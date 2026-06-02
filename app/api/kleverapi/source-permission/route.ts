@@ -1,50 +1,40 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getBaseUrl } from "@/lib/api/magento-url";
+import { getRequestToken } from "@/lib/api/auth-helper";
+import { KLEVER_SOURCE_PERMISSIONS_QUERY } from "@/src/graphql/queries";
+import type { KleverSourcePermissionsData } from "@/src/graphql/types";
+import { graphqlFetch } from "@/src/lib/graphqlFetch";
+
+const EMPTY = { permissions: [], stores: [], permitted_stores: [] };
+const NO_CACHE_HEADERS = { "Cache-Control": "no-store, no-cache, must-revalidate" };
 
 export async function GET(request: NextRequest) {
-    try {
-        const BASE_URL = getBaseUrl(request);
+  const token = await getRequestToken(request);
+  if (!token) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
 
-        let token: string | null = null;
-        const authHeader = request.headers.get("authorization");
-        if (authHeader?.startsWith("Bearer ")) {
-            token = authHeader.substring(7).replace(/['"]/g, "").trim();
-        }
-        if (!token) {
-            token = request.cookies.get("auth-token")?.value?.replace(/['"]/g, "").trim() || null;
-        }
-        if (!token || token === "null" || token === "undefined") {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-        }
+  try {
+    const data = await graphqlFetch<KleverSourcePermissionsData>({
+      query: KLEVER_SOURCE_PERMISSIONS_QUERY,
+      token,
+      cache: "no-store",
+    });
 
-        let res: Response | null = null;
-        try {
-            res = await fetch(`${BASE_URL}/source-permission`, {
-                headers: {
-                    "Content-Type": "application/json",
-                    Authorization: `Bearer ${token}`,
-                },
-                cache: "no-store",
-            });
-        } catch (networkErr: any) {
-            console.warn("[source-permission] Magento fetch threw (network/timeout):", networkErr.message);
-            // Return empty permissions — Navbar handles missing data gracefully
-            return NextResponse.json({ permissions: [], stores: [] }, { status: 200 });
-        }
-
-        if (!res.ok) {
-            const errBody = await res.text();
-            console.error("[source-permission] Magento error:", res.status, errBody);
-            // Return empty on error so Navbar doesn't crash
-            return NextResponse.json({ permissions: [], stores: [] }, { status: 200 });
-        }
-
-        const data = await res.json();
-        return NextResponse.json(data, {
-            headers: { "Cache-Control": "no-store, no-cache, must-revalidate" },
-        });
-    } catch (error: any) {
-        console.error("[source-permission] Route error:", error.message);
-        return NextResponse.json({ permissions: [], stores: [] }, { status: 200 });
+    const result = data.kleverSourcePermissions;
+    if (!result) {
+      return NextResponse.json(EMPTY, { headers: NO_CACHE_HEADERS });
     }
+    return NextResponse.json(
+      {
+        has_restrictions: result.has_restrictions,
+        total_count: result.total_count,
+        permitted_store_ids: result.permitted_store_ids,
+        permitted_stores: result.permitted_stores,
+      },
+      { headers: NO_CACHE_HEADERS },
+    );
+  } catch (error) {
+    console.warn("[source-permission] GraphQL failed, serving empty:", error);
+    return NextResponse.json(EMPTY, { headers: NO_CACHE_HEADERS });
+  }
 }

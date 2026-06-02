@@ -1,7 +1,21 @@
+/**
+ * Binary file proxy — intentionally NOT a GraphQL route.
+ *
+ * Why this stays REST:
+ *   - Forecast file metadata + URL come from `kleverForecastList` GraphQL —
+ *     the frontend reads `file_url` from a list item and passes it here as
+ *     `?url=` along with the forecast id.
+ *   - GraphQL transports JSON; it cannot stream XLSX/PDF bytes. The actual
+ *     binary download must happen over plain HTTP.
+ *   - This proxy stays server-side so the Magento bearer token is never
+ *     exposed to the browser network tab. The token is read from the request
+ *     (cookies / Authorization header) on the server and forwarded only to
+ *     Magento's REST endpoint, then the bytes are streamed back to the client.
+ */
 import { NextResponse } from 'next/server';
 import { getBaseUrl } from '@/lib/api/magento-url';
 
-// BASE_URL is now obtained per-request via getBaseUrl(request)
+// BASE_URL is obtained per-request via getBaseUrl(request)
 
 // Fix double slashes in URL path (but preserve https://)
 function fixUrl(url: string): string {

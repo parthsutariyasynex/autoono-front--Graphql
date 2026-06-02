@@ -29,6 +29,15 @@ function LoginPageContent() {
   const lp = useLocalePath();
   const [mode, setMode] = useState<"password" | "otp">("password");
 
+  // Server-passed session makes useSession resolve synchronously, so the
+  // `status === "loading"` branch below never fires on direct visits. Render
+  // the skeleton on the SSR pass + first client paint, then swap in the form
+  // after hydration so users always see a visible loading state.
+  const [hydrated, setHydrated] = useState(false);
+  useEffect(() => {
+    setHydrated(true);
+  }, []);
+
   const { data: session, status } = useSession();
   const dispatch = useAppDispatch();
   const { loading: reduxLoading } = useAppSelector((state: RootState) => state.auth);

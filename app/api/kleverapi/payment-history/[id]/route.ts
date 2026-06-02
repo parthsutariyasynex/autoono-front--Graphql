@@ -1,133 +1,92 @@
 import { NextResponse } from "next/server";
-import { getBaseUrl } from "@/lib/api/magento-url";
+import { getRequestToken } from "@/lib/api/auth-helper";
+import { KLEVER_PAYMENT_HISTORY_BY_ID_QUERY } from "@/src/graphql/queries";
+import { KLEVER_PAYMENT_HISTORY_EDIT_MUTATION } from "@/src/graphql/mutations";
+import type {
+  KleverPaymentHistoryByIdData,
+  KleverPaymentHistoryEditData,
+} from "@/src/graphql/types";
+import { graphqlFetch, isGraphQLRequestError } from "@/src/lib/graphqlFetch";
 
 export async function GET(
-    request: Request,
-    { params }: { params: Promise<{ id: string }> }
+  request: Request,
+  { params }: { params: Promise<{ id: string }> },
 ) {
-    try {
-        const BASE_URL = getBaseUrl(request);
-        const { id } = await params;
-        const authHeader = request.headers.get("Authorization");
-
-        if (!authHeader || !authHeader.startsWith("Bearer ")) {
-            return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
-        }
-
-        const magentoUrl = `${BASE_URL}/payment-history/${id}`;
-
-        const response = await fetch(magentoUrl, {
-            method: "GET",
-            headers: {
-                "Content-Type": "application/json",
-                Authorization: authHeader,
-                platform: "web",
-            },
-            cache: "no-store",
-        });
-
-        const data = await response.json();
-
-        if (!response.ok) {
-            return NextResponse.json(
-                { message: data.message || `Magento returned ${response.status}` },
-                { status: response.status }
-            );
-        }
-
-        return NextResponse.json(data);
-    } catch (error: any) {
-        return NextResponse.json(
-            { message: error.message || "Server error fetching payment details" },
-            { status: 500 }
-        );
+  try {
+    const token = await getRequestToken(request);
+    if (!token) {
+      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
+    const { id } = await params;
+    const paymentId = Number(id);
+    if (!paymentId) {
+      return NextResponse.json({ message: "Invalid payment id" }, { status: 400 });
+    }
+
+    const data = await graphqlFetch<KleverPaymentHistoryByIdData>({
+      query: KLEVER_PAYMENT_HISTORY_BY_ID_QUERY,
+      variables: { paymentId },
+      token,
+      cache: "no-store",
+    });
+
+    if (!data.kleverPaymentHistoryById) {
+      return NextResponse.json({ message: "Payment not found" }, { status: 404 });
+    }
+    return NextResponse.json(data.kleverPaymentHistoryById, { status: 200 });
+  } catch (error) {
+    if (isGraphQLRequestError(error)) {
+      return NextResponse.json(
+        { message: error.message, errors: error.errors },
+        { status: error.status >= 400 ? error.status : 500 },
+      );
+    }
+    return NextResponse.json({ message: "Server error fetching payment details" }, { status: 500 });
+  }
 }
 
-export async function POST(
-    request: Request,
-    { params }: { params: Promise<{ id: string }> }
+async function editHandler(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> },
 ) {
-    try {
-        const BASE_URL = getBaseUrl(request);
-        const { id } = await params;
-        const authHeader = request.headers.get("Authorization");
-        const body = await request.json();
-
-        if (!authHeader || !authHeader.startsWith("Bearer ")) {
-            return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
-        }
-
-        const magentoUrl = `${BASE_URL}/payment-history/${id}`;
-
-        const response = await fetch(magentoUrl, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                Authorization: authHeader,
-                platform: "web",
-            },
-            body: JSON.stringify(body),
-        });
-
-        const data = await response.json();
-
-        if (!response.ok) {
-            return NextResponse.json(
-                { message: data.message || `Magento returned ${response.status}` },
-                { status: response.status }
-            );
-        }
-
-        return NextResponse.json(data);
-    } catch (error: any) {
-        return NextResponse.json(
-            { message: error.message || "Server error updating payment record" },
-            { status: 500 }
-        );
+  try {
+    const token = await getRequestToken(request);
+    if (!token) {
+      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
+    const { id } = await params;
+    const paymentId = Number(id);
+    if (!paymentId) {
+      return NextResponse.json({ message: "Invalid payment id" }, { status: 400 });
+    }
+    const body = await request.json();
+    const paidPayment =
+      body.paidPayment !== undefined || body.paid_payment !== undefined
+        ? Number(body.paidPayment ?? body.paid_payment)
+        : null;
+
+    const data = await graphqlFetch<KleverPaymentHistoryEditData>({
+      query: KLEVER_PAYMENT_HISTORY_EDIT_MUTATION,
+      variables: {
+        paymentId,
+        paidPayment,
+        remarks: body.remarks ?? null,
+      },
+      token,
+      cache: "no-store",
+    });
+
+    return NextResponse.json(data.kleverPaymentHistoryEdit, { status: 200 });
+  } catch (error) {
+    if (isGraphQLRequestError(error)) {
+      return NextResponse.json(
+        { message: error.message, errors: error.errors },
+        { status: error.status >= 400 ? error.status : 500 },
+      );
+    }
+    return NextResponse.json({ message: "Server error updating payment record" }, { status: 500 });
+  }
 }
 
-export async function PUT(
-    request: Request,
-    { params }: { params: Promise<{ id: string }> }
-) {
-    try {
-        const BASE_URL = getBaseUrl(request);
-        const { id } = await params;
-        const authHeader = request.headers.get("Authorization");
-        const body = await request.json();
-
-        if (!authHeader || !authHeader.startsWith("Bearer ")) {
-            return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
-        }
-
-        const magentoUrl = `${BASE_URL}/payment-history/${id}`;
-
-        const response = await fetch(magentoUrl, {
-            method: "PUT",
-            headers: {
-                "Content-Type": "application/json",
-                Authorization: authHeader,
-                platform: "web",
-            },
-            body: JSON.stringify(body),
-        });
-
-        const data = await response.json();
-
-        if (!response.ok) {
-            return NextResponse.json(
-                { message: data.message || `Magento returned ${response.status}` },
-                { status: response.status }
-            );
-        }
-
-        return NextResponse.json(data);
-    } catch (error: any) {
-        return NextResponse.json(
-            { message: error.message || "Server error updating payment record" },
-            { status: 500 }
-        );
-    }
-}
+export const POST = editHandler;
+export const PUT = editHandler;

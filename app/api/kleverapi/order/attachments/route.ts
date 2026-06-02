@@ -1,55 +1,51 @@
 import { NextResponse } from "next/server";
-import { getBaseUrl } from "@/lib/api/magento-url";
-
-// BASE_URL is now obtained per-request via getBaseUrl(request)
+import { getRequestToken } from "@/lib/api/auth-helper";
+import { KLEVER_ORDER_UPLOAD_SEARCH_QUERY } from "@/src/graphql/queries";
+import type { KleverOrderUploadSearchData } from "@/src/graphql/types";
+import { graphqlFetch, isGraphQLRequestError } from "@/src/lib/graphqlFetch";
 
 export async function GET(request: Request) {
-    try {
-        const BASE_URL = getBaseUrl(request);
-        const { searchParams } = new URL(request.url);
-        const order_id = searchParams.get("order_id");
-        const document_type = searchParams.get("document_type");
-        const invoice_due = searchParams.get("invoice_due");
-
-        const authHeader = request.headers.get("Authorization");
-
-        if (!authHeader || !authHeader.startsWith("Bearer ")) {
-            return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
-        }
-
-        // Construct query parameters for Magento
-        const params = new URLSearchParams();
-        if (order_id) params.append("order_id", order_id);
-        if (document_type && document_type !== "All") params.append("document_type", document_type);
-        if (invoice_due && invoice_due !== "All") params.append("invoice_due", invoice_due);
-
-        const queryString = params.toString();
-        const magentoUrl = `${BASE_URL}/order/attachments${queryString ? `?${queryString}` : ""}`;
-
-        const response = await fetch(magentoUrl, {
-            method: "GET",
-            headers: {
-                "Content-Type": "application/json",
-                Authorization: authHeader,
-                platform: "web",
-            },
-            cache: "no-store",
-        });
-
-        const data = await response.json();
-
-        if (!response.ok) {
-            return NextResponse.json(
-                { message: data.message || `Magento returned ${response.status}` },
-                { status: response.status }
-            );
-        }
-
-        return NextResponse.json(data);
-    } catch (error: any) {
-        return NextResponse.json(
-            { message: error.message || "Server error fetching order attachments" },
-            { status: 500 }
-        );
+  try {
+    const token = await getRequestToken(request);
+    if (!token) {
+      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
+
+    const { searchParams } = new URL(request.url);
+    const orderId = searchParams.get("order_id");
+    const documentType = searchParams.get("document_type");
+    const pageSize = Number(searchParams.get("pageSize") || "50");
+    const currentPage = Number(searchParams.get("currentPage") || "1");
+
+    const data = await graphqlFetch<KleverOrderUploadSearchData>({
+      query: KLEVER_ORDER_UPLOAD_SEARCH_QUERY,
+      variables: { pageSize, currentPage },
+      token,
+      cache: "no-store",
+    });
+
+    let items = data.kleverOrderUploadSearch?.items ?? [];
+    if (orderId) {
+      items = items.filter((item) => String(item.order_id) === String(orderId));
+    }
+    if (documentType && documentType !== "All") {
+      items = items.filter((item) => item.upload_for === documentType);
+    }
+
+    return NextResponse.json(
+      { ...(data.kleverOrderUploadSearch ?? {}), items },
+      { status: 200 },
+    );
+  } catch (error) {
+    if (isGraphQLRequestError(error)) {
+      return NextResponse.json(
+        { message: error.message, errors: error.errors },
+        { status: error.status >= 400 ? error.status : 500 },
+      );
+    }
+    return NextResponse.json(
+      { message: "Server error fetching order attachments" },
+      { status: 500 },
+    );
+  }
 }

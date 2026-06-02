@@ -13,6 +13,7 @@ import { forgotPassword } from "@/store/actions/authActions";
 import { RootState } from "@/store/store";
 
 import CountryDropdown from "@/app/components/CountryDropdown";
+import { ForgotPasswordSkeleton } from "@/components/skeletons";
 
 export default function ForgotPasswordPage() {
   const router = useRouter();
@@ -38,6 +39,15 @@ export default function ForgotPasswordPage() {
   // UI State
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
+
+  // The page renders synchronously on direct visits — without this gate the
+  // skeleton would only appear during SPA navigation. Show it on SSR + first
+  // client paint, then swap to the real form after hydration.
+  const [hydrated, setHydrated] = useState(false);
+  useEffect(() => {
+    setHydrated(true);
+  }, []);
+
   useEffect(() => {
     document.body.classList.add('scrollbar-hide');
     return () => document.body.classList.remove('scrollbar-hide');
@@ -294,6 +304,10 @@ export default function ForgotPasswordPage() {
       handleResetPassword();
     }
   };
+
+  // Pre-hydration: render the skeleton so users always see a visible loading
+  // state on direct visits (not just SPA navigation).
+  if (!hydrated) return <ForgotPasswordSkeleton />;
 
   return (
     <div className="flex-1 w-full min-h-full bg-surfaceSubtle flex flex-col">

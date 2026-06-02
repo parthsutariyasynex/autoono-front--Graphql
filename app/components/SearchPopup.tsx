@@ -167,6 +167,10 @@ const SearchPopup: React.FC<SearchPopupProps> = ({ isOpen, onClose }) => {
                 params.set("query", query);
                 params.set("pageSize", String(PREVIEW_LIMIT));
                 params.set("page", "1");
+                // Lightweight mode — stock products(search:) is ~17× faster
+                // than the full kleverCategoryProducts pool. Typeahead only
+                // needs name + sku, so the slim response is fine.
+                params.set("light", "1");
                 const store = searchParams?.get("store") || getClientStoreCode();
                 if (store) params.set("store", store);
 

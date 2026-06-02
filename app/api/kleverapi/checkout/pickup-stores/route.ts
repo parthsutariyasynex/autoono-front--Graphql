@@ -1,41 +1,48 @@
 import { NextResponse } from "next/server";
-import { getBaseUrl } from "@/lib/api/magento-url";
+import { getRequestToken } from "@/lib/api/auth-helper";
+import { PICKUP_LOCATIONS_QUERY } from "@/src/graphql/queries";
+import type { PickupLocationsData } from "@/src/graphql/types";
+import { graphqlFetch, isGraphQLRequestError } from "@/src/lib/graphqlFetch";
 
-// BASE_URL is now obtained per-request via getBaseUrl(req)
+const DEFAULT_COUNTRY = process.env.MAGENTO_DEFAULT_COUNTRY || "AE";
 
 export async function GET(req: Request) {
-    try {
-        const BASE_URL = getBaseUrl(req);
-        const authHeader = req.headers.get("Authorization") || req.headers.get("authorization");
-        if (!authHeader || !authHeader.startsWith("Bearer ") || authHeader.includes("null") || authHeader.includes("undefined")) {
-            console.error("[Pickup Stores Proxy] Missing or invalid token format:", authHeader);
-            return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
-        }
-
-        const url = `${BASE_URL}/checkout/pickup-stores`;
-        console.log("[Pickup Stores Proxy] Fetching from Magento:", url);
-
-        const response = await fetch(url, {
-            method: "GET",
-            headers: {
-                "Authorization": authHeader,
-                "Content-Type": "application/json",
-                "platform": "web",
-            },
-            cache: "no-store",
-        });
-
-        const data = await response.json();
-        console.log("[Pickup Stores Proxy] Magento Response Status:", response.status);
-
-        if (!response.ok) {
-            console.error("[Pickup Stores Proxy] Magento API error:", response.status, JSON.stringify(data).substring(0, 500));
-            return NextResponse.json(data, { status: response.status });
-        }
-
-        return NextResponse.json(data);
-    } catch (error) {
-        console.error("Proxy Pickup Stores Error:", error);
-        return NextResponse.json({ message: "Internal server error" }, { status: 500 });
+  try {
+    const token = await getRequestToken(req);
+    if (!token) {
+      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
+
+    const { searchParams } = new URL(req.url);
+    const countryCode = searchParams.get("country") || DEFAULT_COUNTRY;
+    const pageSize = Number(searchParams.get("pageSize") || "50");
+    const currentPage = Number(searchParams.get("currentPage") || "1");
+
+    const data = await graphqlFetch<PickupLocationsData>({
+      query: PICKUP_LOCATIONS_QUERY,
+      variables: { countryCode, pageSize, currentPage },
+      token,
+      cache: "no-store",
+    });
+
+    const stores = data.pickupLocations.items.map((loc) => ({
+      store_id: loc.pickup_location_code,
+      name: loc.name,
+      address: loc.street,
+      city: loc.city,
+      country: loc.country_id,
+      postcode: loc.postcode,
+      latitude: loc.latitude,
+      longitude: loc.longitude,
+    }));
+    return NextResponse.json(stores, { status: 200 });
+  } catch (error) {
+    if (isGraphQLRequestError(error)) {
+      return NextResponse.json(
+        { message: error.message, errors: error.errors },
+        { status: error.status >= 400 ? error.status : 500 },
+      );
+    }
+    return NextResponse.json({ message: "Internal server error" }, { status: 500 });
+  }
 }

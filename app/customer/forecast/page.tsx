@@ -250,7 +250,7 @@ export default function MyForecastPage() {
                                     type="file"
                                     id="file-upload"
                                     className="hidden"
-                                    accept=".jpg,.jpeg,.png,.zip,.rar,.docx,.doc,.pdf,.xls,.xlsx,.csv,.msg"
+                                    accept=".jpg,.jpeg,.gif,.png,.pdf,.docx,.doc,.xls,.xlsx"
                                     onChange={handleFileChange}
                                 />
                                 <label

@@ -1,52 +1,41 @@
 import { NextResponse } from "next/server";
-import { getBaseUrl } from "@/lib/api/magento-url";
-
-// BASE_URL is now obtained per-request via getBaseUrl(request)
+import { getRequestToken } from "@/lib/api/auth-helper";
+import { KLEVER_CHECKOUT_PO_REMOVE_FILE_MUTATION } from "@/src/graphql/mutations";
+import type { KleverCheckoutPoRemoveFileData } from "@/src/graphql/types";
+import { graphqlFetch, isGraphQLRequestError } from "@/src/lib/graphqlFetch";
 
 export async function DELETE(
-    req: Request,
-    { params }: { params: Promise<{ filename: string }> }
+  req: Request,
+  { params }: { params: Promise<{ filename: string }> },
 ) {
-    try {
-        const BASE_URL = getBaseUrl(req);
-        const { filename } = await params;
-        const authHeader = req.headers.get("authorization");
-        if (!authHeader || !authHeader.startsWith("Bearer ")) {
-            return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
-        }
-
-        console.log(">>> PO Delete REQUEST:", filename);
-
-        const response = await fetch(`${BASE_URL}/checkout/po-upload/${encodeURIComponent(filename)}`, {
-            method: "DELETE",
-            headers: {
-                Authorization: authHeader,
-                platform: "web",
-            },
-        });
-
-        const contentType = response.headers.get("content-type");
-        let data;
-
-        if (contentType && contentType.includes("application/json")) {
-            data = await response.json();
-        } else {
-            const text = await response.text();
-            data = { message: text || "Non-JSON response from server" };
-        }
-
-        console.log("<<< PO Delete RESPONSE Status:", response.status, data);
-
-        if (!response.ok) {
-            return NextResponse.json(data, { status: response.status });
-        }
-
-        return NextResponse.json(data);
-    } catch (error) {
-        console.error("Proxy PO Delete Error:", error);
-        return NextResponse.json(
-            { message: error instanceof Error ? error.message : "Internal server error" },
-            { status: 500 }
-        );
+  try {
+    const token = await getRequestToken(req);
+    if (!token) {
+      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
+    const { filename } = await params;
+    const fileName = decodeURIComponent(filename);
+    if (!fileName) {
+      return NextResponse.json({ message: "filename is required" }, { status: 400 });
+    }
+
+    const data = await graphqlFetch<KleverCheckoutPoRemoveFileData>({
+      query: KLEVER_CHECKOUT_PO_REMOVE_FILE_MUTATION,
+      variables: { fileName },
+      token,
+      cache: "no-store",
+    });
+    return NextResponse.json(
+      { success: data.kleverCheckoutPoRemoveFile !== false, fileName },
+      { status: 200 },
+    );
+  } catch (error) {
+    if (isGraphQLRequestError(error)) {
+      return NextResponse.json(
+        { message: error.message, errors: error.errors },
+        { status: error.status >= 400 ? error.status : 500 },
+      );
+    }
+    return NextResponse.json({ message: "Internal server error" }, { status: 500 });
+  }
 }

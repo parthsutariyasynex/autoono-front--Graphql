@@ -1,7 +1,20 @@
+/**
+ * Binary file proxy — intentionally NOT a GraphQL route.
+ *
+ * Why this stays REST:
+ *   - File metadata + URL come from `kleverOrderUploadSearch` GraphQL — the
+ *     frontend gets `file_url` from that response and passes it here as `?url=`.
+ *   - GraphQL transports JSON; it cannot stream PDF/image bytes. The actual
+ *     binary download must happen over plain HTTP.
+ *   - This proxy stays server-side so the Magento bearer token is never
+ *     exposed to the browser network tab. The token is read from the request
+ *     (cookies / Authorization header) on the server and forwarded only to
+ *     Magento's REST endpoint, then the bytes are streamed back to the client.
+ */
 import { NextResponse } from 'next/server';
 import { getBaseUrl } from '@/lib/api/magento-url';
 
-// BASE_URL is now obtained per-request via getBaseUrl(request)
+// BASE_URL is obtained per-request via getBaseUrl(request)
 
 // Fix double slashes in URL path (but preserve https://)
 function fixUrl(url: string): string {
@@ -62,9 +75,10 @@ export async function GET(
 
         const { searchParams } = new URL(request.url);
         const rawFileUrl = searchParams.get('url');
+        const rawFileName = searchParams.get('name');
         const origin = new URL(BASE_URL || 'https://autoono-demo.btire.com').origin;
 
-        console.log('[AttachmentDownload] ID:', id, 'Raw URL:', rawFileUrl);
+        console.log('[AttachmentDownload] ID:', id, 'Raw URL:', rawFileUrl, 'Name:', rawFileName);
 
         // Build list of URLs to try
         const urlsToTry: string[] = [];
@@ -92,6 +106,21 @@ export async function GET(
                     : fixedUrl.replace(/^\/+/, '');
                 urlsToTry.push(`${origin}/media/orderupload/${clean}`);
             }
+        }
+
+        // When file_url is unavailable (kleverOrderUploadSearch doesn't expose
+        // it), derive the path from the filename using Magento's hash-based
+        // media layout: `/media/orderupload/<first-char>/<second-char>/<filename>`.
+        if (rawFileName) {
+            const safeName = rawFileName.replace(/^\/+/, '').toLowerCase();
+            const a = safeName.charAt(0);
+            const b = safeName.charAt(1);
+            if (a && b) {
+                urlsToTry.push(`${origin}/media/orderupload/${a}/${b}/${rawFileName}`);
+                urlsToTry.push(`${origin}/pub/media/orderupload/${a}/${b}/${rawFileName}`);
+            }
+            // Also try a flat layout as a last resort
+            urlsToTry.push(`${origin}/media/orderupload/${rawFileName}`);
         }
 
         // Also try the API download endpoint

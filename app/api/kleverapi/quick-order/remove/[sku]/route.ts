@@ -1,55 +1,40 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getBaseUrl } from "@/lib/api/magento-url";
-
-// BASE_URL is now obtained per-request via getBaseUrl(request)
+import { getRequestToken } from "@/lib/api/auth-helper";
+import { KLEVER_QUICK_ORDER_REMOVE_ITEM_MUTATION } from "@/src/graphql/mutations";
+import type { KleverQuickOrderRemoveItemData } from "@/src/graphql/types";
+import { graphqlFetch, isGraphQLRequestError } from "@/src/lib/graphqlFetch";
 
 export async function DELETE(
-    request: NextRequest,
-    { params }: { params: Promise<{ sku: string }> }
+  request: NextRequest,
+  { params }: { params: Promise<{ sku: string }> },
 ) {
-    const { sku } = await params;
-    try {
-        const BASE_URL = getBaseUrl(request);
-        let token: string | null = null;
-
-        const authHeader = request.headers.get("authorization");
-        if (authHeader?.startsWith("Bearer ")) {
-            token = authHeader.substring(7).replace(/['"]/g, "").trim();
-        }
-
-        if (!token) {
-            token = request.cookies.get("auth-token")?.value?.replace(/['"]/g, "").trim() || null;
-        }
-
-        if (!token || token === "null" || token === "undefined") {
-            return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
-        }
-
-        // Mageplaza Quick Order Remove Single Item API
-        const magentoUrl = `${BASE_URL}/quick-order/remove/${sku}`;
-
-        console.log("[quick-order/remove] Deleting item:", sku, "from:", magentoUrl);
-
-        const res = await fetch(magentoUrl, {
-            method: "DELETE",
-            headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${token}`,
-            },
-            cache: "no-store",
-        });
-
-        if (!res.ok) {
-            const errBody = await res.text();
-            console.error(`[quick-order/remove] Magento error for ${sku}:`, res.status, errBody);
-            return NextResponse.json({ error: "Removal failed", details: errBody }, { status: res.status });
-        }
-
-        const data = await res.json();
-        return NextResponse.json(data);
-
-    } catch (error: any) {
-        console.error(`[quick-order/remove] Error for ${sku}:`, error.message);
-        return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+  try {
+    const token = await getRequestToken(request);
+    if (!token) {
+      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
+
+    const { sku } = await params;
+    const decoded = decodeURIComponent(sku);
+    if (!decoded) {
+      return NextResponse.json({ error: "sku is required" }, { status: 400 });
+    }
+
+    const data = await graphqlFetch<KleverQuickOrderRemoveItemData>({
+      query: KLEVER_QUICK_ORDER_REMOVE_ITEM_MUTATION,
+      variables: { sku: decoded },
+      token,
+      cache: "no-store",
+    });
+
+    return NextResponse.json(data.kleverQuickOrderRemoveItem);
+  } catch (error) {
+    if (isGraphQLRequestError(error)) {
+      return NextResponse.json(
+        { message: error.message, errors: error.errors },
+        { status: error.status >= 400 ? error.status : 500 },
+      );
+    }
+    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+  }
 }

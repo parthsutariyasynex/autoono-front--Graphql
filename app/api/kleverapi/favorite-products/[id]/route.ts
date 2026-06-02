@@ -1,41 +1,46 @@
-import { NextResponse } from 'next/server';
-import { getBaseUrl } from '@/lib/api/magento-url';
-
-// BASE_URL is now obtained per-request via getBaseUrl(request)
+import { NextResponse } from "next/server";
+import { getRequestToken } from "@/lib/api/auth-helper";
+import { KLEVER_REMOVE_FAVORITE_PRODUCT_MUTATION } from "@/src/graphql/mutations";
+import type { KleverRemoveFavoriteProductData } from "@/src/graphql/types";
+import { graphqlFetch, isGraphQLRequestError } from "@/src/lib/graphqlFetch";
 
 export async function DELETE(
-    request: Request,
-    { params }: { params: Promise<{ id: string }> }
+  request: Request,
+  { params }: { params: Promise<{ id: string }> },
 ) {
-    try {
-        const BASE_URL = getBaseUrl(request);
-        const { id } = await params;
-        const authHeader = request.headers.get('Authorization');
-        if (!authHeader) {
-            return NextResponse.json({ message: 'Authentication required' }, { status: 401 });
-        }
-
-        const magentoUrl = `${BASE_URL}/favorite-products/${id}`;
-        console.log(`[API ROUTE] Removing Favorite Product ID: ${id} at: ${magentoUrl}`);
-
-        const response = await fetch(magentoUrl, {
-            method: 'DELETE',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': authHeader,
-                'platform': 'web',
-            },
-            cache: 'no-store',
-        });
-
-        const data = await response.json();
-        return NextResponse.json(data, { status: response.status });
-
-    } catch (error: any) {
-        console.error('[API ROUTE ERROR] Favorite Products DELETE Catch:', error);
-        return NextResponse.json(
-            { message: error.message || 'Server-side error removing favorite.' },
-            { status: 500 }
-        );
+  try {
+    const token = await getRequestToken(request);
+    if (!token) {
+      return NextResponse.json({ message: "Authentication required" }, { status: 401 });
     }
+
+    const { id } = await params;
+    const productId = Number(id);
+    if (!productId) {
+      return NextResponse.json({ message: "Invalid product id" }, { status: 400 });
+    }
+
+    const data = await graphqlFetch<KleverRemoveFavoriteProductData>({
+      query: KLEVER_REMOVE_FAVORITE_PRODUCT_MUTATION,
+      variables: { productId },
+      token,
+      cache: "no-store",
+    });
+
+    return NextResponse.json(
+      { success: data.kleverRemoveFavoriteProduct !== false, product_id: productId },
+      { status: 200 },
+    );
+  } catch (error) {
+    if (isGraphQLRequestError(error)) {
+      return NextResponse.json(
+        { message: error.message, errors: error.errors },
+        { status: error.status >= 400 ? error.status : 500 },
+      );
+    }
+    return NextResponse.json(
+      { message: "Server-side error removing favorite." },
+      { status: 500 },
+    );
+  }
 }

@@ -1,7 +1,13 @@
 import { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
-import { getMagentoBaseUrl, isValidLocale, defaultLocale, type Locale } from "@/lib/i18n/config";
+import { isValidLocale, defaultLocale, type Locale } from "@/lib/i18n/config";
 import { SESSION_COOKIE_NAME, CSRF_COOKIE_NAME, CALLBACK_URL_COOKIE_NAME } from "./constants";
+import { GENERATE_CUSTOMER_TOKEN_MUTATION } from "@/src/graphql/mutations";
+import type { GenerateCustomerTokenData } from "@/src/graphql/types";
+import { graphqlFetch, isGraphQLRequestError } from "@/src/lib/graphqlFetch";
+
+const MAGENTO_DOMAIN =
+    process.env.NEXT_PUBLIC_MAGENTO_BASE_URL || "https://autoono-demo.btire.com";
 
 /**
  * Decode a Magento JWT token to read its expiry time.
@@ -35,84 +41,81 @@ export const authOptions: NextAuthOptions = {
             async authorize(credentials) {
                 if (!credentials) return null;
 
-                const isOtp = !!(credentials as any).otp;
-                // Read locale from credentials (passed from login form)
-                const credLocale = (credentials as any).locale;
-                const locale: Locale = credLocale && isValidLocale(credLocale) ? credLocale : defaultLocale;
-                const magentoBase = getMagentoBaseUrl(locale);
-                let url = "";
-                let body = {};
-
-                if (isOtp) {
-                    url = `${magentoBase}/login/otp`;
-                    body = {
-                        mobile: (credentials as any).mobile,
-                        otp: (credentials as any).otp,
-                        countryCode: (credentials as any).countryCode
-                    };
-                } else {
-                    url = `${magentoBase}/login/email`;
-                    body = {
-                        email: (credentials as any).email,
-                        password: (credentials as any).password,
-                    };
-                }
-
-                if (!url) {
-                    console.error("Auth URL is not defined");
-                    return null;
-                }
+                const creds = credentials as Record<string, string | undefined>;
+                const isOtp = !!creds.otp;
+                const credLocale = creds.locale;
+                const locale: Locale =
+                    credLocale && isValidLocale(credLocale)
+                        ? (credLocale as Locale)
+                        : defaultLocale;
 
                 try {
-                    const headers: any = {
-                        "Content-Type": "application/json"
-                    };
+                    let token: string | null = null;
+
                     if (isOtp) {
-                        headers["platform"] = "web";
-                    }
-
-                    const res = await fetch(url, {
-                        method: "POST",
-                        headers: headers,
-                        body: JSON.stringify(body),
-                    });
-
-                    let data: any;
-                    const rawText = await res.text();
-                    try {
-                        data = JSON.parse(rawText);
-                    } catch {
-                        console.error("[auth] Magento returned non-JSON:", res.status, rawText.slice(0, 200));
-                        return null;
-                    }
-
-                    if (!res.ok) {
-                        console.error("[auth] Magento login rejected:", res.status, data);
-                        return null;
-                    }
-
-                    if (data) {
-                        const token = isOtp
-                            ? (data.token || (data.customer && data.customer.token))
-                            : (typeof data === 'string' ? data : data.token);
-
-                        if (!token) {
-                            console.error("[auth] No token in Magento response:", data);
-                            return null;
+                        // REST workaround — GraphQL createCustomerTokenWithOtp
+                        // rejects E.164 mobiles via a ≤9-digit validator. REST
+                        // accepts mobile + countryCode as separate fields.
+                        const rawMobile = creds.mobile ?? "";
+                        const rawCountryCode = creds.countryCode ?? "";
+                        let mobile = rawMobile.trim();
+                        const countryCode = rawCountryCode.trim();
+                        if (mobile.startsWith("+") && countryCode && mobile.startsWith(countryCode)) {
+                            mobile = mobile.slice(countryCode.length);
+                        } else if (mobile.startsWith("+")) {
+                            mobile = mobile.replace(/^\+\d{1,3}/, "");
                         }
 
-                        const trimmedToken = String(token).trim();
-
-                        return {
-                            id: (credentials as any).email || (credentials as any).mobile,
-                            email: (credentials as any).email || "",
-                            name: (credentials as any).email || (credentials as any).mobile,
-                            token: trimmedToken,
-                        };
+                        const upstream = await fetch(
+                            `${MAGENTO_DOMAIN}/rest/${locale}/V1/kleverapi/login/otp`,
+                            {
+                                method: "POST",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({ mobile, otp: creds.otp, countryCode }),
+                                cache: "no-store",
+                            },
+                        );
+                        const data = await upstream.json().catch(() => null);
+                        if (!upstream.ok || !data) {
+                            console.error("[auth] REST OTP login rejected:", upstream.status, data?.message);
+                            return null;
+                        }
+                        token = data.token || data?.customer?.token || null;
+                    } else {
+                        const data = await graphqlFetch<GenerateCustomerTokenData>({
+                            query: GENERATE_CUSTOMER_TOKEN_MUTATION,
+                            variables: {
+                                email: creds.email,
+                                password: creds.password,
+                            },
+                            store: locale,
+                            cache: "no-store",
+                        });
+                        token = data.generateCustomerToken?.token ?? null;
                     }
-                    return null;
+
+                    if (!token) {
+                        console.error("[auth] No token returned from GraphQL");
+                        return null;
+                    }
+
+                    const trimmedToken = token.trim();
+                    return {
+                        id: creds.email || creds.mobile || "",
+                        email: creds.email || "",
+                        name: creds.email || creds.mobile || "",
+                        token: trimmedToken,
+                    };
                 } catch (error) {
-                    console.error("[auth] Unexpected error in authorize:", error);
+                    if (isGraphQLRequestError(error)) {
+                        console.error(
+                            "[auth] Magento GraphQL rejected login:",
+                            error.status,
+                            error.message,
+                        );
+                    } else {
+                        console.error("[auth] Unexpected error in authorize:", error);
+                    }
                     return null;
                 }
             },

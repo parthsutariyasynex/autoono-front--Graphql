@@ -1,58 +1,42 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getBaseUrl } from "@/lib/api/magento-url";
-
-// BASE_URL is now obtained per-request via getBaseUrl(request)
+import { getRequestToken } from "@/lib/api/auth-helper";
+import { KLEVER_QUICK_ORDER_UPDATE_ITEM_QTY_MUTATION } from "@/src/graphql/mutations";
+import type { KleverQuickOrderUpdateItemQtyData } from "@/src/graphql/types";
+import { graphqlFetch, isGraphQLRequestError } from "@/src/lib/graphqlFetch";
 
 export async function PUT(
-    request: NextRequest,
-    { params }: { params: Promise<{ sku: string }> }
+  request: NextRequest,
+  { params }: { params: Promise<{ sku: string }> },
 ) {
-    const { sku } = await params;
-    try {
-        const BASE_URL = getBaseUrl(request);
-        const body = await request.json(); // Expected: { qty: number }
-
-        let token: string | null = null;
-
-        const authHeader = request.headers.get("authorization");
-        if (authHeader?.startsWith("Bearer ")) {
-            token = authHeader.substring(7).replace(/['"]/g, "").trim();
-        }
-
-        if (!token) {
-            token = request.cookies.get("auth-token")?.value?.replace(/['"]/g, "").trim() || null;
-        }
-
-        if (!token || token === "null" || token === "undefined") {
-            return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
-        }
-
-        // Mageplaza Quick Order Update Quantity API
-        const magentoUrl = `${BASE_URL}/quick-order/update-qty/${sku}`;
-
-        console.log("[quick-order/update-qty] Updating item:", sku, "to qty:", body.qty, "at:", magentoUrl);
-
-        const res = await fetch(magentoUrl, {
-            method: "PUT",
-            headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${token}`,
-            },
-            body: JSON.stringify(body),
-            cache: "no-store",
-        });
-
-        if (!res.ok) {
-            const errBody = await res.text();
-            console.error(`[quick-order/update-qty] Magento error for ${sku}:`, res.status, errBody);
-            return NextResponse.json({ error: "Update failed", details: errBody }, { status: res.status });
-        }
-
-        const data = await res.json();
-        return NextResponse.json(data);
-
-    } catch (error: any) {
-        console.error(`[quick-order/update-qty] Error for ${sku}:`, error.message);
-        return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+  try {
+    const token = await getRequestToken(request);
+    if (!token) {
+      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
+
+    const { sku } = await params;
+    const decoded = decodeURIComponent(sku);
+    const body = await request.json();
+    const qty = Number(body.qty ?? body.quantity);
+    if (!decoded || !Number.isFinite(qty)) {
+      return NextResponse.json({ error: "sku + qty required" }, { status: 400 });
+    }
+
+    const data = await graphqlFetch<KleverQuickOrderUpdateItemQtyData>({
+      query: KLEVER_QUICK_ORDER_UPDATE_ITEM_QTY_MUTATION,
+      variables: { sku: decoded, qty },
+      token,
+      cache: "no-store",
+    });
+
+    return NextResponse.json(data.kleverQuickOrderUpdateItemQty);
+  } catch (error) {
+    if (isGraphQLRequestError(error)) {
+      return NextResponse.json(
+        { message: error.message, errors: error.errors },
+        { status: error.status >= 400 ? error.status : 500 },
+      );
+    }
+    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+  }
 }

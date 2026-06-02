@@ -1070,7 +1070,7 @@ const CheckoutPageUI: React.FC = () => {
                                                             <option value="">--- Select ---</option>
                                                             {(sourcePermission as any)?.permitted_stores?.map((s: any) => (
                                                                 <option key={s.store_code} value={s.store_code}>
-                                                                    {s.store_name || s.group_name || s.store_code}
+                                                                    {s.group_name || s.store_name || s.store_code}
                                                                 </option>
                                                             ))}
                                                             {!(sourcePermission as any)?.permitted_stores && (

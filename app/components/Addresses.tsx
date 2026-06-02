@@ -271,7 +271,7 @@ export default function Addresses() {
   return (
     <div className="w-full space-y-12" dir={isRtl ? "rtl" : "ltr"}>
       {/* Header with Add Address Button */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-6 border-b border-gray-200">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-6 border-b border-gray-100">
         <div>
           <h1 className="text-h3 md:text-h1-sm font-bold text-black uppercase tracking-tight">
             {t("addressBook.title") || "ADDRESS BOOK"}

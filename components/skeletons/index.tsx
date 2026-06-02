@@ -1290,6 +1290,62 @@ export function PageSkeleton({ children }: { children: React.ReactNode }) {
   return <div className="min-h-[60vh]">{children}</div>;
 }
 
+// ─── Forgot-Password Skeleton ────────────────────────────────────────────────
+export function ForgotPasswordSkeleton() {
+  // Mirrors app/forgot-password/page.tsx so the swap-in causes no layout shift.
+  // Real card: max-w-[440px], padded sections; title row has a bottom-border;
+  // mode tabs match login; body has a multi-line subtitle, one input, submit
+  // button, and a back-to-login link. NO password field (single-input form).
+  return (
+    <div className="flex-1 w-full min-h-full bg-surfaceSubtle flex flex-col">
+      <main className="flex-1 w-full flex justify-center items-start pt-6 sm:pt-8 md:pt-16 pb-8 sm:pb-12 px-4 md:px-0">
+        <div className="w-full max-w-[440px] bg-white rounded-[3px] shadow-[0_10px_40px_rgba(0,0,0,0.08)] border border-gray-100 flex flex-col overflow-hidden">
+
+          {/* Header section: title + mode tabs */}
+          <div className="p-4 sm:p-6 md:p-8 flex flex-col gap-6">
+            {/* Title row with bottom border — title text-base sm:text-lg ≈ 22/26px */}
+            <div className="pb-4 border-b-[0.80px] border-gray-200">
+              <Pulse className="h-[22px] sm:h-[26px] w-40" />
+            </div>
+
+            {/* Mode tabs (OTP / Password) — flex of two equal-width pulses */}
+            <div className="flex w-full rounded-[3px] overflow-hidden border border-gray-200">
+              <Pulse className="flex-1 h-[45px] !rounded-none" />
+              <Pulse className="flex-1 h-[45px] !rounded-none border-l border-gray-100" />
+            </div>
+          </div>
+
+          {/* Body section: subtitle + form */}
+          <div className="px-4 sm:px-6 md:px-8 pb-6 sm:pb-8 flex flex-col gap-6">
+            {/* Subtitle — text-xs leading-5 (1.66), typically 2 lines = ~40px */}
+            <div className="space-y-1.5">
+              <Pulse className="h-3.5 w-full" />
+              <Pulse className="h-3.5 w-4/5" />
+            </div>
+
+            {/* Form */}
+            <div className="flex flex-col gap-3 sm:gap-5">
+              {/* Single input (email OR mobile) — label + h-10 sm:h-11 input */}
+              <div className="flex flex-col gap-1.5">
+                <Pulse className="h-3 w-20" />
+                <Pulse className="h-10 sm:h-11 w-full !rounded-[1px]" />
+              </div>
+
+              {/* Submit button */}
+              <Pulse className="h-10 sm:h-11 w-full rounded-sm" />
+
+              {/* Back-to-login link */}
+              <div className="flex justify-center">
+                <Pulse className="h-3.5 w-32" />
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  );
+}
+
 // ─── Login Skeleton ──────────────────────────────────────────────────────────
 export function LoginSkeleton() {
   // Mirrors the real login card from app/login/page.tsx pixel-for-pixel.
@@ -1935,9 +1991,8 @@ export function RouteAwareSkeleton() {
   // Helper function to render page-specific skeleton wrapped in layout
   const renderContent = () => {
     // Auth pages
-    if (base.startsWith("/login") || base.startsWith("/forgot-password") || base.startsWith("/change-password")) {
-      return <LoginSkeleton />;
-    }
+    if (base.startsWith("/login") || base.startsWith("/change-password")) return <LoginSkeleton />;
+    if (base.startsWith("/forgot-password")) return <ForgotPasswordSkeleton />;
 
     // Cart / Checkout / Quick Order
     // NOTE: /checkout/success must be matched BEFORE /checkout because

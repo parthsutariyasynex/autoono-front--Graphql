@@ -1,10 +1,8 @@
 "use client";
 
 import { Suspense, useEffect, useState, useMemo, useCallback, useRef } from "react";
-import { ShoppingCart, X, Star, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, ChevronsUpDown, AlertTriangle, Info, Check, Filter } from "lucide-react";
+import { X, Star, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, ChevronsUpDown, AlertTriangle, Check, Filter } from "lucide-react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
-import Link from "next/link";
-import Image from "next/image";
 import dynamic from "next/dynamic";
 const ProductDialog = dynamic(() => import("../components/ProductDialog"), { ssr: false });
 const ProductEnquiryModal = dynamic(() => import("../components/ProductEnquiryModal"), { ssr: false });
@@ -18,6 +16,7 @@ import { api } from "@/lib/api/api-client";
 import { formatPrice, redirectToLogin, formatMagentoQueryParams, parseMagentoQueryParams } from "@/utils/helpers";
 import Price from "../components/Price";
 import PortalDropdown from "@/components/PortalDropdown";
+import { ProductCard, StockBadge } from "../components/ProductCard";
 
 import { toast } from "react-hot-toast";
 import { useTranslation } from "@/hooks/useTranslation";
@@ -263,7 +262,7 @@ export default function ProductsPage({ categoryId: propCategoryId, storeCode: pr
     }
   }, [selectedFilters, currentPage, sortBy, searchByTerm, itemCodeTerm, isMounted, router, searchParams, isInitialized]);
 
-  const toggleFavorite = async (product: any) => {
+  const toggleFavorite = useCallback(async (product: any) => {
     const { product_id: productId } = product;
     const stored = localStorage.getItem("favourites");
     const favIds: number[] = stored ? JSON.parse(stored) : [];
@@ -284,7 +283,22 @@ export default function ProductsPage({ categoryId: propCategoryId, storeCode: pr
       }
     }
     router.push(lp(`/favorites?added=${encodeURIComponent(product.name || "")}`));
-  };
+  }, [t, router, lp]);
+
+  const handleInquiry = useCallback((product: any) => {
+    setInquiryProduct(product);
+    setIsInquiryModalOpen(true);
+  }, []);
+
+  const handleImagePreview = useCallback((product: any) => {
+    setSelectedImage(product.image_url);
+    setPreviewProduct(product);
+    setIsImageModalOpen(true);
+  }, []);
+
+  const handleQtyChange = useCallback((sku: string, qty: number) => {
+    setProductQtys(prev => ({ ...prev, [sku]: qty }));
+  }, []);
 
   const [debouncedFilters, setDebouncedFilters] = useState(selectedFilters);
   const isFirstRender = useRef(true);
@@ -325,8 +339,7 @@ export default function ProductsPage({ categoryId: propCategoryId, storeCode: pr
           ...(tempStoreCode && { "x-store-code": tempStoreCode })
         };
 
-        const apiSortBy = sortBy === "price-asc" || sortBy === "price-desc" ? sortBy : "none";
-        const queryString = formatMagentoQueryParams(debouncedFilters, currentPage, apiSortBy);
+        const queryString = formatMagentoQueryParams(debouncedFilters, currentPage, sortBy);
 
         // Priority for categoryId: Prop > URL Param > Default (15)
         const categoryIdFromUrl = propCategoryId || urlCategoryId || "15";
@@ -440,24 +453,18 @@ export default function ProductsPage({ categoryId: propCategoryId, storeCode: pr
     }
   }, [addToCart, router, productQtys]);
 
-  // Map the API-provided stock_color string → Tailwind dot class.
-  // This is a presentation concern only — the label text comes directly from the API.
-  const stockColorClass = (color: string) => {
-    const c = (color || "").toLowerCase();
-    if (c === "green") return "bg-green-500";
-    if (c === "yellow" || c === "orange") return "bg-primary";
-    if (c === "red") return "bg-red-500";
-    return "bg-gray-400";
+  // Stock tier: 0 = available, 1 = limited, 2 = out of stock.
+  const stockTier = (p: any): number => {
+    const outOfStock = p.is_in_stock === false
+      || p.stock_label === "Not Available"
+      || p.stock_status === "Out of Stock"
+      || p.stock_status === "Not Available"
+      || Number(p.stock_qty || 0) <= 0;
+    if (outOfStock) return 2;
+    if (Number(p.stock_qty || 0) > 0 && Number(p.stock_qty) <= 10) return 1;
+    return 0;
   };
-
-  const getStockBadge = (product: any) => (
-    <div className="flex flex-col items-center justify-center text-center gap-1">
-      <span className={`w-4 h-4 rounded-full border border-gray-100 shadow-sm ${stockColorClass(product.stock_color)}`} />
-      <span className="text-caption font-semibold text-black/80 uppercase leading-none">
-        {product.stock_label || ""}
-      </span>
-    </div>
-  );
+  const cmpStr = (a: string, b: string) => a.localeCompare(b, undefined, { sensitivity: "base" });
 
   const sortedProducts = useMemo(() => {
     let result = [...products];
@@ -465,58 +472,39 @@ export default function ProductsPage({ categoryId: propCategoryId, storeCode: pr
     const selectedOffers = selectedFilters["offers"];
     if (selectedOffers?.length) result = result.filter(p => p?.offer && selectedOffers.some((o: string) => o === p.offer));
 
-    if (!sortBy || sortBy === "none") return result;
-    const lastDash = sortBy.lastIndexOf("-");
-    if (lastDash < 0) return result;
-    const field = sortBy.slice(0, lastDash);
-    const order = sortBy.slice(lastDash + 1);
-    const direction = order === "asc" ? 1 : -1;
-    const stockPriority = (p: any) => {
-      const c = (p.stock_color || "").toLowerCase();
-      if (c === "green") return 3;
-      if (c === "yellow" || c === "orange") return 2;
-      if (c === "red") return 1;
-      return 0;
-    };
-
-    switch (field) {
-      case "brand":
-        return result.sort((a, b) => (a.brand || "").localeCompare(b.brand || "") * direction);
-      case "name":
-        return result.sort((a, b) => (a.name || "").localeCompare(b.name || "") * direction);
-      case "image":
-        return result.sort((a, b) => ((b.image_url ? 1 : 0) - (a.image_url ? 1 : 0)) * direction);
-      case "stock":
-        return result.sort((a, b) => (stockPriority(b) - stockPriority(a)) * direction);
-      case "price":
-        return result.sort((a, b) => ((a.final_price ?? 0) - (b.final_price ?? 0)) * direction);
-      default:
-        return result;
+    switch (sortBy) {
+      case "price-asc":  return result.sort((a, b) => (a.final_price ?? 0) - (b.final_price ?? 0));
+      case "price-desc": return result.sort((a, b) => (b.final_price ?? 0) - (a.final_price ?? 0));
+      case "brand-asc":  return result.sort((a, b) => cmpStr(a.brand ?? "", b.brand ?? ""));
+      case "brand-desc": return result.sort((a, b) => cmpStr(b.brand ?? "", a.brand ?? ""));
+      case "name-asc":   return result.sort((a, b) => cmpStr(a.name ?? "", b.name ?? ""));
+      case "name-desc":  return result.sort((a, b) => cmpStr(b.name ?? "", a.name ?? ""));
+      case "stock-asc":  return result.sort((a, b) => stockTier(a) - stockTier(b));
+      case "stock-desc": return result.sort((a, b) => stockTier(b) - stockTier(a));
+      default:           return result;
     }
   }, [products, sortBy, isFavorite, favIds, selectedFilters]);
 
-  const HEADER_SORT_FIELDS: Record<string, string> = {
+  // Click a column header to cycle: none → asc → desc → none.
+  const cycleSort = (field: "brand" | "name" | "stock" | "price") => {
+    setSortBy(prev => {
+      if (prev === `${field}-asc`) return `${field}-desc`;
+      if (prev === `${field}-desc`) return "none";
+      return `${field}-asc`;
+    });
+    setCurrentPage(1);
+  };
+  const SortIcon = ({ field }: { field: string }) => {
+    if (sortBy === `${field}-asc`) return <ChevronUp size={14} strokeWidth={2.5} className="text-primary" />;
+    if (sortBy === `${field}-desc`) return <ChevronDown size={14} strokeWidth={2.5} className="text-primary" />;
+    return <ChevronsUpDown size={14} strokeWidth={2} className="text-black/30" />;
+  };
+  const SORTABLE_HEADERS: Record<string, "brand" | "name" | "stock" | "price" | null> = {
     "m.brand": "brand",
     "m.name": "name",
-    "m.image": "image",
+    "m.image": null,
     "m.stock": "stock",
     "m.price": "price",
-  };
-
-  const handleHeaderSort = (headerKey: string) => {
-    const field = HEADER_SORT_FIELDS[headerKey];
-    if (!field) return;
-    if (sortBy === `${field}-asc`) setSortBy(`${field}-desc`);
-    else if (sortBy === `${field}-desc`) setSortBy("none");
-    else setSortBy(`${field}-asc`);
-  };
-
-  const renderSortIcon = (headerKey: string) => {
-    const field = HEADER_SORT_FIELDS[headerKey];
-    if (!field) return null;
-    if (sortBy === `${field}-asc`) return <ChevronUp size={12} className="text-primary" />;
-    if (sortBy === `${field}-desc`) return <ChevronDown size={12} className="text-primary" />;
-    return <ChevronsUpDown size={12} className="opacity-30" />;
   };
 
   // Show the Action column only if at least one loaded product has is_action === "Yes".
@@ -526,101 +514,6 @@ export default function ProductsPage({ categoryId: propCategoryId, storeCode: pr
   const displayCount = totalCount;
   const totalPages = Math.ceil(displayCount / PAGE_SIZE);
 
-
-  /* ══════════════════════════════════════════════════════════════
-     MOBILE PRODUCT CARD
-  ══════════════════════════════════════════════════════════════ */
-  const renderProductCard = (product: any, index: number) => {
-    // All values come directly from the API — no hardcoded fallbacks.
-    const showActions = product.is_action === "Yes";
-    const showOldPrice = product.show_old_price !== false && product.original_price > product.final_price;
-    const isOutOfStock = product.is_in_stock === false || product.stock_label === "Not Available";
-
-    // Resolve relative path from the API-provided product_url.
-    let productPath = "#";
-    if (product.product_url) {
-      try { productPath = new URL(product.product_url).pathname; }
-      catch { productPath = product.product_url; }
-    }
-
-    return (
-      <div key={index} className="bg-white rounded-lg border border-gray-100 shadow-sm p-2.5 sm:p-3 flex flex-col gap-1.5 hover:border-primary/30 transition-colors">
-        {/* Top: content left + image right */}
-        <Link href={productPath} className="flex gap-2.5 group/card">
-          <div className="flex-1 min-w-0">
-            <p className="text-caption font-semibold text-black/50 uppercase tracking-wider">{product.brand || "—"}</p>
-            <p className="text-body-sm md:text-body font-semibold text-black leading-tight mt-0.5 truncate group-hover/card:text-primary transition-colors">{
-              (() => {
-                const name = product.name || "";
-                const brand = product.brand || "";
-                if (brand && name.toUpperCase().startsWith(brand.toUpperCase())) {
-                  return name.slice(brand.length).trim() || name;
-                }
-                return name || "—";
-              })()
-            }</p>
-            {product.item_code && (
-              <p className="text-caption text-black/40 font-medium mt-0.5 truncate">{product.item_code}</p>
-            )}
-            <div className="flex items-center gap-1.5 mt-1.5">
-              <span className={`w-2 h-2 rounded-full ${stockColorClass(product.stock_color)}`} />
-              <span className="text-caption font-semibold text-black/70 uppercase">{product.stock_label || ""}</span>
-            </div>
-          </div>
-          <div className="w-12 h-12 sm:w-14 sm:h-14 flex-shrink-0 rounded-lg border border-gray-100 overflow-hidden bg-gray-50 flex items-center justify-center group-hover/card:border-primary/20 transition-colors relative">
-            {product.image_url
-              ? <Image src={product.image_url} alt={product.name} fill sizes="56px" className="object-contain" />
-              : <span className="text-[8px] text-black/40 font-semibold uppercase">No Img</span>}
-          </div>
-        </Link>
-
-        {/* Bottom: price left + actions right */}
-        <div className="flex items-center justify-between border-t border-gray-100 pt-2 gap-2">
-          {/* Price */}
-          <div className="flex flex-col min-w-0">
-            {showOldPrice && (
-              <span className="text-caption font-semibold text-black/50">
-                <Price amount={product.original_price} className="font-semibold line-through" />
-              </span>
-            )}
-            <span className="text-body font-semibold text-black rubik-sans truncate">
-              <Price amount={product.final_price} />
-            </span>
-          </div>
-
-          {/* Actions — only when API says is_action === "Yes" */}
-          {showActions && (
-            <div className="flex items-center gap-1 flex-shrink-0">
-              {!isOutOfStock ? (
-                <button
-                  onClick={() => handleAddToCart(product)}
-                  disabled={addingToCart === product.sku}
-                  className={`h-9 px-2.5 rounded-lg flex items-center gap-1.5 text-label font-semibold uppercase shadow-sm active:scale-95 cursor-pointer flex-shrink-0 ${justAdded === product.sku ? "bg-green-500 text-white" : "bg-primary text-black"}`}
-                >
-                  {justAdded === product.sku
-                    ? <><Check size={14} strokeWidth={3} />{t("favorites.cartAdded")}</>
-                    : <ShoppingCart size={14} strokeWidth={2.5} className={addingToCart === product.sku ? "opacity-40" : ""} />}
-                </button>
-              ) : (
-                <button
-                  onClick={() => { setInquiryProduct(product); setIsInquiryModalOpen(true); }}
-                  className="h-9 px-2.5 bg-primary text-black rounded-lg flex items-center gap-1.5 text-label font-semibold uppercase shadow-sm active:scale-95 cursor-pointer flex-shrink-0"
-                >
-                  <Info size={14} strokeWidth={2.5} />
-                </button>
-              )}
-              <button
-                onClick={() => toggleFavorite(product)}
-                className={`w-9 h-9 rounded-lg flex items-center justify-center active:scale-95 cursor-pointer flex-shrink-0 ${favIds.includes(product.product_id) ? "bg-primary text-black" : "bg-gray-100 text-black/50"}`}
-              >
-                <Star size={16} fill={favIds.includes(product.product_id) ? "currentColor" : "none"} strokeWidth={2.5} />
-              </button>
-            </div>
-          )}
-        </div>
-      </div>
-    );
-  };
 
   /* ══════════════════════════════════════════════════════════════
      PAGINATION (shared)
@@ -664,10 +557,7 @@ export default function ProductsPage({ categoryId: propCategoryId, storeCode: pr
   // Sidebar always reflects exactly what the current category-products call returns.
   // Magento narrows filter options to match the active query + selected filters,
   // so the sidebar stays in sync with the result set automatically.
-  // Pass null (not []) when filters haven't loaded yet — passing [] makes
-  // SidebarFilter think "I have filters, just zero of them" and prematurely
-  // turn off its loading skeleton AND skip its own fetch fallback.
-  const sidebarFilters: any[] | null = apiFilters;
+  const sidebarFilters: any[] = apiFilters ?? [];
 
   /* ══════════════════════════════════════════════════════════════
      RENDER
@@ -676,12 +566,10 @@ export default function ProductsPage({ categoryId: propCategoryId, storeCode: pr
     <>
       <Suspense fallback={null}><SearchParamsReader onParams={handleParams} /></Suspense>
       <div className="flex">
-        {/* Desktop Sidebar — visible at xl+ only (1280px). On tablet sizes
-            (md / lg) the persistent sidebar takes up too much room, so users
-            access filters via the FILTER button in the desktop header which
-            opens the filter drawer overlay. */}
+        {/* Desktop Sidebar — visible at lg+ (1024px) so iPad-landscape users
+            don't have to open the mobile drawer just to use the filter. */}
         {!itemCodeTerm && (loading || products.length > 0) && (
-          <div className="hidden xl:flex flex-col flex-shrink-0 self-stretch bg-white border-r border-gray-200">
+          <div className="hidden lg:flex flex-col flex-shrink-0 self-stretch bg-white border-r border-gray-200">
             <SidebarFilter
               onFilterChange={handleFilterChange}
               selectedFilters={selectedFilters}
@@ -703,12 +591,7 @@ export default function ProductsPage({ categoryId: propCategoryId, storeCode: pr
                 )}
               </div>
               <div className="flex-1 overflow-y-auto">
-                {/* Hide SidebarFilter's own header (title + collapse chevron) — the
-                    drawer has its own header. Targets the FIRST direct child div of
-                    the aside (the header), not nested div>div:first-child which
-                    accidentally also matched the content wrapper and blanked the
-                    filter list. */}
-                <div className="[&>aside]:!w-full [&>aside]:!h-auto [&>aside]:!static [&>aside]:!border-0 [&>aside]:!overflow-visible [&>aside>div]:!static [&>aside>div]:!h-auto [&>aside>div:first-child]:!hidden">
+                <div className="[&>aside]:!w-full [&>aside]:!h-auto [&>aside]:!static [&>aside]:!border-0 [&>aside]:!overflow-visible [&>aside>div]:!static [&>aside>div]:!h-auto [&>aside>div>div:first-child]:!hidden">
                   <SidebarFilter onFilterChange={(f, l) => { handleFilterChange(f, l); setIsMobileFilterOpen(false); }} selectedFilters={selectedFilters} isCollapsed={false} setIsCollapsed={() => { }} initialFilters={sidebarFilters} />
                 </div>
               </div>
@@ -726,17 +609,17 @@ export default function ProductsPage({ categoryId: propCategoryId, storeCode: pr
 
         <div className="flex-1 flex flex-col w-full">
 
-          {/* ── MOBILE CONTROLS — visible only below md (sm + smaller phones) ── */}
-          <div className="md:hidden flex flex-col gap-2 mb-3">
+          {/* ── MOBILE CONTROLS ── */}
+          <div className="xl:hidden flex flex-col gap-2 mb-3">
             {storeName && (loading || products.length > 0) && (
               <div className="px-1 mb-1">
                 <h1 className="text-body-lg font-bold text-black uppercase tracking-tight">{storeName}</h1>
               </div>
             )}
             {/* Controls: 2 cols for SKU lookup (no filters), 3 cols otherwise.
-                At md+ the Filter button is hidden (sidebar replaces it), so the
+                At lg+ the Filter button is hidden (sidebar replaces it), so the
                 grid drops to 2 cols to fill the row evenly with Favorites + Sort. */}
-            <div className={`grid ${itemCodeTerm ? "grid-cols-2" : "grid-cols-3 md:grid-cols-2"} gap-2`}>
+            <div className={`grid ${itemCodeTerm ? "grid-cols-2" : "grid-cols-3 lg:grid-cols-2"} gap-2`}>
               <button onClick={() => router.push(lp("/favorites"))} className="h-[44px] bg-white border border-gray-200 rounded-xl flex items-center justify-center gap-2 text-label font-semibold uppercase tracking-wider shadow-sm active:scale-95 cursor-pointer">
                 <Star className="w-4 h-4 fill-black text-black" /> {t("m.favourite-products")}
               </button>
@@ -745,7 +628,7 @@ export default function ProductsPage({ categoryId: propCategoryId, storeCode: pr
                 {sortBy === "none" ? t("products.sortByDefault") : sortBy === "price-asc" ? t("products.sortByLowToHigh") : t("products.sortByHighToLow")}
               </button>
               {!itemCodeTerm && (
-                <button onClick={() => setIsMobileFilterOpen(true)} className="md:hidden h-[44px] bg-white border border-gray-200 rounded-xl flex items-center justify-center gap-2 text-label font-semibold uppercase tracking-wider shadow-sm active:scale-95 cursor-pointer">
+                <button onClick={() => setIsMobileFilterOpen(true)} className="lg:hidden h-[44px] bg-white border border-gray-200 rounded-xl flex items-center justify-center gap-2 text-label font-semibold uppercase tracking-wider shadow-sm active:scale-95 cursor-pointer">
                   <Filter className="w-4 h-4" /> Filter
                   {Object.keys(selectedFilters).length > 0 && <span className="w-5 h-5 bg-primary rounded-full text-caption font-semibold flex items-center justify-center">{Object.keys(selectedFilters).length}</span>}
                 </button>
@@ -787,7 +670,7 @@ export default function ProductsPage({ categoryId: propCategoryId, storeCode: pr
 
           {/* Mobile Sort Bottom Sheet */}
           {isMobileSortOpen && (
-            <div className="md:hidden fixed inset-0 z-[100]">
+            <div className="xl:hidden fixed inset-0 z-[100]">
               <div className="absolute inset-0 bg-black/40" onClick={() => setIsMobileSortOpen(false)} />
               <div className="absolute bottom-0 left-0 right-0 bg-white rounded-t-2xl shadow-2xl animate-in slide-in-from-bottom duration-300">
                 <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
@@ -815,8 +698,9 @@ export default function ProductsPage({ categoryId: propCategoryId, storeCode: pr
             </div>
           )}
 
-          {/* ── MOBILE CARD LIST — only visible below md ── */}
-          <div className="md:hidden flex-1 grid grid-cols-1 sm:grid-cols-2 gap-2.5 overflow-y-auto">
+          {/* ── MOBILE/TABLET CARD LIST ── */}
+          {/* lg:grid-cols-2 keeps cards comfortable next to the 300px sidebar at 1024-1279px. */}
+          <div className="xl:hidden flex-1 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-2 gap-2.5 overflow-y-auto">
             {loading ? <MobileCardShimmer /> : serverError ? (
               <div className="flex-1 flex items-center justify-center py-10 px-4 col-span-full">
                 <div className="bg-red-50 border border-red-100 text-red-700 px-5 py-4 rounded-xl flex flex-col items-center gap-3 w-full shadow-sm text-center">
@@ -832,15 +716,28 @@ export default function ProductsPage({ categoryId: propCategoryId, storeCode: pr
                   <span className="text-xs font-semibold uppercase tracking-wider">{t("products.noProducts")}</span>
                 </div>
               </div>
-            ) : sortedProducts.map((p, i) => renderProductCard(p, i))}
+            ) : sortedProducts.map((p, i) => (
+              <ProductCard
+                key={p.sku || p.product_id || i}
+                product={p}
+                variant="card"
+                priority={i < 4}
+                qty={productQtys[p.sku] || 1}
+                isAdding={addingToCart === p.sku}
+                isJustAdded={justAdded === p.sku}
+                isFavorite={favIds.includes(p.product_id)}
+                onAddToCart={handleAddToCart}
+                onToggleFavorite={toggleFavorite}
+                onInquiry={handleInquiry}
+                onQtyChange={handleQtyChange}
+              />
+            ))}
           </div>
-          <div className="md:hidden">{renderPagination(true)}</div>
+          <div className="xl:hidden">{renderPagination(true)}</div>
 
-          {/* ── DESKTOP CONTROLS + TABLE — visible at md+ (tablet portrait and up) ── */}
-          {/* Table min-width scales with breakpoint: 600px at md (so 800px tablet
-              portrait fits comfortably), 640px at lg, 700px at xl (full desktop).
-              Each tier still uses table-fixed so columns stay aligned. */}
-          <div className={`hidden md:flex flex-col bg-white shadow-sm border border-gray-200 overflow-hidden ${itemCodeTerm || (!loading && products.length === 0) ? "md:rounded-2xl" : "md:rounded-r-2xl border-l-0"}`}>
+          {/* ── DESKTOP CONTROLS + TABLE ── */}
+          {/* For SKU lookup or empty results the sidebar is gone → full rounding; otherwise right-rounded only */}
+          <div className={`hidden xl:flex flex-col bg-white shadow-sm border border-gray-200 overflow-hidden ${itemCodeTerm || (!loading && products.length === 0) ? "md:rounded-2xl" : "md:rounded-r-2xl border-l-0"}`}>
             {/* Desktop header */}
             {(loading || products.length > 0) && (
               <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center gap-4 min-h-[60px]">
@@ -884,56 +781,46 @@ export default function ProductsPage({ categoryId: propCategoryId, storeCode: pr
                     </button>
                   )}
                 </div>
-                <div className="flex items-center gap-2">
-                  <PortalDropdown
-                    value={sortBy}
-                    onChange={setSortBy}
-                    options={[{ label: t("products.sortByDefault"), value: "none" }, { label: t("products.sortByLowToHigh"), value: "price-asc" }, { label: t("products.sortByHighToLow"), value: "price-desc" }]}
-                    buttonClassName="bg-gray-50 px-4 py-2 rounded-xl border border-gray-200 text-xs font-medium text-black cursor-pointer shadow-sm hover:border-gray-300 whitespace-nowrap"
-                    minWidth={190}
-                  />
-                  {/* FILTER button — only on md/lg (sidebar is hidden there).
-                      At xl+ the persistent SidebarFilter is visible, so this
-                      drawer-opener button is redundant and gets hidden. */}
-                  {!itemCodeTerm && (
-                    <button
-                      onClick={() => setIsMobileFilterOpen(true)}
-                      className="xl:hidden bg-white px-4 py-2 rounded-xl border border-gray-200 text-xs font-bold uppercase tracking-wider text-black cursor-pointer shadow-sm hover:border-gray-300 flex items-center gap-2 whitespace-nowrap active:scale-95 transition-all"
-                    >
-                      <Filter className="w-4 h-4" />
-                      {t("m.filter-options") !== "m.filter-options" ? t("m.filter-options") : "Filter"}
-                      {Object.keys(selectedFilters).length > 0 && (
-                        <span className="w-5 h-5 bg-primary rounded-full text-caption font-semibold flex items-center justify-center">
-                          {Object.keys(selectedFilters).length}
-                        </span>
-                      )}
-                    </button>
-                  )}
-                </div>
+                <PortalDropdown
+                  value={sortBy}
+                  onChange={setSortBy}
+                  options={[{ label: t("products.sortByDefault"), value: "none" }, { label: t("products.sortByLowToHigh"), value: "price-asc" }, { label: t("products.sortByHighToLow"), value: "price-desc" }]}
+                  buttonClassName="bg-gray-50 px-4 py-2 rounded-xl border border-gray-200 text-xs font-medium text-black cursor-pointer shadow-sm hover:border-gray-300 whitespace-nowrap"
+                  minWidth={190}
+                />
               </div>
             )}
 
             {/* Desktop table area */}
             <div className="flex-1 overflow-x-auto">
-              <table className="w-full border-collapse table-fixed min-w-[600px] lg:min-w-[640px] xl:min-w-[700px]">
+              <table className="w-full border-collapse table-fixed min-w-[700px]">
                 <TableColGroup showAction={showActionColumn} />
                 {(loading || products.length > 0) && (
                   <thead className="sticky top-0 z-20">
                     <tr className="bg-gray-50 border-b-2 border-gray-200">
-                      {BASE_HEADER_KEYS.map(key => (
-                        <th key={key} className="px-2 md:px-4 py-2 md:py-3 text-label font-semibold text-black uppercase tracking-widest text-center whitespace-nowrap">
-                          <button
-                            type="button"
-                            onClick={() => handleHeaderSort(key)}
-                            className="inline-flex items-center justify-center gap-1.5 mx-auto hover:text-primary transition-colors cursor-pointer select-none"
-                          >
-                            <span>{t(key)}</span>
-                            {renderSortIcon(key)}
-                          </button>
-                        </th>
-                      ))}
+                      {BASE_HEADER_KEYS.map(key => {
+                        const field = SORTABLE_HEADERS[key];
+                        if (!field) {
+                          return (
+                            <th key={key} className="px-2 md:px-4 py-2 md:py-3 text-label font-semibold text-black uppercase tracking-widest text-center">{t(key)}</th>
+                          );
+                        }
+                        return (
+                          <th key={key} className="px-2 md:px-4 py-2 md:py-3 text-label font-semibold text-black uppercase tracking-widest text-center">
+                            <button
+                              type="button"
+                              onClick={() => cycleSort(field)}
+                              className="inline-flex items-center gap-1 select-none hover:text-primary transition-colors cursor-pointer uppercase tracking-widest"
+                              aria-label={`Sort by ${t(key)}`}
+                            >
+                              <span>{t(key)}</span>
+                              <SortIcon field={field} />
+                            </button>
+                          </th>
+                        );
+                      })}
                       {showActionColumn && (
-                        <th className="px-2 md:px-4 py-2 md:py-3 text-label font-semibold text-black uppercase tracking-widest text-center whitespace-nowrap">{t('m.action')}</th>
+                        <th className="px-2 md:px-4 py-2 md:py-3 text-label font-semibold text-black uppercase tracking-widest text-center">{t('m.action')}</th>
                       )}
                     </tr>
                   </thead>
@@ -958,117 +845,24 @@ export default function ProductsPage({ categoryId: propCategoryId, storeCode: pr
                         </div>
                       </td>
                     </tr>
-                  ) : sortedProducts.map((product, index) => {
-                    // All display values are taken directly from the API response.
-                    const showActions = product.is_action === "Yes";
-                    const showOldPrice = product.show_old_price !== false && product.original_price > product.final_price;
-                    const isOutOfStock = product.is_in_stock === false || product.stock_label === "Not Available";
-
-                    let productPath = "#";
-                    if (product.product_url) {
-                      try { productPath = new URL(product.product_url).pathname; }
-                      catch { productPath = product.product_url; }
-                    }
-
-                    return (
-                      <tr key={index} className={`hover:bg-primary/5 transition-colors group ${ROW_HEIGHT}`}>
-                        {/* Brand — direct from API */}
-                        <td className="px-2 md:px-4 text-body-sm font-normal text-black/80 text-center">
-                          {product.brand || "—"}
-                        </td>
-
-                        {/* Name + item_code — direct from API */}
-                        <td className="px-2 md:px-4 text-center">
-                          {/* <Link href={productPath} className="hover:text-primary transition-colors"> */}
-                          <span className="text-body-sm font-normal text-black block leading-tight">{
-                            (() => {
-                              const name = product.name || "";
-                              const brand = product.brand || "";
-                              if (brand && name.toUpperCase().startsWith(brand.toUpperCase())) {
-                                return name.slice(brand.length).trim() || name;
-                              }
-                              return name || "—";
-                            })()
-                          }</span>
-                          {/* {product.item_code && (
-                              <span className="text-caption text-black/40 font-medium block mt-0.5">{product.item_code}</span>
-                            )} */}
-                          {/* </Link> */}
-                        </td>
-
-                        {/* Image — direct from API */}
-                        <td className="px-2 md:px-4 text-center">
-                          <div className="w-10 h-10 mx-auto">
-                            {product.image_url ? (
-                              <div className="relative w-10 h-10 group/img cursor-pointer" onClick={() => { setSelectedImage(product.image_url); setPreviewProduct(product); setIsImageModalOpen(true); }}>
-                                <Image src={product.image_url} alt={product.name} fill sizes="40px" className="object-contain rounded border border-gray-100 shadow-sm" />
-                                <div className="absolute inset-0 bg-black/50 opacity-0 group-hover/img:opacity-100 transition-all duration-300 flex items-center justify-center rounded">
-                                  <div className="w-5 h-5 bg-primary rounded-full flex items-center justify-center text-black font-semibold text-caption shadow-lg transform scale-50 group-hover/img:scale-100 transition-transform duration-300">+</div>
-                                </div>
-                              </div>
-                            ) : <span className="text-caption text-black/40 font-semibold uppercase leading-[40px]">No Image</span>}
-                          </div>
-                        </td>
-
-                        {/* Stock — stock_label + stock_color direct from API */}
-                        <td className="px-2 md:px-4 text-center">{getStockBadge(product)}</td>
-
-                        {/* Price — final_price + show_old_price + original_price direct from API */}
-                        <td className="px-2 md:px-4 text-center whitespace-nowrap">
-                          <div className="flex flex-col items-center justify-center">
-                            {showOldPrice && (
-                              <span className="text-caption font-semibold text-black/50 mb-0.5">
-                                <Price amount={product.original_price} className="font-semibold line-through" />
-                              </span>
-                            )}
-                            <span className="text-body-sm font-semibold text-black tracking-tight rubik-sans">
-                              <Price amount={product.final_price} />
-                            </span>
-                          </div>
-                        </td>
-
-                        {/* Action TD — only in DOM when the column is visible */}
-                        {showActionColumn && (
-                          <td className="px-1 text-center align-middle">
-                            {showActions && (
-                              <div className="inline-grid grid-cols-3 gap-1 items-center">
-                                {!isOutOfStock ? (
-                                  <input
-                                    type="text"
-                                    value={productQtys[product.sku] || 1}
-                                    onChange={(e) => {
-                                      const val = e.target.value.replace(/\D/g, "");
-                                      setProductQtys({ ...productQtys, [product.sku]: parseInt(val) || 0 });
-                                    }}
-                                    className="w-8 h-8 border-2 border-gray-100 rounded-md flex items-center justify-center text-label font-semibold text-black bg-white shadow-sm text-center outline-none focus:border-primary transition-colors"
-                                    onFocus={(e) => { const t = e.target; setTimeout(() => t.select(), 0); }}
-                                    onClick={(e) => (e.target as HTMLInputElement).select()}
-                                    onKeyDown={(e) => { if (e.key === "Enter") handleAddToCart(product); }}
-                                  />
-                                ) : <div className="w-8 h-8" />}
-
-                                {!isOutOfStock ? (
-                                  <button onClick={() => handleAddToCart(product)} disabled={addingToCart === product.sku} className={`w-8 h-8 rounded-md flex items-center justify-center shadow-md hover:-translate-y-0.5 transition-all cursor-pointer ${justAdded === product.sku ? "bg-green-500 text-white" : "bg-primary text-black"}`}>
-                                    {justAdded === product.sku
-                                      ? <Check size={15} strokeWidth={3} />
-                                      : <ShoppingCart size={15} strokeWidth={2.5} className={addingToCart === product.sku ? "opacity-40" : ""} />}
-                                  </button>
-                                ) : (
-                                  <button onClick={() => { setInquiryProduct(product); setIsInquiryModalOpen(true); }} className="w-8 h-8 bg-primary text-black rounded-md flex items-center justify-center shadow-md active:scale-95 cursor-pointer">
-                                    <Info size={15} strokeWidth={2.5} />
-                                  </button>
-                                )}
-
-                                <button onClick={() => toggleFavorite(product)} className={`w-8 h-8 rounded-md flex items-center justify-center shadow-md active:scale-95 cursor-pointer ${favIds.includes(product.product_id) ? "bg-primary text-black" : "bg-white text-black/50 border border-gray-100 hover:border-primary"}`}>
-                                  <Star size={15} fill={favIds.includes(product.product_id) ? "currentColor" : "none"} strokeWidth={2.5} />
-                                </button>
-                              </div>
-                            )}
-                          </td>
-                        )}
-                      </tr>
-                    );
-                  })}
+                  ) : sortedProducts.map((p, i) => (
+                    <ProductCard
+                      key={p.sku || p.product_id || i}
+                      product={p}
+                      variant="row"
+                      priority={i < 4}
+                      qty={productQtys[p.sku] || 1}
+                      isAdding={addingToCart === p.sku}
+                      isJustAdded={justAdded === p.sku}
+                      isFavorite={favIds.includes(p.product_id)}
+                      showActionColumn={showActionColumn}
+                      onAddToCart={handleAddToCart}
+                      onToggleFavorite={toggleFavorite}
+                      onInquiry={handleInquiry}
+                      onQtyChange={handleQtyChange}
+                      onImagePreview={handleImagePreview}
+                    />
+                  ))}
                 </tbody>
               </table>
             </div>

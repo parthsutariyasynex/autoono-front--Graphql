@@ -1,54 +1,89 @@
 import { NextResponse } from "next/server";
-import { getBaseUrl } from "@/lib/api/magento-url";
+import { getRequestToken } from "@/lib/api/auth-helper";
+import {
+  KLEVER_CHECKOUT_SUCCESS_QUERY,
+  KLEVER_MY_ORDERS_QUERY,
+} from "@/src/graphql/queries";
+import type {
+  KleverCheckoutSuccessData,
+  KleverMyOrdersData,
+} from "@/src/graphql/types";
+import { graphqlFetch, isGraphQLRequestError } from "@/src/lib/graphqlFetch";
 
-// BASE_URL is now obtained per-request via getBaseUrl(request)
+async function resolveOrderId(
+  raw: string,
+  token: string,
+): Promise<number | null> {
+  // Fast path: already numeric (e.g. "162")
+  const direct = Number(raw);
+  if (Number.isInteger(direct) && direct > 0) return direct;
+
+  // Slow path: increment_id like "AUT0000162" → look up via customer orders
+  try {
+    const data = await graphqlFetch<KleverMyOrdersData>({
+      query: KLEVER_MY_ORDERS_QUERY,
+      variables: { orderNumber: raw, pageSize: 1, currentPage: 1 },
+      token,
+      cache: "no-store",
+    });
+    const match = data.kleverMyOrders?.orders?.find(
+      (o) => o.increment_id === raw,
+    );
+    if (match) return Number(match.order_id);
+  } catch {
+    // fall through
+  }
+
+  // Last fallback: extract trailing digits ("AUT0000162" → 162)
+  const m = raw.match(/(\d+)$/);
+  if (m) {
+    const n = Number(m[1]);
+    if (Number.isInteger(n) && n > 0) return n;
+  }
+  return null;
+}
 
 export async function GET(
-    req: Request,
-    { params }: { params: Promise<{ orderId: string }> }
+  request: Request,
+  { params }: { params: Promise<{ orderId: string }> },
 ) {
-    try {
-        const BASE_URL = getBaseUrl(req);
-        const { orderId } = await params;
-        const authHeader = req.headers.get("authorization");
-
-        if (!authHeader || !authHeader.startsWith("Bearer ") || authHeader.includes("null") || authHeader.includes("undefined")) {
-            console.error("Checkout Success Proxy: Missing or invalid token header:", authHeader);
-            return NextResponse.json({ message: "Unauthorized: Invalid token format" }, { status: 401 });
-        }
-
-        if (!orderId) {
-            return NextResponse.json({ message: "Order ID is required" }, { status: 400 });
-        }
-
-        const response = await fetch(`${BASE_URL}/checkout/success/${orderId}`, {
-            method: "GET",
-            headers: {
-                Authorization: authHeader as string,
-                "Content-Type": "application/json",
-                platform: "web",
-                accept: "application/json",
-            },
-            cache: "no-store",
-        });
-
-        const responseText = await response.text();
-
-        if (!response.ok) {
-            console.error("Checkout Success API error:", response.status, responseText);
-            return NextResponse.json({ error: "Failed to get success data", details: responseText }, { status: response.status });
-        }
-
-        try {
-            const data = JSON.parse(responseText);
-            console.log("DEBUG_SUCCESS_DATA:", JSON.stringify(data));
-            return NextResponse.json(data);
-        } catch (e) {
-            console.error("Checkout Success JSON Parse Error. Raw:", responseText);
-            return NextResponse.json({ error: "Invalid JSON from Magento", raw: responseText }, { status: 500 });
-        }
-    } catch (error: any) {
-        console.error("Proxy GET Checkout Success Error:", error);
-        return NextResponse.json({ message: "Internal server error", details: error.message }, { status: 500 });
+  try {
+    const token = await getRequestToken(request);
+    if (!token) {
+      return NextResponse.json({ message: "Unauthorized: Invalid token format" }, { status: 401 });
     }
+
+    const { orderId } = await params;
+    if (!orderId) {
+      return NextResponse.json({ message: "Order ID is required" }, { status: 400 });
+    }
+
+    const numericId = await resolveOrderId(orderId, token);
+    if (!numericId) {
+      return NextResponse.json(
+        { message: `Order not found for "${orderId}"` },
+        { status: 404 },
+      );
+    }
+
+    const data = await graphqlFetch<KleverCheckoutSuccessData>({
+      query: KLEVER_CHECKOUT_SUCCESS_QUERY,
+      variables: { orderId: numericId },
+      token,
+      cache: "no-store",
+    });
+
+    if (!data.kleverCheckoutSuccess) {
+      return NextResponse.json({ message: "Order not found" }, { status: 404 });
+    }
+    return NextResponse.json(data.kleverCheckoutSuccess, { status: 200 });
+  } catch (error) {
+    if (isGraphQLRequestError(error)) {
+      return NextResponse.json(
+        { message: error.message, errors: error.errors },
+        { status: error.status >= 400 ? error.status : 500 },
+      );
+    }
+    return NextResponse.json({ message: "Internal server error" }, { status: 500 });
+  }
 }

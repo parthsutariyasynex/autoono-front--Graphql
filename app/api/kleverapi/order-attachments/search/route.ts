@@ -1,66 +1,60 @@
-import { NextResponse } from 'next/server';
-import { getBaseUrl } from '@/lib/api/magento-url';
-
-// BASE_URL is now obtained per-request via getBaseUrl(request)
+import { NextResponse } from "next/server";
+import { getRequestToken } from "@/lib/api/auth-helper";
+import { KLEVER_ORDER_UPLOAD_SEARCH_QUERY } from "@/src/graphql/queries";
+import type { KleverOrderUploadSearchData } from "@/src/graphql/types";
+import { graphqlFetch, isGraphQLRequestError } from "@/src/lib/graphqlFetch";
 
 export async function GET(request: Request) {
-    try {
-        const BASE_URL = getBaseUrl(request);
-        const { searchParams } = new URL(request.url);
-        const authHeader = request.headers.get('Authorization');
-
-        if (!authHeader || !authHeader.startsWith('Bearer ')) {
-            return NextResponse.json(
-                { message: 'Unauthorized' },
-                { status: 401 }
-            );
-        }
-
-        // Forward matching query parameters
-        const magentoParams = new URLSearchParams();
-        const orderId = searchParams.get('order_id');
-        const documentType = searchParams.get('document_type');
-        const invoiceDue = searchParams.get('invoice_due');
-        const pageSize = searchParams.get('pageSize') || '10';
-        const currentPage = searchParams.get('currentPage') || '1';
-
-        if (orderId) magentoParams.append('orderIncrementId', orderId);
-        if (documentType && documentType !== 'All') magentoParams.append('documents', documentType);
-        if (invoiceDue && invoiceDue !== 'All') magentoParams.append('invoiceDue', invoiceDue);
-        magentoParams.append('pageSize', pageSize);
-        magentoParams.append('currentPage', currentPage);
-
-        const magentoUrl = `${BASE_URL}/orderupload/search${magentoParams.toString() ? `?${magentoParams.toString()}` : ''}`;
-        console.log('[orderupload-search] Request URL:', magentoUrl);
-
-        const response = await fetch(magentoUrl, {
-            method: 'GET',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': authHeader,
-                'platform': 'web',
-            },
-            cache: 'no-store',
-        });
-
-        console.log('[orderupload-search] Response status:', response.status);
-        const data = await response.json();
-        console.log('[orderupload-search] Response data:', JSON.stringify(data));
-
-        if (!response.ok) {
-            return NextResponse.json(
-                { message: data.message || `Magento returned ${response.status}`, attachments: [] },
-                { status: response.status }
-            );
-        }
-
-        return NextResponse.json(data);
-
-    } catch (error: any) {
-        console.error('[orderupload-search] Catch error:', error);
-        return NextResponse.json(
-            { message: error.message || 'Server error searching attachments', attachments: [] },
-            { status: 500 }
-        );
+  try {
+    const token = await getRequestToken(request);
+    if (!token) {
+      return NextResponse.json(
+        { message: "Unauthorized", attachments: [] },
+        { status: 401 },
+      );
     }
+
+    const { searchParams } = new URL(request.url);
+    const orderId = searchParams.get("order_id");
+    const documentType = searchParams.get("document_type");
+    const invoiceDue = searchParams.get("invoice_due");
+    const pageSize = Number(searchParams.get("pageSize") || "10");
+    const currentPage = Number(searchParams.get("currentPage") || "1");
+
+    const data = await graphqlFetch<KleverOrderUploadSearchData>({
+      query: KLEVER_ORDER_UPLOAD_SEARCH_QUERY,
+      variables: { pageSize, currentPage },
+      token,
+      cache: "no-store",
+    });
+
+    const result = data.kleverOrderUploadSearch;
+    if (!result) {
+      return NextResponse.json({ items: [], total_count: 0 }, { status: 200 });
+    }
+
+    let items = result.items;
+    if (orderId) {
+      items = items.filter((i) => String(i.order_id) === String(orderId));
+    }
+    if (documentType && documentType !== "All") {
+      items = items.filter((i) => i.upload_for === documentType);
+    }
+    if (invoiceDue && invoiceDue !== "All") {
+      items = items.filter((i) => i.payment_status === invoiceDue);
+    }
+
+    return NextResponse.json({ ...result, items }, { status: 200 });
+  } catch (error) {
+    if (isGraphQLRequestError(error)) {
+      return NextResponse.json(
+        { message: error.message, errors: error.errors, attachments: [] },
+        { status: error.status >= 400 ? error.status : 500 },
+      );
+    }
+    return NextResponse.json(
+      { message: "Server error searching attachments", attachments: [] },
+      { status: 500 },
+    );
+  }
 }

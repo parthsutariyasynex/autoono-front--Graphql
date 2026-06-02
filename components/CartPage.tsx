@@ -22,9 +22,7 @@ const CartPage: React.FC = () => {
     const lp = useLocalePath();
     const { openGiftModal, availableGifts, hasGifts, isAllGiftsSelected } = useGift();
     const { cart, isLoading, error, removeFromCart, updateCartItem, clearCart, refetchCart } = useCart();
-    // const { startMultiShipping } = useCheckout({ skipInitialFetch: true });
     const [pendingQtys, setPendingQtys] = React.useState<Record<number, number>>({});
-    // const [isStartingMultiShipping, setIsStartingMultiShipping] = React.useState(false);
     const [isClearingCart, setIsClearingCart] = React.useState(false);
 
     // Always fetch fresh cart data when the cart page mounts
@@ -93,22 +91,6 @@ const CartPage: React.FC = () => {
             setIsClearingCart(false);
         }
     };
-
-    // const handleStartMultiShipping = async () => {
-    //     if (!cart?.items || cart.items.length === 0) return;
-
-    //     try {
-    //         setIsStartingMultiShipping(true);
-    //         await startMultiShipping();
-    //     } catch (err: any) {
-    //         // Magento may reject with "at least two units" — proceed anyway,
-    //         // the assign step will handle the actual session setup
-    //         console.warn("Multi-shipping start warning (proceeding):", err.message);
-    //     }
-    //     toast.success(t("cart.startingMultiLocation"));
-    //     router.push(lp("/multi-location-delivery"));
-    //     setIsStartingMultiShipping(false);
-    // };
 
     // Show skeleton while loading OR before the first fetch resolves (cart === null).
     // Without the `cart === null` guard, the initial mount falls through to the
@@ -245,21 +227,6 @@ const CartPage: React.FC = () => {
                                         isClearingCart={isClearingCart}
                                     />
 
-                                    {/* Multiple Address Section Bar */}
-                                    {/* <div className="border border-primary bg-white rounded-xl flex flex-col md:flex-row items-stretch justify-between overflow-hidden shadow-xl shadow-primary/5">
-                                        <div className="px-6 py-4 flex items-center bg-gray-50/50 flex-1">
-                                            <h4 className="text-caption font-bold text-black uppercase tracking-wider">{t("cart.multiAddressShipping")}</h4>
-                                        </div>
-                                        <button
-                                            onClick={handleStartMultiShipping}
-                                            disabled={isStartingMultiShipping}
-                                            className="bg-primary font-bold py-4 px-10 uppercase tracking-widest text-caption hover:bg-black hover:text-white transition-all duration-300 disabled:opacity-70 disabled:cursor-not-allowed w-full md:w-auto shadow-none"
-                                        >
-                                            <span className={isStartingMultiShipping ? "animate-pulse opacity-60" : ""}>
-                                                {t("cart.shipToMultiple")}
-                                            </span>
-                                        </button>
-                                    </div> */}
                                 </div>
                             </div>
                         </div>
@@ -274,6 +241,7 @@ const CartPage: React.FC = () => {
                             grandTotal={cart.grand_total}
                             currencyCode={cart.currency_code}
                             discountAmount={cart.discount_amount}
+                            appliedCoupons={cart.applied_coupons}
                         />
                     </div>
                 </div>

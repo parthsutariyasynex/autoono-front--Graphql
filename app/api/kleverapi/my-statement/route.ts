@@ -1,94 +1,54 @@
-import { NextResponse } from 'next/server';
-import { getBaseUrl } from '@/lib/api/magento-url';
-
-// BASE_URL is now obtained per-request via getBaseUrl(request)
+import { NextResponse } from "next/server";
+import { getRequestToken } from "@/lib/api/auth-helper";
+import { KLEVER_MY_STATEMENT_QUERY } from "@/src/graphql/queries";
+import type { KleverMyStatementData } from "@/src/graphql/types";
+import { graphqlFetch, isGraphQLRequestError } from "@/src/lib/graphqlFetch";
 
 export async function GET(request: Request) {
-    try {
-        const BASE_URL = getBaseUrl(request);
-        const { searchParams } = new URL(request.url);
-        const fromDate = searchParams.get('fromDate') || '2025-01-01';
-        const toDate = searchParams.get('toDate') || '2026-03-16';
-        const type = searchParams.get('type') || 'account_statement';
-
-        const authHeader = request.headers.get('Authorization');
-        if (!authHeader || !authHeader.startsWith('Bearer ')) {
-            return NextResponse.json(
-                { message: 'Unauthorized' },
-                { status: 401 }
-            );
-        }
-
-        const magentoUrl = `${BASE_URL}/my-statement?fromDate=${encodeURIComponent(fromDate)}&toDate=${encodeURIComponent(toDate)}&type=${encodeURIComponent(type)}`;
-
-        console.log(`[my-statement] Initial request to: ${magentoUrl}`);
-
-        const response = await fetch(magentoUrl, {
-            method: 'GET',
-            headers: {
-                'Authorization': authHeader,
-                'platform': 'web',
-                'Accept': 'application/pdf, application/json',
-            },
-            cache: 'no-store',
-        });
-
-        const contentType = response.headers.get('content-type');
-
-        if (!response.ok) {
-            const responseText = await response.text();
-            let errorData: any = { message: "Backend error" };
-            try {
-                errorData = responseText ? JSON.parse(responseText) : errorData;
-            } catch {
-                // non-JSON body — wrap it
-                errorData = { message: responseText || "Backend error" };
-            }
-            console.error(`<<< My Statement GET ERROR: ${response.status}`, errorData);
-            return NextResponse.json(errorData, { status: response.status });
-        }
-
-        // Check if the response is JSON (potentially containing pdf_url)
-        if (contentType && contentType.includes('application/json')) {
-            const data = await response.json();
-            if (data.pdf_url) {
-                console.log(`>>> Found PDF URL: ${data.pdf_url}`);
-                const pdfResponse = await fetch(data.pdf_url, {
-                    method: 'GET',
-                    headers: { 'Authorization': authHeader },
-                });
-                if (pdfResponse.ok) {
-                    const buffer = await pdfResponse.arrayBuffer();
-                    return new Response(buffer, {
-                        headers: {
-                            'Content-Type': 'application/pdf',
-                            'Content-Disposition': `attachment; filename="statement_${fromDate}_${toDate}.pdf"`,
-                        },
-                    });
-                }
-                return NextResponse.json(data);
-            }
-            return NextResponse.json(data);
-        }
-
-        // Check if the response is already a PDF
-        if (contentType && contentType.includes('application/pdf')) {
-            const buffer = await response.arrayBuffer();
-            return new Response(buffer, {
-                headers: {
-                    'Content-Type': 'application/pdf',
-                    'Content-Disposition': `attachment; filename="statement_${fromDate}_${toDate}.pdf"`,
-                },
-            });
-        }
-
-        // Default: return as text
-        const fallbackData = await response.text();
-        return new Response(fallbackData, {
-            headers: { 'Content-Type': contentType || 'text/plain' },
-        });
-    } catch (error: any) {
-        console.error('[my-statement] Server error:', error);
-        return NextResponse.json({ message: error.message || 'Server error' }, { status: 500 });
+  try {
+    const token = await getRequestToken(request);
+    if (!token) {
+      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
+
+    const { searchParams } = new URL(request.url);
+    const fromDate = searchParams.get("fromDate") || "2025-01-01";
+    const toDate = searchParams.get("toDate") || "2026-03-16";
+    const statementType =
+      searchParams.get("statementType") || searchParams.get("type") || "account_statement";
+
+    const data = await graphqlFetch<KleverMyStatementData>({
+      query: KLEVER_MY_STATEMENT_QUERY,
+      variables: { fromDate, toDate, statementType },
+      token,
+      cache: "no-store",
+    });
+
+    const pdfUrl = data.kleverMyStatement?.pdf_url;
+    if (!pdfUrl) {
+      return NextResponse.json(data.kleverMyStatement ?? {}, { status: 200 });
+    }
+
+    const pdfResponse = await fetch(pdfUrl, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (pdfResponse.ok) {
+      const buffer = await pdfResponse.arrayBuffer();
+      return new Response(buffer, {
+        headers: {
+          "Content-Type": "application/pdf",
+          "Content-Disposition": `attachment; filename="statement_${fromDate}_${toDate}.pdf"`,
+        },
+      });
+    }
+    return NextResponse.json({ pdf_url: pdfUrl }, { status: 200 });
+  } catch (error) {
+    if (isGraphQLRequestError(error)) {
+      return NextResponse.json(
+        { message: error.message, errors: error.errors },
+        { status: error.status >= 400 ? error.status : 500 },
+      );
+    }
+    return NextResponse.json({ message: "Server error" }, { status: 500 });
+  }
 }

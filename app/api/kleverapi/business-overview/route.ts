@@ -1,95 +1,74 @@
-// import { NextRequest, NextResponse } from "next/server";
-// import { getBaseUrl } from "@/lib/api/magento-url";
-// import { getServerSession } from "next-auth";
-// import { authOptions } from "@/lib/auth/auth-options";
+import { NextRequest, NextResponse } from "next/server";
+import { getRequestToken } from "@/lib/api/auth-helper";
+import { getLocaleFromRequest } from "@/lib/api/magento-url";
+import { KLEVER_BUSINESS_OVERVIEW_QUERY } from "@/src/graphql/queries";
+import { KLEVER_UPDATE_BUSINESS_OVERVIEW_MUTATION } from "@/src/graphql/mutations";
+import type {
+  KleverBusinessOverviewData,
+  KleverUpdateBusinessOverviewData,
+} from "@/src/graphql/types";
+import { graphqlFetch, isGraphQLRequestError } from "@/src/lib/graphqlFetch";
 
-// // Shared auth helper
-// async function getAuthToken(request: NextRequest): Promise<string | null> {
-//     let token: string | null = null;
+export async function GET(request: NextRequest) {
+  try {
+    const token = await getRequestToken(request);
+    if (!token) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
 
-//     const authHeader = request.headers.get("Authorization");
-//     if (authHeader && authHeader.startsWith("Bearer ")) {
-//         token = authHeader.substring(7).replace(/['"]/g, "").trim();
-//     }
+    const data = await graphqlFetch<KleverBusinessOverviewData>({
+      query: KLEVER_BUSINESS_OVERVIEW_QUERY,
+      token,
+      store: request.headers.get("x-store-code") || getLocaleFromRequest(request),
+      cache: "no-store",
+    });
 
-//     if (!token || token === "null") {
-//         const cookie = request.cookies.get("auth-token")?.value;
-//         if (cookie) token = cookie.replace(/['"]/g, "").trim();
-//     }
+    return NextResponse.json(data.kleverBusinessOverview ?? {}, { status: 200 });
+  } catch (error) {
+    if (isGraphQLRequestError(error)) {
+      return NextResponse.json(
+        { error: error.message, errors: error.errors },
+        { status: error.status >= 400 ? error.status : 500 },
+      );
+    }
+    return NextResponse.json({ error: "Failed to fetch business overview" }, { status: 500 });
+  }
+}
 
-//     if (!token || token === "null") {
-//         const session: any = await getServerSession(authOptions);
-//         token = session?.accessToken || null;
-//     }
+export async function PUT(request: NextRequest) {
+  try {
+    const token = await getRequestToken(request);
+    if (!token) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
 
-//     if (!token || token === "null" || token === "undefined") return null;
-//     return token;
-// }
+    const body = await request.json();
+    const variables = {
+      totalEmployees: body.total_employees ?? body.totalEmployees ?? null,
+      trucks: body.trucks ?? null,
+      annualRevenue: body.annual_revenue ?? body.annualRevenue ?? null,
+      businessModel: body.business_model ?? body.businessModel ?? null,
+      productsOffered: body.products_offered ?? body.productsOffered ?? null,
+    };
 
-// // GET — Fetch business overview
-// // export async function GET(request: NextRequest) {
-// //     try {
-// //         const baseUrl = getBaseUrl(request);
-// //         const token = await getAuthToken(request);
-// //         if (!token) {
-// //             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-// //         }
+    const data = await graphqlFetch<KleverUpdateBusinessOverviewData>({
+      query: KLEVER_UPDATE_BUSINESS_OVERVIEW_MUTATION,
+      variables,
+      token,
+      store: request.headers.get("x-store-code") || getLocaleFromRequest(request),
+      cache: "no-store",
+    });
 
-// //         const res = await fetch(`${baseUrl}/business-overview`, {
-// //             headers: {
-// //                 Authorization: `Bearer ${token}`,
-// //                 "Content-Type": "application/json",
-// //             },
-// //             cache: "no-store",
-// //         });
+    return NextResponse.json(data.kleverUpdateBusinessOverview, { status: 200 });
+  } catch (error) {
+    if (isGraphQLRequestError(error)) {
+      return NextResponse.json(
+        { error: error.message, errors: error.errors },
+        { status: error.status >= 400 ? error.status : 500 },
+      );
+    }
+    return NextResponse.json({ error: "Failed to update business overview" }, { status: 500 });
+  }
+}
 
-// //         if (!res.ok) {
-// //             const errBody = await res.text();
-// //             console.error("[business-overview GET] Magento error:", res.status, errBody);
-// //             return NextResponse.json({ error: "Magento API error", details: errBody }, { status: res.status });
-// //         }
-
-// //         const data = await res.json();
-// //         return NextResponse.json(data);
-// //     } catch (error: any) {
-// //         console.error("[business-overview GET] Error:", error.message);
-// //         return NextResponse.json({ error: error.message }, { status: 500 });
-// //     }
-// // }
-
-// // PUT — Update business overview
-// // export async function PUT(request: NextRequest) {
-// //     try {
-// //         const baseUrl = getBaseUrl(request);
-// //         const token = await getAuthToken(request);
-// //         if (!token) {
-// //             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-// //         }
-
-// //         const body = await request.json();
-
-// //         console.log("[business-overview PUT] Payload:", JSON.stringify(body).substring(0, 500));
-
-// //         const res = await fetch(`${baseUrl}/business-overview`, {
-// //             method: "PUT",
-// //             headers: {
-// //                 Authorization: `Bearer ${token}`,
-// //                 "Content-Type": "application/json",
-// //             },
-// //             body: JSON.stringify(body),
-// //             cache: "no-store",
-// //         });
-
-// //         if (!res.ok) {
-// //             const errBody = await res.text();
-// //             console.error("[business-overview PUT] Magento error:", res.status, errBody);
-// //             return NextResponse.json({ error: "Magento API error", details: errBody }, { status: res.status });
-// //         }
-
-// //         const data = await res.json();
-// //         return NextResponse.json(data);
-// //     } catch (error: any) {
-// //         console.error("[business-overview PUT] Error:", error.message);
-// //         return NextResponse.json({ error: error.message }, { status: 500 });
-// //     }
-// // }
+export const POST = PUT;

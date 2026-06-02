@@ -1,40 +1,34 @@
-import { NextResponse } from 'next/server';
-import { getBaseUrl } from '@/lib/api/magento-url';
+import { NextResponse } from "next/server";
+import { REQUEST_PASSWORD_RESET_EMAIL_MUTATION } from "@/src/graphql/mutations";
+import type { RequestPasswordResetEmailData } from "@/src/graphql/types";
+import { graphqlFetch, isGraphQLRequestError } from "@/src/lib/graphqlFetch";
 
 export async function POST(request: Request) {
-    try {
-        const baseUrl = getBaseUrl(request);
-        const body = await request.json();
+  try {
+    const body = await request.json();
+    const email = body.email;
 
-        // The Magento endpoint is 'forget-password' not 'forgot-password'
-        const magentoUrl = `${baseUrl}/forget-password`;
-
-        console.log(`>>> PROXY ATTEMPT: ${magentoUrl}`);
-
-        const response = await fetch(magentoUrl, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'platform': 'web'
-            },
-            body: JSON.stringify(body)
-        });
-
-        const data = await response.json();
-
-        if (response.ok) {
-            console.log(`>>> PROXY SUCCESS: ${magentoUrl}`);
-        } else {
-            console.error(`>>> PROXY FAILURE: ${magentoUrl} returned ${response.status}`, data);
-        }
-
-        return NextResponse.json(data, { status: response.status });
-
-    } catch (error: any) {
-        console.error('>>> PROXY CRITICAL ERROR:', error);
-        return NextResponse.json(
-            { message: error.message || "Internal Server Error" },
-            { status: 500 }
-        );
+    if (!email) {
+      return NextResponse.json({ message: "Email is required" }, { status: 400 });
     }
+
+    const data = await graphqlFetch<RequestPasswordResetEmailData>({
+      query: REQUEST_PASSWORD_RESET_EMAIL_MUTATION,
+      variables: { email },
+      cache: "no-store",
+    });
+
+    return NextResponse.json(
+      { success: data.requestPasswordResetEmail !== false },
+      { status: 200 },
+    );
+  } catch (error) {
+    if (isGraphQLRequestError(error)) {
+      return NextResponse.json(
+        { message: error.message, errors: error.errors },
+        { status: error.status >= 400 ? error.status : 400 },
+      );
+    }
+    return NextResponse.json({ message: "Forgot-password request failed" }, { status: 500 });
+  }
 }

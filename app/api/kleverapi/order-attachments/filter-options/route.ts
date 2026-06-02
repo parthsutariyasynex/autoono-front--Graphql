@@ -1,47 +1,47 @@
-import { NextResponse } from 'next/server';
-import { getBaseUrl } from '@/lib/api/magento-url';
-
-// BASE_URL is now obtained per-request via getBaseUrl(request)
+import { NextResponse } from "next/server";
+import { getRequestToken } from "@/lib/api/auth-helper";
+import { KLEVER_ORDER_UPLOAD_FILTER_OPTIONS_QUERY } from "@/src/graphql/queries";
+import type { KleverOrderUploadFilterOptionsData } from "@/src/graphql/types";
+import { graphqlFetch, isGraphQLRequestError } from "@/src/lib/graphqlFetch";
 
 export async function GET(request: Request) {
-    try {
-        const BASE_URL = getBaseUrl(request);
-        const authHeader = request.headers.get('Authorization');
-        if (!authHeader || !authHeader.startsWith('Bearer ')) {
-            return NextResponse.json(
-                { message: 'Unauthorized' },
-                { status: 401 }
-            );
-        }
-
-        const magentoUrl = `${BASE_URL}/orderupload/filter-options`;
-
-        const response = await fetch(magentoUrl, {
-            method: 'GET',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': authHeader,
-                'platform': 'web',
-            },
-            cache: 'no-store',
-        });
-
-        const data = await response.json();
-
-        if (!response.ok) {
-            return NextResponse.json(
-                { message: data.message || `Magento returned ${response.status}` },
-                { status: response.status }
-            );
-        }
-
-        return NextResponse.json(data);
-
-    } catch (error: any) {
-        console.error('[orderupload-filter-options] Catch error:', error);
-        return NextResponse.json(
-            { message: error.message || 'Server error fetching filter options' },
-            { status: 500 }
-        );
+  const isDev = process.env.NODE_ENV !== "production";
+  try {
+    const token = await getRequestToken(request);
+    if (isDev) {
+      console.log(`[order-attachments/filter-options] token present: ${!!token}${token ? ` (len=${token.length})` : ""}`);
     }
+    if (!token) {
+      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+    }
+
+    const data = await graphqlFetch<KleverOrderUploadFilterOptionsData>({
+      query: KLEVER_ORDER_UPLOAD_FILTER_OPTIONS_QUERY,
+      token,
+      // `revalidate` + a Bearer token would let Next.js cache the response
+      // across requests/users. This is a per-customer query — disable caching.
+      cache: "no-store",
+    });
+
+    if (isDev) {
+      console.log("[order-attachments/filter-options] OK");
+    }
+    return NextResponse.json(data.kleverOrderUploadFilterOptions ?? {}, { status: 200 });
+  } catch (error) {
+    if (isGraphQLRequestError(error)) {
+      console.error(
+        `[order-attachments/filter-options] GraphQL error: status=${error.status} message=${error.message}`,
+        error.errors,
+      );
+      return NextResponse.json(
+        { message: error.message, errors: error.errors },
+        { status: error.status >= 400 ? error.status : 500 },
+      );
+    }
+    console.error("[order-attachments/filter-options] Unexpected error:", error);
+    return NextResponse.json(
+      { message: "Server error fetching filter options" },
+      { status: 500 },
+    );
+  }
 }

@@ -140,10 +140,14 @@ export default function OrderAttachmentsPage() {
 
         setOpeningFileId(id);
         try {
-            let proxyUrl = `/api/kleverapi/order-attachments/file/${id}`;
-            if (fileUrl) {
-                proxyUrl += `?url=${encodeURIComponent(fileUrl)}`;
-            }
+            // kleverOrderUploadSearch doesn't expose `file_url`, so we also
+            // forward `name`. The route uses Magento's deterministic media
+            // layout `/media/orderupload/<a>/<b>/<filename>` to locate the
+            // file when no explicit URL is available.
+            const qs = new URLSearchParams();
+            if (fileUrl) qs.set("url", fileUrl);
+            if (fileName) qs.set("name", fileName);
+            const proxyUrl = `/api/kleverapi/order-attachments/file/${id}${qs.toString() ? `?${qs.toString()}` : ""}`;
 
             const res = await fetch(proxyUrl, {
                 headers: { Authorization: `Bearer ${token}` }

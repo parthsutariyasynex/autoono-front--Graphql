@@ -1,65 +1,43 @@
 import { NextResponse } from "next/server";
-import { getBaseUrl } from "@/lib/api/magento-url";
-
-// BASE_URL is now obtained per-request via getBaseUrl(request)
+import { getRequestToken } from "@/lib/api/auth-helper";
+import { KLEVER_MARK_NOTIFICATION_AS_READ_MUTATION } from "@/src/graphql/mutations";
+import type { KleverMarkNotificationAsReadData } from "@/src/graphql/types";
+import { graphqlFetch, isGraphQLRequestError } from "@/src/lib/graphqlFetch";
 
 export async function POST(
-    req: Request,
-    { params }: { params: Promise<{ id: string }> }
+  req: Request,
+  { params }: { params: Promise<{ id: string }> },
 ) {
-    try {
-        const BASE_URL = getBaseUrl(req);
-        const { id } = await params;
-        const authHeader = req.headers.get("authorization");
-
-        if (!authHeader || !authHeader.startsWith("Bearer ")) {
-            return NextResponse.json({ message: "Unauthorized: Missing customer token" }, { status: 401 });
-        }
-
-        const url = `${BASE_URL}/notifications/${id}/read`;
-        console.log("[Notification Read] Calling:", url);
-
-        // Try PUT first (standard Magento update), fallback to POST
-        let response = await fetch(url, {
-            method: "PUT",
-            headers: {
-                Authorization: authHeader,
-                "Content-Type": "application/json",
-                platform: "web",
-            },
-        });
-
-        // If PUT returns 404 or 405, try POST as fallback
-        if (response.status === 404 || response.status === 405) {
-            console.log("[Notification Read] PUT failed with", response.status, "— trying POST");
-            response = await fetch(url, {
-                method: "POST",
-                headers: {
-                    Authorization: authHeader,
-                    "Content-Type": "application/json",
-                    platform: "web",
-                },
-            });
-        }
-
-        const text = await response.text();
-        console.log("[Notification Read] Status:", response.status, "Response:", text.substring(0, 300));
-
-        let data;
-        try {
-            data = JSON.parse(text);
-        } catch {
-            // Magento may return plain true/false
-            data = { success: text.trim() === "true", raw: text };
-        }
-
-        if (!response.ok) {
-            return NextResponse.json(data, { status: response.status });
-        }
-
-        return NextResponse.json(data);
-    } catch (error: any) {
-        console.error("Proxy Mark Notification Read Error:", error);
-        return NextResponse.json({ message: error.message || "Internal server error" }, { status: 500 });
+  try {
+    const token = await getRequestToken(req);
+    if (!token) {
+      return NextResponse.json(
+        { message: "Unauthorized: Missing customer token" },
+        { status: 401 },
+      );
     }
+    const { id } = await params;
+    const notificationId = Number(id);
+    if (!notificationId) {
+      return NextResponse.json({ message: "Invalid notification id" }, { status: 400 });
+    }
+
+    const data = await graphqlFetch<KleverMarkNotificationAsReadData>({
+      query: KLEVER_MARK_NOTIFICATION_AS_READ_MUTATION,
+      variables: { notificationId },
+      token,
+      cache: "no-store",
+    });
+    return NextResponse.json(data.kleverMarkNotificationAsRead, { status: 200 });
+  } catch (error) {
+    if (isGraphQLRequestError(error)) {
+      return NextResponse.json(
+        { message: error.message, errors: error.errors },
+        { status: error.status >= 400 ? error.status : 500 },
+      );
+    }
+    return NextResponse.json({ message: "Internal server error" }, { status: 500 });
+  }
 }
+
+export const PUT = POST;

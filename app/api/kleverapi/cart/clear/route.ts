@@ -1,62 +1,48 @@
 import { NextResponse } from "next/server";
-import { getBaseUrl, getLocaleBaseUrl } from "@/lib/api/magento-url";
+import { getRequestToken } from "@/lib/api/auth-helper";
+import { CUSTOMER_CART_ID_QUERY } from "@/src/graphql/queries";
+import { REMOVE_ITEM_FROM_CART_MUTATION } from "@/src/graphql/mutations";
+import type { CustomerCartIdData, RemoveItemFromCartData } from "@/src/graphql/types";
+import { graphqlFetch, isGraphQLRequestError } from "@/src/lib/graphqlFetch";
 
-// BASE_URL is now obtained per-request via getBaseUrl(req)
-
-/* =========================
-   CLEAR CART (KleverAPI)
-   POST /api/kleverapi/cart/clear
-========================= */
 export async function POST(req: Request) {
-    try {
-        const BASE_URL = getBaseUrl(req);
-        const authHeader = req.headers.get("authorization");
-
-        if (!authHeader || !authHeader.startsWith("Bearer ")) {
-            return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
-        }
-
-        let response = await fetch(`${BASE_URL}/cart/clear`, {
-            method: "POST",
-            headers: {
-                Authorization: authHeader,
-                "Content-Type": "application/json",
-            },
-        });
-
-        let responseText = await response.text();
-
-        // If warehouse store code fails, retry with locale-only store (e.g. V101_en → en)
-        if (!response.ok) {
-            const localeUrl = `${getLocaleBaseUrl(req)}/cart/clear`;
-            if (localeUrl !== `${BASE_URL}/cart/clear`) {
-                console.log("[cart/clear] Retrying with locale-base URL");
-                const localeRes = await fetch(localeUrl, {
-                    method: "POST",
-                    headers: { Authorization: authHeader, "Content-Type": "application/json" },
-                });
-                if (localeRes.ok) {
-                    response = localeRes;
-                    responseText = await localeRes.text();
-                }
-            }
-        }
-
-        if (!response.ok) {
-            console.error("Clear Cart API error:", response.status, responseText);
-            let errorData: any = { message: "Failed to clear cart" };
-            try { errorData = JSON.parse(responseText); } catch { }
-            return NextResponse.json(errorData, { status: response.status });
-        }
-
-        // Magento may return an empty body, plain true, or JSON on success
-        let data: any = { success: true };
-        if (responseText) {
-            try { data = JSON.parse(responseText); } catch { data = { success: true, message: responseText }; }
-        }
-        return NextResponse.json(data);
-    } catch (error) {
-        console.error("Proxy Clear Cart Error:", error);
-        return NextResponse.json({ message: "Internal server error" }, { status: 500 });
+  try {
+    const token = await getRequestToken(req);
+    if (!token) {
+      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
+
+    const idData = await graphqlFetch<CustomerCartIdData>({
+      query: CUSTOMER_CART_ID_QUERY,
+      token,
+      cache: "no-store",
+    });
+    const cart = idData.customerCart;
+    if (!cart || cart.items.length === 0) {
+      return NextResponse.json({ success: true });
+    }
+
+    for (const item of cart.items) {
+      try {
+        await graphqlFetch<RemoveItemFromCartData>({
+          query: REMOVE_ITEM_FROM_CART_MUTATION,
+          variables: { cartId: cart.id, cartItemId: Number(item.id) },
+          token,
+          cache: "no-store",
+        });
+      } catch (err) {
+        console.warn(`[cart/clear] Failed to remove item ${item.id}:`, err);
+      }
+    }
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    if (isGraphQLRequestError(error)) {
+      return NextResponse.json(
+        { message: error.message, errors: error.errors },
+        { status: error.status >= 400 ? error.status : 500 },
+      );
+    }
+    return NextResponse.json({ message: "Internal server error" }, { status: 500 });
+  }
 }

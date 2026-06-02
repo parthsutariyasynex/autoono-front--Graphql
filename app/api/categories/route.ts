@@ -1,28 +1,50 @@
-import { getBaseUrl } from '@/lib/api/magento-url';
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth/auth-options";
+import { NextRequest, NextResponse } from "next/server";
+import { getLocaleFromRequest } from "@/lib/api/magento-url";
+import { CATEGORIES_QUERY } from "@/src/graphql/queries";
+import { graphqlFetch, isGraphQLRequestError } from "@/src/lib/graphqlFetch";
 
-export async function GET(request: Request) {
-    const session: any = await getServerSession(authOptions);
-    const token = session?.accessToken;
-
-    if (!token) {
-        return Response.json({ error: "Unauthorized" }, { status: 401 });
+function buildFilters(searchParams: URLSearchParams) {
+    const ids = searchParams.get("ids");
+    if (ids) {
+        const list = ids.split(",").map((s) => s.trim()).filter(Boolean);
+        return { ids: list.length > 1 ? { in: list } : { eq: list[0] } };
     }
 
-    const baseUrl = getBaseUrl(request);
-    const res = await fetch(
-        `${baseUrl}/category-products`,
-        {
-            headers: {
-                "Authorization": `Bearer ${token}`,
-                "Content-Type": "application/json",
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-                "platform": "web",
-            },
-        }
-    );
+    const urlKey = searchParams.get("urlKey");
+    if (urlKey) {
+        return { url_key: { eq: urlKey } };
+    }
 
-    const data = await res.json();
-    return Response.json(data);
+    return { parent_id: { eq: searchParams.get("parentId") || "2" } };
+}
+
+export async function GET(request: NextRequest) {
+    const { searchParams } = new URL(request.url);
+
+    try {
+        const data = await graphqlFetch({
+            query: CATEGORIES_QUERY,
+            variables: {
+                filters: buildFilters(searchParams),
+                pageSize: Number(searchParams.get("pageSize") || "50"),
+                currentPage: Number(searchParams.get("currentPage") || "1"),
+            },
+            store: request.headers.get("x-store-code") || getLocaleFromRequest(request),
+            cache: "no-store",
+        });
+
+        return NextResponse.json(data);
+    } catch (error) {
+        if (isGraphQLRequestError(error)) {
+            return NextResponse.json(
+                { message: error.message, errors: error.errors },
+                { status: error.status || 500 },
+            );
+        }
+
+        return NextResponse.json(
+            { message: "Failed to load categories." },
+            { status: 500 },
+        );
+    }
 }

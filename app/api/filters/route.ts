@@ -1,110 +1,64 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getBaseUrl } from "@/lib/api/magento-url";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth/auth-options";
+import { getLocaleFromRequest } from "@/lib/api/magento-url";
+import { getRequestToken } from "@/lib/api/auth-helper";
+import { KLEVER_CATEGORY_FILTER_OPTIONS_QUERY } from "@/src/graphql/queries";
+import type {
+  KleverCategoryFilterOptionsData,
+  KleverFilterGroup,
+} from "@/src/graphql/types";
+import { graphqlFetch, isGraphQLRequestError } from "@/src/lib/graphqlFetch";
+
+const KEY_MAP: Record<string, string> = {
+  color: "tyre_size",
+  manufacturer: "origin",
+  mgs_brand: "brand",
+  productGroup: "product_group",
+  warrantyPeriod: "warranty_period",
+  newArrivals: "new_arrivals",
+  partsCategory: "parts_category",
+  oilType: "oil_type",
+  oilGrade: "grade",
+  itemCode: "item_code",
+};
+
+function normalizeFilters(filters: KleverFilterGroup[]): KleverFilterGroup[] {
+  return filters.map((f) => ({
+    ...f,
+    code: KEY_MAP[f.code] ?? f.code,
+  }));
+}
 
 export async function GET(request: NextRequest) {
-    try {
-        const baseUrl = getBaseUrl(request);
-        // Step 1: Try to get token from the Authorization header sent by the browser
-        let token: string | null = null;
+  try {
+    const token = await getRequestToken(request);
+    const { searchParams } = new URL(request.url);
+    const categoryId = Number(searchParams.get("categoryId"));
 
-        const authHeader = request.headers.get("authorization");
-        if (authHeader && authHeader.startsWith("Bearer ")) {
-            const raw = authHeader.replace("Bearer ", "").replace(/['"]/g, "").trim();
-            if (raw && raw !== "null" && raw !== "undefined") {
-                token = raw;
-            }
-        }
-
-        // Step 2: Fallback to cookies directly (most reliable)
-        if (!token) {
-            const cookie = request.cookies.get("auth-token")?.value;
-            if (cookie) {
-                token = cookie.replace(/['"]/g, "").trim();
-            }
-        }
-
-        // Step 3: Fallback to Next-Auth session
-        if (!token) {
-            const session: any = await getServerSession(authOptions);
-            if (session?.accessToken) {
-                token = session.accessToken;
-            }
-        }
-
-        // Final check - santize invalid strings
-        if (token === "null" || token === "undefined" || !token) {
-            token = null;
-        }
-
-        // Step 4: Get categoryId from query params
-        const { searchParams } = new URL(request.url);
-        const categoryId = searchParams.get("categoryId") || "";
-
-        if (!categoryId) {
-            return NextResponse.json([]);
-        }
-
-        // Step 5: Fetch filter options from Magento
-        const magentoUrl = `${baseUrl}/category-filter-options/${categoryId}`;
-
-        const res = await fetch(magentoUrl, {
-            method: "GET",
-            headers: {
-                ...(token && { Authorization: `Bearer ${token}` }),
-                "Content-Type": "application/json",
-            },
-            cache: "no-store",
-        });
-
-        if (!res.ok) {
-            const errBody = await res.text();
-            console.error("Magento filter API error:", res.status, errBody);
-            return NextResponse.json(
-                { error: "Magento API error", status: res.status, detail: errBody },
-                { status: res.status }
-            );
-        }
-
-        const data = await res.json();
-
-        // Normalize response: always return { filters: [...] }
-        // Magento may return array directly, or wrapped in filters/data/items
-        let filters = Array.isArray(data)
-            ? data
-            : (data.filters || data.data || data.items || []);
-
-        // ── Normalize Filter Keys ──
-        if (Array.isArray(filters)) {
-            filters = filters.map((f: any) => {
-                let code = f.code || f.attribute_code;
-
-                // Map backend keys to what the frontend expects
-                if (code === "color") code = "tyre_size";
-                if (code === "manufacturer") code = "origin";
-                if (code === "mgs_brand") code = "brand";
-                if (code === "productGroup") code = "product_group";
-                if (code === "warrantyPeriod") code = "warranty_period";
-                if (code === "newArrivals") code = "new_arrivals";
-                if (code === "partsCategory") code = "parts_category";
-                if (code === "oilType") code = "oil_type";
-                if (code === "oilGrade") code = "grade";
-                if (code === "itemCode") code = "item_code";
-
-                return { ...f, code };
-            });
-        }
-
-        console.log(`[filters/route] Loaded ${filters.length} normalized filter groups for category ${categoryId}`);
-
-        return NextResponse.json({ filters });
-
-    } catch (error: any) {
-        console.error("Filter route catch:", error.message);
-        return NextResponse.json(
-            { error: "Failed to fetch filters", message: error.message },
-            { status: 500 }
-        );
+    if (!categoryId) {
+      return NextResponse.json({ filters: [] });
     }
+
+    const data = await graphqlFetch<KleverCategoryFilterOptionsData>({
+      query: KLEVER_CATEGORY_FILTER_OPTIONS_QUERY,
+      variables: { categoryId },
+      token,
+      store: request.headers.get("x-store-code") || getLocaleFromRequest(request),
+      revalidate: 300,
+      tags: [`filters:${categoryId}`],
+    });
+
+    const filters = normalizeFilters(data.kleverCategoryFilterOptions?.filters ?? []);
+    return NextResponse.json({ filters });
+  } catch (error) {
+    if (isGraphQLRequestError(error)) {
+      return NextResponse.json(
+        { error: error.message, errors: error.errors },
+        { status: error.status >= 400 ? error.status : 500 },
+      );
+    }
+    return NextResponse.json(
+      { error: "Failed to fetch filters" },
+      { status: 500 },
+    );
+  }
 }

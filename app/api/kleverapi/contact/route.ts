@@ -1,36 +1,40 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getGlobalBaseUrl } from "@/lib/api/magento-url";
+import { CONTACT_US_MUTATION } from "@/src/graphql/mutations";
+import type { ContactUsData } from "@/src/graphql/types";
+import { graphqlFetch, isGraphQLRequestError } from "@/src/lib/graphqlFetch";
 
 export async function POST(request: NextRequest) {
-    try {
-        const body = await request.json();
-        // body: { name, email, comment, telephone }
+  try {
+    const body = await request.json();
+    const name = body.name;
+    const email = body.email;
+    const comment = body.comment ?? body.message;
+    const telephone = body.telephone ?? body.phone ?? null;
 
-        const url = `${getGlobalBaseUrl(request)}/contact`;
-
-        const res = await fetch(url, {
-            method: "POST",
-            headers: { "Content-Type": "application/json", "Accept": "application/json" },
-            body: JSON.stringify(body),
-            cache: "no-store",
-        });
-
-        console.log(`[contact POST] ${res.status} → ${url}`);
-
-        const text = await res.text();
-        let data: any;
-        try { data = JSON.parse(text); } catch { data = { message: text }; }
-
-        if (!res.ok) {
-            return NextResponse.json(
-                { message: data?.message || "Failed to send message" },
-                { status: res.status }
-            );
-        }
-
-        return NextResponse.json(data);
-    } catch (error: any) {
-        console.error("[contact POST] exception:", error.message);
-        return NextResponse.json({ message: "Internal server error" }, { status: 500 });
+    if (!name || !email || !comment) {
+      return NextResponse.json(
+        { message: "name, email and comment are required" },
+        { status: 400 },
+      );
     }
+
+    const data = await graphqlFetch<ContactUsData>({
+      query: CONTACT_US_MUTATION,
+      variables: { input: { name, email, comment, telephone } },
+      cache: "no-store",
+    });
+
+    return NextResponse.json(
+      { success: Boolean(data.contactUs.status) },
+      { status: 200 },
+    );
+  } catch (error) {
+    if (isGraphQLRequestError(error)) {
+      return NextResponse.json(
+        { message: error.message, errors: error.errors },
+        { status: error.status >= 400 ? error.status : 400 },
+      );
+    }
+    return NextResponse.json({ message: "Failed to send message" }, { status: 500 });
+  }
 }

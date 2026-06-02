@@ -1,5 +1,5 @@
-import { LoginSkeleton } from "@/components/skeletons";
+import { ForgotPasswordSkeleton } from "@/components/skeletons";
 
 export default function Loading() {
-  return <LoginSkeleton />;
+  return <ForgotPasswordSkeleton />;
 }

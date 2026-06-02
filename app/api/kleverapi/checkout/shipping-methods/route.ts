@@ -1,102 +1,97 @@
 import { NextResponse } from "next/server";
-import { getBaseUrl } from "@/lib/api/magento-url";
+import { getRequestToken } from "@/lib/api/auth-helper";
+import {
+  CART_SHIPPING_METHODS_QUERY,
+  CUSTOMER_CART_ID_QUERY,
+} from "@/src/graphql/queries";
+import { SET_SHIPPING_METHODS_ON_CART_MUTATION } from "@/src/graphql/mutations";
+import type {
+  CartShippingMethodsData,
+  CustomerCartIdData,
+  SetShippingMethodsOnCartData,
+} from "@/src/graphql/types";
+import { graphqlFetch, isGraphQLRequestError } from "@/src/lib/graphqlFetch";
 
-// BASE_URL is now obtained per-request via getBaseUrl(req)
+async function resolveCartId(token: string, fallback: string | null): Promise<string | null> {
+  if (fallback) return fallback;
+  const idData = await graphqlFetch<CustomerCartIdData>({
+    query: CUSTOMER_CART_ID_QUERY,
+    token,
+    cache: "no-store",
+  });
+  return idData.customerCart?.id ?? null;
+}
 
 export async function GET(req: Request) {
-    try {
-        const BASE_URL = getBaseUrl(req);
-        const authHeader = req.headers.get("authorization");
-        if (!authHeader || !authHeader.startsWith("Bearer ") || authHeader.includes("null") || authHeader.includes("undefined")) {
-            console.error("Shipping Methods Proxy: Invalid token:", authHeader);
-            return NextResponse.json({ message: "Unauthorized: Invalid token format" }, { status: 401 });
-        }
-
-        console.log(`>>> Shipping Methods GET REQUEST: ${BASE_URL}/checkout/shipping-methods`);
-
-        const response = await fetch(`${BASE_URL}/checkout/shipping-methods`, {
-            method: "GET",
-            headers: {
-                Authorization: authHeader,
-                "Content-Type": "application/json",
-                accept: "application/json",
-                platform: "web",
-            },
-            cache: "no-store",
-        });
-
-        // Safe response parsing
-        const responseText = await response.text();
-        let data;
-        try {
-            data = responseText ? JSON.parse(responseText) : {};
-        } catch (err) {
-            console.error(`<<< Shipping Methods GET RESPONSE: ${response.status} (FAILED TO PARSE JSON)`, responseText);
-            return NextResponse.json(
-                { message: "Invalid backend response format", details: responseText.substring(0, 200) },
-                { status: 502 }
-            );
-        }
-
-        console.log(`<<< Shipping Methods GET RESPONSE: ${response.status}`, data);
-
-        if (!response.ok) {
-            return NextResponse.json(data, { status: response.status });
-        }
-
-        return NextResponse.json(data);
-    } catch (error: any) {
-        console.error("Proxy GET Shipping Methods Error:", error);
-        return NextResponse.json({ message: error.message || "Internal server error" }, { status: 500 });
+  try {
+    const token = await getRequestToken(req);
+    if (!token) {
+      return NextResponse.json({ message: "Unauthorized: Invalid token format" }, { status: 401 });
     }
+    const { searchParams } = new URL(req.url);
+    const cartId = await resolveCartId(token, searchParams.get("cart_id"));
+    if (!cartId) {
+      return NextResponse.json({ message: "No active cart found" }, { status: 404 });
+    }
+
+    const data = await graphqlFetch<CartShippingMethodsData>({
+      query: CART_SHIPPING_METHODS_QUERY,
+      variables: { cartId },
+      token,
+      cache: "no-store",
+    });
+
+    const methods =
+      data.cart?.shipping_addresses?.flatMap((a) => a.available_shipping_methods ?? []) ?? [];
+    return NextResponse.json(methods, { status: 200 });
+  } catch (error) {
+    if (isGraphQLRequestError(error)) {
+      return NextResponse.json(
+        { message: error.message, errors: error.errors },
+        { status: error.status >= 400 ? error.status : 500 },
+      );
+    }
+    return NextResponse.json({ message: "Internal server error" }, { status: 500 });
+  }
 }
 
 export async function POST(req: Request) {
-    try {
-        const BASE_URL = getBaseUrl(req);
-        const authHeader = req.headers.get("authorization");
-        if (!authHeader || !authHeader.startsWith("Bearer ") || authHeader.includes("null") || authHeader.includes("undefined")) {
-            console.error("Shipping Methods Proxy: Invalid token:", authHeader);
-            return NextResponse.json({ message: "Unauthorized: Invalid token format" }, { status: 401 });
-        }
-
-        const body = await req.json();
-        console.log(`>>> Set Shipping Method POST REQUEST: ${BASE_URL}/checkout/shipping-methods`, body);
-
-        const response = await fetch(`${BASE_URL}/checkout/shipping-methods`, {
-            method: "POST",
-            headers: {
-                Authorization: authHeader,
-                "Content-Type": "application/json",
-                accept: "application/json",
-                platform: "web",
-            },
-            body: JSON.stringify(body),
-            cache: "no-store",
-        });
-
-        // Safe response parsing
-        const responseText = await response.text();
-        let data;
-        try {
-            data = responseText ? JSON.parse(responseText) : {};
-        } catch (err) {
-            console.error(`<<< Set Shipping Method POST RESPONSE: ${response.status} (FAILED TO PARSE JSON)`, responseText);
-            return NextResponse.json(
-                { message: "Invalid backend response format", details: responseText.substring(0, 200) },
-                { status: 502 }
-            );
-        }
-
-        console.log(`<<< Set Shipping Method POST RESPONSE: ${response.status}`, data);
-
-        if (!response.ok) {
-            return NextResponse.json(data, { status: response.status });
-        }
-
-        return NextResponse.json(data);
-    } catch (error: any) {
-        console.error("Proxy Set Shipping Method POST Error:", error);
-        return NextResponse.json({ message: error.message || "Internal server error" }, { status: 500 });
+  try {
+    const token = await getRequestToken(req);
+    if (!token) {
+      return NextResponse.json({ message: "Unauthorized: Invalid token format" }, { status: 401 });
     }
+
+    const body = await req.json();
+    const carrierCode = body.carrierCode ?? body.carrier_code;
+    const methodCode = body.methodCode ?? body.method_code;
+    if (!carrierCode || !methodCode) {
+      return NextResponse.json(
+        { message: "carrierCode and methodCode are required" },
+        { status: 400 },
+      );
+    }
+
+    const cartId = await resolveCartId(token, body.cart_id ?? null);
+    if (!cartId) {
+      return NextResponse.json({ message: "No active cart found" }, { status: 404 });
+    }
+
+    const data = await graphqlFetch<SetShippingMethodsOnCartData>({
+      query: SET_SHIPPING_METHODS_ON_CART_MUTATION,
+      variables: { cartId, carrierCode, methodCode },
+      token,
+      cache: "no-store",
+    });
+
+    return NextResponse.json(data.setShippingMethodsOnCart.cart, { status: 200 });
+  } catch (error) {
+    if (isGraphQLRequestError(error)) {
+      return NextResponse.json(
+        { message: error.message, errors: error.errors },
+        { status: error.status >= 400 ? error.status : 500 },
+      );
+    }
+    return NextResponse.json({ message: "Internal server error" }, { status: 500 });
+  }
 }

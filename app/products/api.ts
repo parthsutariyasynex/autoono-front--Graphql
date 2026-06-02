@@ -13,6 +13,7 @@
 // }
 // app/products/api.ts
 import { api } from "@/lib/api/api-client";
+import { getCategoryProducts } from "@/src/lib/categoryProducts";
 import type { Product } from "../../modules/types/product";
 import type { AppRouterInstance } from "next/dist/shared/lib/app-router-context.shared-runtime";
 
@@ -31,16 +32,21 @@ import type { AppRouterInstance } from "next/dist/shared/lib/app-router-context.
 
 export async function fetchProducts(searchParams?: URLSearchParams | string): Promise<Product[]> {
   try {
-    let url = "/category-products?categoryId=5"; // Default fallback structure
+    const params =
+      searchParams instanceof URLSearchParams
+        ? searchParams
+        : new URLSearchParams(searchParams ?? "");
 
-    if (searchParams instanceof URLSearchParams) {
-      url = `/products?${searchParams.toString()}`;
-    }
+    const data = await getCategoryProducts({
+      categoryId: params.get("categoryId") ?? "5",
+      currentPage: Number(params.get("currentPage") ?? "1"),
+      pageSize: Number(params.get("pageSize") ?? "20"),
+      store: params.get("store") ?? undefined,
+      token:
+        typeof window !== "undefined" ? localStorage.getItem("token") ?? undefined : undefined,
+    });
 
-    const data = await api.get(url);
-
-    console.log("API RESPONSE:", data);
-    return data.products ?? data.items ?? [];
+    return (data.items as unknown as Product[]) ?? [];
   } catch (error) {
     console.error("fetchProducts error:", error);
     return [];

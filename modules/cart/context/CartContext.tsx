@@ -49,6 +49,7 @@ export interface Cart {
   items_count: number;
   cart_id: number | string | null;
   discount_amount?: number;
+  applied_coupons?: Array<{ code: string }>;
 }
 
 interface CartContextType {
@@ -180,8 +181,11 @@ export function CartProvider({ children }: { children: ReactNode }) {
       // Calculate total units instead of unique SKUs for navbar count
       const items_count = items.reduce((sum: number, i: CartItem) => sum + i.qty, 0);
       const cart_id = data.cart_id ?? data.cart?.cart_id ?? null;
+      const applied_coupons = Array.isArray(data.applied_coupons)
+        ? data.applied_coupons.filter((c: { code?: unknown }) => c && typeof c.code === "string")
+        : [];
 
-      setCart({ items, subtotal, tax_amount, tax_label, grand_total, currency_code, items_count, cart_id, discount_amount });
+      setCart({ items, subtotal, tax_amount, tax_label, grand_total, currency_code, items_count, cart_id, discount_amount, applied_coupons });
     } catch {
       // Network error or backend unreachable — fail silently
       setCart(null);

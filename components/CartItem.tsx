@@ -21,9 +21,6 @@ interface CartItemProps {
 const CartItem: React.FC<CartItemProps> = ({ item, currencyCode, onUpdateQty, onRemove, onEnter }) => {
     const { t } = useTranslation();
     const [localQty, setLocalQty] = useState(item.qty);
-    const originalPrice = item.discount_amount && item.discount_amount > 0
-        ? item.price + item.discount_amount
-        : null;
 
     const handleQtyChange = (newQty: number) => {
         if (newQty < 1) return;
@@ -72,12 +69,7 @@ const CartItem: React.FC<CartItemProps> = ({ item, currencyCode, onUpdateQty, on
                         <div className="flex items-center justify-between">
                             <div className="flex flex-col">
                                 <span className="text-[10px] text-black/40 font-bold uppercase">{t("m.unit-price") || "Unit"}</span>
-                                {originalPrice && (
-                                    <span className="text-[10px] font-bold text-black/30 line-through">
-                                        <Price amount={originalPrice} />
-                                    </span>
-                                )}
-                                <span className={`text-xs font-bold ${originalPrice ? "text-[#008a00]" : "text-black/60"}`}>
+                                <span className="text-xs font-bold text-black/60">
                                     <Price amount={item.price} />
                                 </span>
                                 <span className="text-sm font-bold text-black mt-0.5">
@@ -143,12 +135,7 @@ const CartItem: React.FC<CartItemProps> = ({ item, currencyCode, onUpdateQty, on
                 </div>
 
                 <div className="w-[15%] text-center">
-                    {originalPrice && (
-                        <span className="block text-[10px] font-bold text-black/30 line-through">
-                            <Price amount={originalPrice} />
-                        </span>
-                    )}
-                    <span className={`text-xs xl:text-sm font-bold ${originalPrice ? "text-[#008a00]" : "text-black"}`}>
+                    <span className="text-xs xl:text-sm font-bold text-black">
                         <Price amount={item.price} />
                     </span>
                 </div>

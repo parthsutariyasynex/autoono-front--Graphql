@@ -13,12 +13,13 @@ import Price from "./Price";
 import AddToCartPopup from "./AddToCartPopup";
 
 import { api } from "@/lib/api/api-client";
+import { FavouriteProductsSkeleton } from "@/components/skeletons";
 import { useTranslation } from "@/hooks/useTranslation";
 import Pagination, { PageSizeSelect } from "@/components/Pagination";
 import { useCart } from "@/modules/cart/context/CartContext";
 import { useSession } from "next-auth/react";
 import PortalDropdown from "@/components/PortalDropdown";
-import { FavouriteProductsSkeleton } from "@/components/skeletons";
+// import { FavouriteProductsSkeleton } from "@/components/skeletons";
 
 interface Product {
     product_id: number;
@@ -71,6 +72,22 @@ export default function FavouriteProducts({ title }: { title?: React.ReactNode }
 
     const [currentPage, setCurrentPage] = useState(1);
     const [pageSize, setPageSize] = useState(10);
+    // const [sortBy, setSortBy] = useState<string>("none");
+
+    // Stock tier: 0 = available, 1 = limited, 2 = out of stock.
+    const stockTier = (p: Product): number => {
+        const outOfStock = p.is_in_stock === false
+            || p.stock_label === "Not Available"
+            || p.stock_status === "Out of Stock"
+            || p.stock_status === "Not Available"
+            || Number(p.stock_qty || 0) <= 0;
+        if (outOfStock) return 2;
+        if (Number(p.stock_qty || 0) > 0 && Number(p.stock_qty) <= 10) return 1;
+        return 0;
+    };
+    const cmpStr = (a: string, b: string) => a.localeCompare(b, undefined, { sensitivity: "base" });
+
+
 
     const [isInquiryModalOpen, setIsInquiryModalOpen] = useState(false);
     const [inquiryProduct, setInquiryProduct] = useState<Product | null>(null);
@@ -293,6 +310,9 @@ export default function FavouriteProducts({ title }: { title?: React.ReactNode }
         // Render the full FavouriteProductsSkeleton (title + table + pagination)
         // so the main content area isn't blank during data fetch / backend outage.
         return <FavouriteProductsSkeleton count={8} />;
+        // Use the proper skeleton so the content area isn't blank during
+        // the initial fetch. Matches what /loading.tsx renders at route level.
+        return <FavouriteProductsSkeleton count={pageSize} />;
     }
 
     const totalPages = Math.ceil(totalCount / pageSize);
@@ -347,7 +367,18 @@ export default function FavouriteProducts({ title }: { title?: React.ReactNode }
                     <div className="py-16 text-center text-black/50 italic text-body">{t("favorites.empty")}</div>
                 ) : sortedFavProducts.map((product) => {
                     const brandName = product.brand || product.name.split(' ')[0] || "—";
-                    const isOutOfStock = product.is_in_stock === false || product.stock_label === "Not Available" || product.stock_status === "Out of Stock" || product.stock_status === "Not Available" || Number(product.stock_qty || 0) <= 0;
+                    // Positive signals first: trust an explicit "Available" status
+                    // (favorite-products GraphQL doesn't return stock_qty, so the
+                    // fallback `stock_qty <= 0` check would otherwise mark
+                    // every product as OOS).
+                    const isAvailable = product.is_in_stock === true || product.stock_status === "Available" || product.stock_label === "Available";
+                    const isOutOfStock = !isAvailable && (
+                        product.is_in_stock === false
+                        || product.stock_label === "Not Available"
+                        || product.stock_status === "Out of Stock"
+                        || product.stock_status === "Not Available"
+                        || Number(product.stock_qty || 0) <= 0
+                    );
                     const isLimited = !isOutOfStock && product.stock_qty > 0 && product.stock_qty <= 10;
                     const dotColor = product.stock_color
                         ? (() => { const c = (product.stock_color || "").toLowerCase(); return c === "green" ? "bg-green-500" : c === "yellow" || c === "orange" ? "bg-primary" : c === "red" ? "bg-red-500" : "bg-gray-400"; })()
@@ -454,7 +485,7 @@ export default function FavouriteProducts({ title }: { title?: React.ReactNode }
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-50">
-                            {favProducts.length === 0 ? (
+                            {sortedFavProducts.length === 0 ? (
                                 <tr>
                                     <td colSpan={6} className="px-5 py-24 text-center">
                                         <p className="text-xs font-bold text-black/50 uppercase tracking-[0.2em]">{t("favorites.empty")}</p>
@@ -463,7 +494,18 @@ export default function FavouriteProducts({ title }: { title?: React.ReactNode }
                             ) : (
                                 sortedFavProducts.map((product) => {
                                     const brandName = product.brand || product.name.split(' ')[0] || "—";
-                                    const isOutOfStock = product.is_in_stock === false || product.stock_label === "Not Available" || product.stock_status === "Out of Stock" || product.stock_status === "Not Available" || Number(product.stock_qty || 0) <= 0;
+                                    // Positive signals first: trust an explicit "Available" status
+                                    // (favorite-products GraphQL doesn't return stock_qty, so the
+                                    // fallback `stock_qty <= 0` check would otherwise mark
+                                    // every product as OOS).
+                                    const isAvailable = product.is_in_stock === true || product.stock_status === "Available" || product.stock_label === "Available";
+                                    const isOutOfStock = !isAvailable && (
+                                        product.is_in_stock === false
+                                        || product.stock_label === "Not Available"
+                                        || product.stock_status === "Out of Stock"
+                                        || product.stock_status === "Not Available"
+                                        || Number(product.stock_qty || 0) <= 0
+                                    );
                                     const isLimited = !isOutOfStock && product.stock_qty > 0 && product.stock_qty <= 10;
                                     const stockColor = product.stock_color
                                         ? (() => { const c = (product.stock_color || "").toLowerCase(); return c === "green" ? "bg-green-500" : c === "yellow" || c === "orange" ? "bg-yellow-400" : c === "red" ? "bg-red-500" : "bg-gray-400"; })()

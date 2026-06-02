@@ -1,54 +1,41 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getBaseUrl } from "@/lib/api/magento-url";
-
-// BASE_URL is now obtained per-request via getBaseUrl(request)
+import { getRequestToken } from "@/lib/api/auth-helper";
+import { KLEVER_QUICK_ORDER_SEARCH_QUERY } from "@/src/graphql/queries";
+import type { KleverQuickOrderSearchData } from "@/src/graphql/types";
+import { graphqlFetch, isGraphQLRequestError } from "@/src/lib/graphqlFetch";
 
 export async function GET(request: NextRequest) {
-    try {
-        const BASE_URL = getBaseUrl(request);
-        let token: string | null = null;
-
-        const authHeader = request.headers.get("authorization");
-        if (authHeader?.startsWith("Bearer ")) {
-            token = authHeader.substring(7).replace(/['"]/g, "").trim();
-        }
-
-        if (!token) {
-            token = request.cookies.get("auth-token")?.value?.replace(/['"]/g, "").trim() || null;
-        }
-
-        if (!token || token === "null" || token === "undefined") {
-            return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
-        }
-
-        const { searchParams } = new URL(request.url);
-        const query = searchParams.get("query") || "";
-        const pageSize = searchParams.get("pageSize") || "10";
-
-        if (!query || query.length < 2) {
-            return NextResponse.json({ items: [], total_count: 0 });
-        }
-
-        const magentoUrl = `${BASE_URL}/quick-order/search?query=${encodeURIComponent(query)}&pageSize=${encodeURIComponent(pageSize)}`;
-
-        const res = await fetch(magentoUrl, {
-            headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${token}`,
-            },
-            cache: "no-store",
-        });
-
-        if (!res.ok) {
-            const errBody = await res.text();
-            console.error("[quick-order/search] Magento error:", res.status, errBody);
-            return NextResponse.json({ error: "Search failed" }, { status: res.status });
-        }
-
-        const data = await res.json();
-        return NextResponse.json(data);
-    } catch (error: any) {
-        console.error("[quick-order/search] Error:", error.message);
-        return NextResponse.json({ error: "Search failed" }, { status: 500 });
+  try {
+    const token = await getRequestToken(request);
+    if (!token) {
+      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
+
+    const { searchParams } = new URL(request.url);
+    const query = searchParams.get("query") ?? "";
+    const pageSize = Number(searchParams.get("pageSize") || "10");
+
+    if (!query || query.length < 2) {
+      return NextResponse.json({ items: [], total_count: 0 });
+    }
+
+    const data = await graphqlFetch<KleverQuickOrderSearchData>({
+      query: KLEVER_QUICK_ORDER_SEARCH_QUERY,
+      variables: { query, pageSize },
+      token,
+      cache: "no-store",
+    });
+
+    return NextResponse.json(
+      data.kleverQuickOrderSearch ?? { items: [], total_count: 0 },
+    );
+  } catch (error) {
+    if (isGraphQLRequestError(error)) {
+      return NextResponse.json(
+        { message: error.message, errors: error.errors },
+        { status: error.status >= 400 ? error.status : 500 },
+      );
+    }
+    return NextResponse.json({ error: "Search failed" }, { status: 500 });
+  }
 }

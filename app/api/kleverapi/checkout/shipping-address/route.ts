@@ -1,54 +1,57 @@
 import { NextResponse } from "next/server";
-import { getBaseUrl } from "@/lib/api/magento-url";
-
-// BASE_URL is now obtained per-request via getBaseUrl(req)
+import { getRequestToken } from "@/lib/api/auth-helper";
+import { CUSTOMER_CART_ID_QUERY } from "@/src/graphql/queries";
+import { SET_SHIPPING_ADDRESSES_ON_CART_MUTATION } from "@/src/graphql/mutations";
+import type {
+  CustomerCartIdData,
+  SetShippingAddressesOnCartData,
+} from "@/src/graphql/types";
+import { graphqlFetch, isGraphQLRequestError } from "@/src/lib/graphqlFetch";
 
 export async function POST(req: Request) {
-    try {
-        const BASE_URL = getBaseUrl(req);
-        const authHeader = req.headers.get("authorization");
-        if (!authHeader || !authHeader.startsWith("Bearer ") || authHeader.includes("null") || authHeader.includes("undefined")) {
-            console.error("Shipping Address Proxy: Invalid token:", authHeader);
-            return NextResponse.json({ message: "Unauthorized: Invalid customer token" }, { status: 401 });
-        }
-
-        const body = await req.json();
-        console.log(`>>> Set Shipping Address REQUEST: ${BASE_URL}/checkout/shipping-address`, body);
-
-        const response = await fetch(`${BASE_URL}/checkout/shipping-address`, {
-            method: "POST",
-            headers: {
-                Authorization: authHeader,
-                "Content-Type": "application/json",
-                accept: "application/json",
-                platform: "web",
-            },
-            body: JSON.stringify(body),
-            cache: "no-store",
-        });
-
-        // Safe response parsing
-        const responseText = await response.text();
-        let data;
-        try {
-            data = responseText ? JSON.parse(responseText) : {};
-        } catch (err) {
-            console.error(`<<< Set Shipping Address RESPONSE: ${response.status} (FAILED TO PARSE JSON)`, responseText);
-            return NextResponse.json(
-                { message: "Invalid backend response format", details: responseText.substring(0, 200) },
-                { status: 502 }
-            );
-        }
-
-        console.log(`<<< Set Shipping Address RESPONSE: ${response.status}`, data);
-
-        if (!response.ok) {
-            return NextResponse.json(data, { status: response.status });
-        }
-
-        return NextResponse.json(data);
-    } catch (error: any) {
-        console.error("Proxy POST Shipping Address Error:", error);
-        return NextResponse.json({ message: error.message || "Internal server error" }, { status: 500 });
+  try {
+    const token = await getRequestToken(req);
+    if (!token) {
+      return NextResponse.json({ message: "Unauthorized: Invalid customer token" }, { status: 401 });
     }
+
+    const body = await req.json();
+    const addressId = Number(body.addressId ?? body.address_id ?? body.id);
+    if (!addressId) {
+      return NextResponse.json(
+        { message: "addressId is required (customer's saved address id)" },
+        { status: 400 },
+      );
+    }
+
+    let cartId: string | null = body.cart_id ?? null;
+    if (!cartId) {
+      const idData = await graphqlFetch<CustomerCartIdData>({
+        query: CUSTOMER_CART_ID_QUERY,
+        token,
+        cache: "no-store",
+      });
+      cartId = idData.customerCart?.id ?? null;
+    }
+    if (!cartId) {
+      return NextResponse.json({ message: "No active cart found" }, { status: 404 });
+    }
+
+    const data = await graphqlFetch<SetShippingAddressesOnCartData>({
+      query: SET_SHIPPING_ADDRESSES_ON_CART_MUTATION,
+      variables: { cartId, addressId },
+      token,
+      cache: "no-store",
+    });
+
+    return NextResponse.json(data.setShippingAddressesOnCart.cart, { status: 200 });
+  } catch (error) {
+    if (isGraphQLRequestError(error)) {
+      return NextResponse.json(
+        { message: error.message, errors: error.errors },
+        { status: error.status >= 400 ? error.status : 500 },
+      );
+    }
+    return NextResponse.json({ message: "Internal server error" }, { status: 500 });
+  }
 }

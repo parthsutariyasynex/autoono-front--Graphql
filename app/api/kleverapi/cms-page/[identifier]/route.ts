@@ -1,39 +1,40 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getBaseUrl, getGlobalBaseUrl } from "@/lib/api/magento-url";
+import { getLocaleFromRequest } from "@/lib/api/magento-url";
+import { CMS_PAGE_QUERY } from "@/src/graphql/queries";
+import type { CmsPageData } from "@/src/graphql/types";
+import { graphqlFetch, isGraphQLRequestError } from "@/src/lib/graphqlFetch";
 
 export async function GET(
-    request: NextRequest,
-    { params }: { params: Promise<{ identifier: string }> }
+  request: NextRequest,
+  { params }: { params: Promise<{ identifier: string }> },
 ) {
-    try {
-        const { identifier } = await params;
-
-        const candidateUrls = [
-            `${getBaseUrl(request)}/cms-page/${encodeURIComponent(identifier)}`,
-            `${getGlobalBaseUrl(request)}/cms-page/${encodeURIComponent(identifier)}`,
-        ];
-
-        for (const url of candidateUrls) {
-            let res: Response;
-            try {
-                res = await fetch(url, {
-                    headers: { "Content-Type": "application/json" },
-                    cache: "no-store",
-                });
-            } catch {
-                continue;
-            }
-
-            console.log(`[cms-page] ${res.status} → ${url}`);
-            if (!res.ok) continue;
-
-            const data = await res.json();
-            return NextResponse.json(data);
-        }
-
-        return NextResponse.json({ message: "CMS page not found" }, { status: 404 });
-    } catch (error: any) {
-        console.error("[cms-page GET] exception:", error.message);
-        return NextResponse.json({ message: "Internal server error" }, { status: 500 });
+  try {
+    const { identifier } = await params;
+    if (!identifier) {
+      return NextResponse.json({ message: "identifier is required" }, { status: 400 });
     }
+
+    const data = await graphqlFetch<CmsPageData>({
+      query: CMS_PAGE_QUERY,
+      variables: { identifier },
+      store: request.headers.get("x-store-code") || getLocaleFromRequest(request),
+      revalidate: 300,
+      tags: [`cms-page:${identifier}`],
+    });
+
+    if (!data.cmsPage) {
+      return NextResponse.json({ message: "CMS page not found" }, { status: 404 });
+    }
+
+    return NextResponse.json({ identifier, ...data.cmsPage }, { status: 200 });
+  } catch (error) {
+    if (isGraphQLRequestError(error)) {
+      const status = error.status >= 400 ? error.status : 500;
+      return NextResponse.json(
+        { message: error.message, errors: error.errors },
+        { status },
+      );
+    }
+    return NextResponse.json({ message: "Internal server error" }, { status: 500 });
+  }
 }

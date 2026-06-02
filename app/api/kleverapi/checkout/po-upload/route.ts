@@ -1,79 +1,78 @@
 import { NextResponse } from "next/server";
-import { getBaseUrl } from "@/lib/api/magento-url";
-
-// BASE_URL is now obtained per-request via getBaseUrl(req)
+import { getRequestToken } from "@/lib/api/auth-helper";
+import { KLEVER_CHECKOUT_PO_FILES_QUERY } from "@/src/graphql/queries";
+import { KLEVER_CHECKOUT_PO_UPLOAD_MUTATION } from "@/src/graphql/mutations";
+import type {
+  KleverCheckoutPoFilesData,
+  KleverCheckoutPoUploadData,
+} from "@/src/graphql/types";
+import { graphqlFetch, isGraphQLRequestError } from "@/src/lib/graphqlFetch";
 
 export async function GET(req: Request) {
-    try {
-        const BASE_URL = getBaseUrl(req);
-        const authHeader = req.headers.get("authorization");
-        if (!authHeader || !authHeader.startsWith("Bearer ") || authHeader.includes("null") || authHeader.includes("undefined")) {
-            console.error("PO Upload Proxy: Missing or invalid token header:", authHeader);
-            return NextResponse.json({ message: "Unauthorized: Invalid token format" }, { status: 401 });
-        }
-
-        const response = await fetch(`${BASE_URL}/checkout/po-upload`, {
-            method: "GET",
-            headers: {
-                Authorization: authHeader,
-                platform: "web",
-                accept: "application/json",
-            },
-            cache: "no-store",
-        });
-
-        const responseText = await response.text();
-
-        if (!response.ok) {
-            console.error("PO Upload GET error:", response.status, responseText);
-            return NextResponse.json({ error: "Failed to get PO upload", details: responseText }, { status: response.status });
-        }
-
-        try {
-            const data = JSON.parse(responseText);
-            return NextResponse.json(data);
-        } catch (e) {
-            // Return empty data if not valid JSON
-            return NextResponse.json([]);
-        }
-    } catch (error: any) {
-        console.error("Proxy PO Upload GET Error:", error);
-        return NextResponse.json({ message: "Internal server error", details: error.message }, { status: 500 });
+  try {
+    const token = await getRequestToken(req);
+    if (!token) {
+      return NextResponse.json({ message: "Unauthorized: Invalid token format" }, { status: 401 });
     }
+    const data = await graphqlFetch<KleverCheckoutPoFilesData>({
+      query: KLEVER_CHECKOUT_PO_FILES_QUERY,
+      token,
+      cache: "no-store",
+    });
+    const raw = data.kleverCheckoutPoFiles;
+    let files: unknown = raw;
+    if (typeof raw === "string") {
+      try {
+        files = JSON.parse(raw);
+      } catch {
+        files = raw ? [{ name: raw }] : [];
+      }
+    }
+    return NextResponse.json(files ?? [], { status: 200 });
+  } catch (error) {
+    if (isGraphQLRequestError(error)) {
+      return NextResponse.json(
+        { message: error.message, errors: error.errors },
+        { status: error.status >= 400 ? error.status : 500 },
+      );
+    }
+    return NextResponse.json({ message: "Internal server error" }, { status: 500 });
+  }
 }
 
 export async function POST(req: Request) {
-    try {
-        const BASE_URL = getBaseUrl(req);
-        const authHeader = req.headers.get("authorization");
-        if (!authHeader || !authHeader.startsWith("Bearer ") || authHeader.includes("null") || authHeader.includes("undefined")) {
-            console.error("PO Upload Proxy: Missing or invalid token header:", authHeader);
-            return NextResponse.json({ message: "Unauthorized: Invalid token format" }, { status: 401 });
-        }
-
-        const body = await req.json();
-        console.log(">>> PO Upload REQUEST: JSON Pattern");
-
-        const response = await fetch(`${BASE_URL}/checkout/po-upload`, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                Authorization: authHeader,
-                platform: "web",
-            },
-            body: JSON.stringify(body),
-        });
-
-        const data = await response.json();
-        console.log("<<< PO Upload RESPONSE:", response.status);
-
-        if (!response.ok) {
-            return NextResponse.json(data, { status: response.status });
-        }
-
-        return NextResponse.json(data);
-    } catch (error) {
-        console.error("Proxy PO Upload Error:", error);
-        return NextResponse.json({ message: "Internal server error" }, { status: 500 });
+  try {
+    const token = await getRequestToken(req);
+    if (!token) {
+      return NextResponse.json({ message: "Unauthorized: Invalid token format" }, { status: 401 });
     }
+    const body = await req.json();
+    const fileName = body.fileName ?? body.file_name ?? body.name;
+    const fileContent = body.fileContent ?? body.file_content ?? body.content ?? body.base64;
+    const type = body.type ?? body.fileType ?? null;
+    if (!fileName || !fileContent) {
+      return NextResponse.json(
+        { message: "fileName and fileContent (base64) are required" },
+        { status: 400 },
+      );
+    }
+    const data = await graphqlFetch<KleverCheckoutPoUploadData>({
+      query: KLEVER_CHECKOUT_PO_UPLOAD_MUTATION,
+      variables: { fileName, fileContent, type },
+      token,
+      cache: "no-store",
+    });
+    return NextResponse.json(
+      { success: data.kleverCheckoutPoUpload !== false, fileName },
+      { status: 200 },
+    );
+  } catch (error) {
+    if (isGraphQLRequestError(error)) {
+      return NextResponse.json(
+        { message: error.message, errors: error.errors },
+        { status: error.status >= 400 ? error.status : 500 },
+      );
+    }
+    return NextResponse.json({ message: "Internal server error" }, { status: 500 });
+  }
 }

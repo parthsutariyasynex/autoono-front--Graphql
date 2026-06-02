@@ -417,6 +417,7 @@ export default function Navbar() {
     };
     fetchMenu();
 
+
     return () => { cancelled = true; };
   }, [locale]);
 
@@ -454,6 +455,9 @@ export default function Navbar() {
       const mapped: WarehouseItem[] = filtered.map((s) => {
         const storeCode = String(s.store_code ?? "");
         console.log("[Navbar] warehouse store_url:", s.store_url, "store_code:", storeCode);
+        // Dropdown label uses the human-readable warehouse/dealer name from
+        // `group_name` (e.g. "All Warehouse", "Anwar Khaled"). Falls back to
+        // the technical store identifier (V101, V202) if group_name is unset.
         return {
           label: String(s.group_name || s.store_name || s.website_name || ""),
           code: storeCode,

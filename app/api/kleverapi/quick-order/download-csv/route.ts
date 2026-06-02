@@ -1,57 +1,45 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getBaseUrl } from "@/lib/api/magento-url";
-
-// BASE_URL is now obtained per-request via getBaseUrl(request)
+import { getRequestToken } from "@/lib/api/auth-helper";
+import { KLEVER_QUICK_ORDER_DOWNLOAD_CSV_QUERY } from "@/src/graphql/queries";
+import type { KleverQuickOrderDownloadCsvData } from "@/src/graphql/types";
+import { graphqlFetch, isGraphQLRequestError } from "@/src/lib/graphqlFetch";
 
 export async function GET(request: NextRequest) {
-    try {
-        const BASE_URL = getBaseUrl(request);
-        let token: string | null = null;
-
-        const authHeader = request.headers.get("authorization");
-        if (authHeader?.startsWith("Bearer ")) {
-            token = authHeader.substring(7).replace(/['"]/g, "").trim();
-        }
-
-        if (!token) {
-            token = request.cookies.get("auth-token")?.value?.replace(/['"]/g, "").trim() || null;
-        }
-
-        if (!token || token === "null" || token === "undefined") {
-            return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
-        }
-
-        // Mageplaza Quick Order Download CSV API
-        const magentoUrl = `${BASE_URL}/quick-order/download-csv`;
-
-        console.log("[quick-order/download-csv] Requesting CSV from:", magentoUrl);
-
-        const res = await fetch(magentoUrl, {
-            method: "GET",
-            headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${token}`,
-            },
-            cache: "no-store",
-        });
-
-        if (!res.ok) {
-            const errBody = await res.text();
-            console.error("[quick-order/download-csv] Magento error:", res.status, errBody);
-            return NextResponse.json({ error: "Download failed", details: errBody }, { status: res.status });
-        }
-
-        const data = await res.json();
-        console.log("[quick-order/download-csv] Magento data received:", {
-            success: data?.success,
-            hasBase64: !!data?.base64,
-            message: data?.message
-        });
-
-        return NextResponse.json(data);
-
-    } catch (error: any) {
-        console.error("[quick-order/download-csv] Error:", error.message);
-        return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+  try {
+    const token = await getRequestToken(request);
+    if (!token) {
+      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
+
+    const { searchParams } = new URL(request.url);
+    const rawCategoryId = searchParams.get("categoryId");
+    const categoryId = rawCategoryId ? Number(rawCategoryId) : null;
+
+    const data = await graphqlFetch<KleverQuickOrderDownloadCsvData>({
+      query: KLEVER_QUICK_ORDER_DOWNLOAD_CSV_QUERY,
+      variables: { categoryId },
+      token,
+      cache: "no-store",
+    });
+
+    const result = data.kleverQuickOrderDownloadCsv;
+    if (!result) {
+      return NextResponse.json({ error: "CSV not available" }, { status: 404 });
+    }
+    return NextResponse.json({
+      success: true,
+      filename: result.file_name,
+      base64: result.file_content,
+      mime_type: result.content_type,
+      total_products: result.total_products,
+    });
+  } catch (error) {
+    if (isGraphQLRequestError(error)) {
+      return NextResponse.json(
+        { message: error.message, errors: error.errors },
+        { status: error.status >= 400 ? error.status : 500 },
+      );
+    }
+    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+  }
 }

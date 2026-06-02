@@ -1,56 +1,68 @@
 import { NextResponse } from "next/server";
-import { getBaseUrl } from "@/lib/api/magento-url";
-
-// BASE_URL is now obtained per-request via getBaseUrl(req)
+import { getRequestToken } from "@/lib/api/auth-helper";
+import { CUSTOMER_CART_ID_QUERY } from "@/src/graphql/queries";
+import {
+  PLACE_ORDER_MUTATION,
+  SET_PAYMENT_METHOD_ON_CART_MUTATION,
+} from "@/src/graphql/mutations";
+import type {
+  CustomerCartIdData,
+  PlaceOrderData,
+  SetPaymentMethodOnCartData,
+} from "@/src/graphql/types";
+import { graphqlFetch, isGraphQLRequestError } from "@/src/lib/graphqlFetch";
 
 export async function POST(req: Request) {
-    try {
-        const BASE_URL = getBaseUrl(req);
-        const authHeader = req.headers.get("authorization");
-        if (!authHeader || !authHeader.startsWith("Bearer ")) {
-            return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
-        }
-
-        const body = await req.json();
-        console.log(">>> Place Order REQUEST:", body);
-
-        const response = await fetch(`${BASE_URL}/checkout/place-order`, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                Authorization: authHeader,
-                platform: "web",
-            },
-            body: JSON.stringify(body),
-        });
-
-        const responseText = await response.text();
-        console.log("<<< Place Order RESPONSE:", response.status, responseText);
-
-        if (!response.ok) {
-            let errorData;
-            try {
-                errorData = JSON.parse(responseText);
-            } catch {
-                errorData = { message: responseText };
-            }
-            return NextResponse.json(errorData, { status: response.status });
-        }
-
-        let data: any;
-        try {
-            data = JSON.parse(responseText);
-        } catch {
-            return NextResponse.json({ message: "Invalid response from server" }, { status: 500 });
-        }
-
-        // Normalize: if Magento returns a plain order ID (number or string), wrap it
-        if (typeof data !== 'object' || data === null) {
-            data = { order_id: data, order_increment_id: String(data) };
-        }
-        return NextResponse.json(data);
-    } catch (error) {
-        console.error("Proxy Place Order Error:", error);
-        return NextResponse.json({ message: "Internal server error" }, { status: 500 });
+  try {
+    const token = await getRequestToken(req);
+    if (!token) {
+      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
+
+    const body = await req.json();
+    const paymentMethod = body.paymentMethod ?? body.payment_method ?? body.method;
+
+    let cartId: string | null = body.cart_id ?? null;
+    if (!cartId) {
+      const idData = await graphqlFetch<CustomerCartIdData>({
+        query: CUSTOMER_CART_ID_QUERY,
+        token,
+        cache: "no-store",
+      });
+      cartId = idData.customerCart?.id ?? null;
+    }
+    if (!cartId) {
+      return NextResponse.json({ message: "No active cart found" }, { status: 404 });
+    }
+
+    if (paymentMethod) {
+      await graphqlFetch<SetPaymentMethodOnCartData>({
+        query: SET_PAYMENT_METHOD_ON_CART_MUTATION,
+        variables: { cartId, code: paymentMethod },
+        token,
+        cache: "no-store",
+      });
+    }
+
+    const data = await graphqlFetch<PlaceOrderData>({
+      query: PLACE_ORDER_MUTATION,
+      variables: { cartId },
+      token,
+      cache: "no-store",
+    });
+
+    const orderNumber = data.placeOrder.order.order_number;
+    return NextResponse.json(
+      { order_id: orderNumber, order_increment_id: orderNumber },
+      { status: 200 },
+    );
+  } catch (error) {
+    if (isGraphQLRequestError(error)) {
+      return NextResponse.json(
+        { message: error.message, errors: error.errors },
+        { status: error.status >= 400 ? error.status : 500 },
+      );
+    }
+    return NextResponse.json({ message: "Internal server error" }, { status: 500 });
+  }
 }

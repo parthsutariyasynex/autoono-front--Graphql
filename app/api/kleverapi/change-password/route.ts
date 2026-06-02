@@ -1,37 +1,42 @@
 import { NextResponse } from "next/server";
-import { getBaseUrl } from "@/lib/api/magento-url";
-
-// BASE_URL is now obtained per-request via getBaseUrl(req)
+import { getRequestToken } from "@/lib/api/auth-helper";
+import { CHANGE_CUSTOMER_PASSWORD_MUTATION } from "@/src/graphql/mutations";
+import type { ChangeCustomerPasswordData } from "@/src/graphql/types";
+import { graphqlFetch, isGraphQLRequestError } from "@/src/lib/graphqlFetch";
 
 export async function POST(req: Request) {
-    try {
-        const baseUrl = getBaseUrl(req);
-        const authHeader = req.headers.get("authorization");
-        if (!authHeader || !authHeader.startsWith("Bearer ")) {
-            return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
-        }
-
-        const body = await req.json();
-        const response = await fetch(`${baseUrl}/change-password`, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                Authorization: authHeader,
-                platform: "web",
-            },
-            body: JSON.stringify(body),
-        });
-
-        const data = await response.json();
-
-        if (!response.ok) {
-            console.error("Change Password API error:", response.status, data);
-            return NextResponse.json(data, { status: response.status });
-        }
-
-        return NextResponse.json(data);
-    } catch (error) {
-        console.error("Proxy POST Change Password Error:", error);
-        return NextResponse.json({ message: "Internal server error" }, { status: 500 });
+  try {
+    const token = await getRequestToken(req);
+    if (!token) {
+      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
+
+    const body = await req.json();
+    const currentPassword = body.currentPassword ?? body.current_password ?? body.oldPassword;
+    const newPassword = body.newPassword ?? body.new_password ?? body.password;
+
+    if (!currentPassword || !newPassword) {
+      return NextResponse.json(
+        { message: "currentPassword and newPassword are required" },
+        { status: 400 },
+      );
+    }
+
+    const data = await graphqlFetch<ChangeCustomerPasswordData>({
+      query: CHANGE_CUSTOMER_PASSWORD_MUTATION,
+      variables: { currentPassword, newPassword },
+      token,
+      cache: "no-store",
+    });
+
+    return NextResponse.json({ success: true, customer: data.changeCustomerPassword }, { status: 200 });
+  } catch (error) {
+    if (isGraphQLRequestError(error)) {
+      return NextResponse.json(
+        { message: error.message, errors: error.errors },
+        { status: error.status >= 400 ? error.status : 400 },
+      );
+    }
+    return NextResponse.json({ message: "Internal server error" }, { status: 500 });
+  }
 }

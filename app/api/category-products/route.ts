@@ -1,293 +1,178 @@
-import { getServerSession } from "next-auth";
-import { getToken } from "next-auth/jwt";
-import { authOptions } from "@/lib/auth/auth-options";
-import { NextRequest } from "next/server";
-import { getBaseUrl, getGlobalBaseUrl, getLocaleFromRequest, getStoreBaseUrl } from "@/lib/api/magento-url";
-import { SESSION_COOKIE_NAME } from "@/lib/auth/constants";
+import { NextRequest, NextResponse } from "next/server";
+import { getRequestToken } from "@/lib/api/auth-helper";
+import { getLocaleFromRequest } from "@/lib/api/magento-url";
+import { KLEVER_CATEGORY_PRODUCTS_QUERY } from "@/src/graphql/queries";
+import type {
+  KleverCategoryProductItem,
+  KleverCategoryProductsData,
+} from "@/src/graphql/types";
+import { graphqlFetch, isGraphQLRequestError } from "@/src/lib/graphqlFetch";
+
+// Derives the UI dot color from stock_label / is_in_stock. The GraphQL response
+// from kleverCategoryProducts (minimal selection) doesn't include stock_color
+// itself, so we compute it here for the frontend ProductCard.
+function deriveStockColor(item: KleverCategoryProductItem): string {
+  const label = (item.stock_label || "").toLowerCase().trim();
+  if (label.includes("limited")) return "yellow";
+  if (
+    label.includes("not available") ||
+    label.includes("out of stock") ||
+    item.is_in_stock === false
+  ) {
+    return "red";
+  }
+  return "green";
+}
+
+// Frontend filter param → backend GraphQL variable name.
+// Accepts both snake_case and camelCase from URLs; both map to the camelCase
+// GraphQL variable that kleverCategoryProducts expects.
+const REQUEST_PARAM_MAP: Record<string, string> = {
+  parts_category: "partsCategory",
+  partsCategory: "partsCategory",
+  product_group: "productGroup",
+  productGroup: "productGroup",
+  warranty_period: "warrantyPeriod",
+  warrantyPeriod: "warrantyPeriod",
+  new_arrivals: "newArrivals",
+  newArrivals: "newArrivals",
+  oil_type: "oilType",
+  oilType: "oilType",
+  grade: "oilGrade",
+  oilGrade: "oilGrade",
+  item_code: "itemCode",
+  itemCode: "itemCode",
+  tyre_size: "tyreSize",
+  tyreSize: "tyreSize",
+  oem_marking: "oemMarking",
+  oemMarking: "oemMarking",
+  mgs_brand: "mgsBrand",
+  mgsBrand: "mgsBrand",
+  search: "searchQuery",
+  searchBy: "searchQuery",
+  searchby: "searchQuery",
+  searchQuery: "searchQuery",
+  min_price: "minPrice",
+  minPrice: "minPrice",
+  max_price: "maxPrice",
+  maxPrice: "maxPrice",
+  brand: "brand",
+  color: "color",
+  width: "width",
+  height: "height",
+  rim: "rim",
+  pattern: "pattern",
+  offers: "offers",
+  year: "year",
+  origin: "origin",
+  manufacturer: "manufacturer",
+  types: "types",
+  runflat: "runflat",
+  liters: "liters",
+  sortBy: "sortBy",
+  sortOrder: "sortOrder",
+};
+
+const FLOAT_ARGS = new Set(["minPrice", "maxPrice"]);
+const BOOLEAN_ARGS = new Set(["newArrivals"]);
+
+const RESERVED = new Set([
+  "categoryId",
+  "category_id",
+  "pageSize",
+  "page_size",
+  "currentPage",
+  "current_page",
+  "page",
+  "store",
+  "storeCode",
+  "lang",
+  "category",
+  "is_ajax",
+  "n",
+  "nocache",
+]);
+
+function buildVariables(searchParams: URLSearchParams) {
+  const categoryId = Number(searchParams.get("categoryId") || "15");
+  const pageSize = Number(searchParams.get("pageSize") || "20");
+  const currentPage = Number(
+    searchParams.get("page") || searchParams.get("currentPage") || "1",
+  );
+
+  const variables: Record<string, unknown> = { categoryId, pageSize, currentPage };
+
+  const grouped: Record<string, string[]> = {};
+  for (const [rawKey, rawValue] of searchParams) {
+    if (RESERVED.has(rawKey) || rawValue === "") continue;
+    const baseKey = rawKey.includes("[") ? rawKey.split("[")[0] : rawKey;
+    if (!grouped[baseKey]) grouped[baseKey] = [];
+    for (const part of rawValue.split(",")) {
+      const v = part.trim();
+      if (v && !grouped[baseKey].includes(v)) grouped[baseKey].push(v);
+    }
+  }
+
+  for (const [baseKey, values] of Object.entries(grouped)) {
+    const gqlArg = REQUEST_PARAM_MAP[baseKey];
+    if (!gqlArg) continue;
+
+    if (FLOAT_ARGS.has(gqlArg)) {
+      const n = Number(values[0]);
+      if (Number.isFinite(n)) variables[gqlArg] = n;
+    } else if (BOOLEAN_ARGS.has(gqlArg)) {
+      const v = values[0].toLowerCase();
+      variables[gqlArg] = v === "1" || v === "true";
+    } else {
+      variables[gqlArg] = values.join(",");
+    }
+  }
+
+  return variables;
+}
 
 export async function GET(request: NextRequest) {
-    try {
-        // Step 1: Get token - try multiple methods
-        let token: string | null = null;
+  try {
+    const token = await getRequestToken(request);
+    const { searchParams } = new URL(request.url);
+    const storeCode =
+      searchParams.get("store") ||
+      searchParams.get("storeCode") ||
+      request.headers.get("x-store-code") ||
+      getLocaleFromRequest(request);
 
-        // Method 1: Authorization header from client
-        const authHeader = request.headers.get("authorization");
-        if (authHeader && authHeader.startsWith("Bearer ")) {
-            token = authHeader.substring(7).replace(/['"]/g, "").trim();
+    const data = await graphqlFetch<KleverCategoryProductsData>({
+      query: KLEVER_CATEGORY_PRODUCTS_QUERY,
+      variables: buildVariables(searchParams),
+      token,
+      store: storeCode,
+      cache: "no-store",
+    });
+
+    const result = data.kleverCategoryProducts;
+    const enriched = result
+      ? {
+          ...result,
+          products: result.products.map((p) => ({
+            ...p,
+            stock_color: deriveStockColor(p),
+          })),
         }
+      : null;
 
-        // Method 2: NextAuth JWT from cookie (most reliable on Vercel)
-        if (!token) {
-            try {
-                const jwtToken = await getToken({
-                    req: request,
-                    secret: process.env.NEXTAUTH_SECRET,
-                    cookieName: SESSION_COOKIE_NAME,
-                });
-                token = (jwtToken as any)?.accessToken || null;
-            } catch (e) {
-                console.error("[category-products] JWT token error:", e);
-            }
-        }
-
-        // Method 4: auth-token cookie directly
-        if (!token) {
-            token = request.cookies.get("auth-token")?.value || null;
-            if (token) {
-                token = token.replace(/['"]/g, "").trim();
-                console.log("[category-products] Token from auth-token cookie:", token ? "found" : "missing");
-            }
-        }
-
-        // Final check: if token is invalid string, clear it
-        if (token === "null" || token === "undefined" || !token) {
-            token = null;
-        }
-
-        // Note: For some anonymous endpoints, we might want to continue even without a token.
-        // But here we'll keep the check if the app requires login to see products.
-        if (!token) {
-            console.warn("[category-products] No token found. Proceeding as guest if allowed by Magento.");
-        }
-
-        // Step 2: Handle search parameters
-        const { searchParams } = new URL(request.url);
-        // categoryId=15 is Magento's root/all-products category — required by category-products endpoint
-        const categoryId = searchParams.get("categoryId") || "15";
-        const page = searchParams.get("page") || "1";
-        const pageSize = searchParams.get("pageSize") || "20";
-        // Optional store/warehouse code (e.g. V101, V102, V103) — goes into the Magento URL path
-        const storeCode = searchParams.get("store") || searchParams.get("storeCode") || "";
-
-        // Group parameters: Magento's layered navigation uses key[0]=v1. 
-        // We want to group these into key=v1,v2 for the category-products JSON API.
-        const groupedParams: Record<string, string[]> = {};
-        searchParams.forEach((value, key) => {
-            const baseKey = key.includes("[") ? key.split("[")[0] : key;
-            if (!groupedParams[baseKey]) groupedParams[baseKey] = [];
-            if (!groupedParams[baseKey].includes(value)) groupedParams[baseKey].push(value);
-        });
-
-        // Combine bracketed multi-values (e.g. itemCode[0]=A&itemCode[1]=B) into
-        // a comma-joined string — Magento's `itemCode=A,B` accepts that form.
-        const joinValues = (...arrays: (string[] | undefined)[]) => {
-            const all: string[] = [];
-            arrays.forEach((arr) => arr?.forEach((v) => { if (v && !all.includes(v)) all.push(v); }));
-            return all.join(",");
-        };
-        const searchByParam = searchParams.get("searchby") || searchParams.get("search") || searchParams.get("searchBy") ||
-            joinValues(groupedParams["searchby"], groupedParams["search"], groupedParams["searchBy"]) || "";
-        const itemCodeParam = searchParams.get("item_code") || searchParams.get("itemCode") ||
-            joinValues(groupedParams["item_code"], groupedParams["itemCode"]) || "";
-        const isSearching = !!(searchByParam || itemCodeParam);
-
-        // Step 3: Construct Magento URL with simple params (matching live API format).
-        // `searchBy=<term>` is a name search; `itemCode=<sku>` is the SKU/item-code
-        // attribute filter — they are NOT interchangeable.
-        const queryParts: string[] = [
-            `currentPage=${encodeURIComponent(page)}`,
-            `pageSize=${encodeURIComponent(pageSize)}`,
-            `is_ajax=1`,
-            ...(categoryId ? [`categoryId=${encodeURIComponent(categoryId)}`] : []),
-            ...(searchByParam ? [`searchBy=${encodeURIComponent(searchByParam)}`] : []),
-            ...(itemCodeParam ? [`itemCode=${encodeURIComponent(itemCodeParam)}`] : []),
-        ];
-
-        // Filters: mapping and joining grouped values
-        const reservedKeys = new Set(["categoryId", "page", "pageSize", "sortBy", "is_ajax", "storeCode", "store", "lang", "category", "searchBy", "search", "searchby", "itemCode", "item_code"]);
-
-        Object.entries(groupedParams).forEach(([key, values]) => {
-            if (reservedKeys.has(key)) return;
-
-            const combined = values
-                .flatMap((v) => v.split(",").map((s) => s.trim()).filter(Boolean))
-                .filter((v, i, arr) => arr.indexOf(v) === i)
-                .join(",");
-
-            if (combined) {
-                // Specialized mappings for specific Magento attributes
-                const keyMap: Record<string, string> = {
-                    brand: "mgs_brand",
-                    origin: "manufacturer",
-                    tyre_size: "color",
-                    product_group: "productGroup",
-                    warranty_period: "warrantyPeriod",
-                    new_arrivals: "newArrivals",
-                    item_code: "itemCode",
-                    oem_marking: "oemMarking",
-                    parts_category: "partsCategory",
-                    oil_type: "oilType",
-                    grade: "oilGrade"
-                };
-
-                const magentoKey = keyMap[key] || key;
-
-                // Append to query parts without incorrect snake_case conversion
-                queryParts.push(`${encodeURIComponent(magentoKey)}=${encodeURIComponent(combined)}`);
-            }
-        });
-
-        // Debug: log what locale the API route receives
-        const xLocaleHeader = request.headers.get("x-locale");
-        const localeCookie = request.cookies.get("NEXT_LOCALE")?.value;
-        const referer = request.headers.get("referer") || "";
-        const langParam = new URL(request.url).searchParams.get("lang");
-        const resolvedLocale = getLocaleFromRequest(request);
-        console.log("[category-products] LOCALE DEBUG: lang=" + langParam + " header=" + xLocaleHeader + " cookie=" + localeCookie + " resolved=" + resolvedLocale + " referer=" + referer);
-
-        // Choose the Magento base URL: explicit warehouse code (V101, V102…) takes priority.
-        // When no warehouse is selected, use the global /rest/V1/ endpoint — locale-prefixed
-        // URLs like /rest/en/ don't work with the kleverapi category-products endpoint.
-        const effectiveStoreCode = storeCode || "";
-        const LOCALE_CODES = ["en", "ar"];
-        // Warehouse code (e.g. V101_en) → store-specific base URL
-        // Locale-only code (en/ar) or empty → locale-based base URL (/rest/en/V1/kleverapi)
-        const primaryBaseUrl = (effectiveStoreCode && !LOCALE_CODES.includes(effectiveStoreCode))
-            ? getStoreBaseUrl(effectiveStoreCode)
-            : getBaseUrl(request);
-        // Always use /category-products so search runs within the current
-        // category & store scope (matches the live storefront's `?searchBy=…` URL).
-        const magentoEndpoint = "category-products";
-        const magentoUrlStr = `${primaryBaseUrl}/${magentoEndpoint}?${queryParts.join("&")}`;
-        console.log("[category-products] storeCode=" + effectiveStoreCode + " URL:", magentoUrlStr);
-
-        const t0 = Date.now();
-        let res = await fetch(magentoUrlStr, {
-            headers: {
-                ...(token && { Authorization: `Bearer ${token}` }),
-                "Content-Type": "application/json",
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-                "platform": "web",
-                ...(effectiveStoreCode && { "x-store-code": effectiveStoreCode }),
-            },
-            cache: "no-store",
-        });
-        const tMagento = Date.now() - t0;
-        console.log(`[category-products] ⏱  Magento responded in ${tMagento}ms (status ${res.status})`);
-
-        // Fallback Strategy: If V101 returns 404, try the locale-specific URL
-        if (!res.ok && res.status === 404) {
-            console.warn("[category-products] V101 URL returned 404. Falling back to locale baseUrl.");
-            const localeBaseUrl = getBaseUrl(request);
-            const fallbackUrl = `${localeBaseUrl}/${magentoEndpoint}?${queryParts.join("&")}`;
-            res = await fetch(fallbackUrl, {
-                headers: {
-                    ...(token && { Authorization: `Bearer ${token}` }),
-                    "Content-Type": "application/json",
-                    "platform": "web",
-                    ...(effectiveStoreCode && { "x-store-code": effectiveStoreCode }),
-                },
-                cache: "no-store",
-            });
-        }
-
-        if (!res.ok) {
-            const errBody = await res.text();
-            console.error(`[category-products] Magento ${res.status} for URL: ${magentoUrlStr} — ${errBody.slice(0, 300)}`);
-            if (res.status >= 500) {
-                return Response.json({ products: [], items: [], total_count: 0, filters: [], server_error: true });
-            }
-            return Response.json({ products: [], items: [], total_count: 0, filters: [] });
-        }
-
-        const data = await res.json();
-
-        // ── Normalize Filter Keys ──
-        if (Array.isArray(data.filters)) {
-            data.filters = data.filters.map((f: any) => {
-                let code = f.code || f.attribute_code;
-
-                // Map backend keys to what the frontend expects
-                if (code === "color") code = "tyre_size";
-                if (code === "manufacturer") code = "origin";
-                if (code === "mgs_brand") code = "brand";
-                if (code === "productGroup") code = "product_group";
-                if (code === "warrantyPeriod") code = "warranty_period";
-                if (code === "newArrivals") code = "new_arrivals";
-                if (code === "partsCategory") code = "parts_category";
-                if (code === "oilType") code = "oil_type";
-                if (code === "oilGrade") code = "grade";
-                if (code === "itemCode") code = "item_code";
-
-                return { ...f, code };
-            });
-        }
-
-        // ── Dynamic Offers Filter Injection ──
-        const products = Array.isArray(data) ? data : (Array.isArray(data.products) ? data.products : (Array.isArray(data.items) ? data.items : []));
-
-        if (products.length > 0) {
-            // Collect unique offers from the products array
-            const offerValues = products
-                .map((p: any) => p.offer)
-                .filter((v: any): v is string => typeof v === 'string' && v.trim().length > 0);
-
-            const uniqueOffers: string[] = Array.from(new Set(offerValues));
-
-            if (uniqueOffers.length > 0) {
-                // Count products per offer for the filter counts
-                const offerCounts: Record<string, number> = {};
-                offerValues.forEach((v: string) => {
-                    offerCounts[v] = (offerCounts[v] || 0) + 1;
-                });
-
-                const locale = getLocaleFromRequest(request);
-                // Create the synthetic filter group
-                const offersFilter = {
-                    code: "offers",
-                    label: locale === "ar" ? "العروض والترقيات" : "Promotions and Offers",
-                    record_count: uniqueOffers.length,
-                    options: uniqueOffers.map((offer: string) => ({
-                        value: offer,
-                        label: offer,
-                        count: offerCounts[offer]
-                    }))
-                };
-
-                // Ensure data.filters exists
-                if (!Array.isArray(data.filters)) {
-                    data.filters = [];
-                }
-
-                // Check if already exists to avoid duplicates
-                const hasOffers = data.filters.some((f: any) => f.code === "offers" || f.code === "promotions_and_offers");
-
-                if (!hasOffers) {
-                    // Find index of itemCode to insert after it, or push to start
-                    const itemCodeIndex = data.filters.findIndex((f: any) => f.code === "itemCode" || f.code === "item_code");
-                    if (itemCodeIndex !== -1) {
-                        data.filters.splice(itemCodeIndex + 1, 0, offersFilter);
-                    } else {
-                        data.filters.unshift(offersFilter);
-                    }
-                }
-            }
-        }
-
-        // Extract total count and other fields from the original response
-        const totalCount = typeof data.total_count === "number" ? data.total_count : products.length;
-        const totalPages = data.total_pages || Math.ceil(totalCount / Number(pageSize));
-        const finalFilters = Array.isArray(data.filters) ? data.filters : [];
-
-        // Return the clean, normalized structure requested
-        // Include debug info so we can see what locale was used
-        return new Response(JSON.stringify({
-            ...data,
-            products: products,
-            total_count: totalCount,
-            total_pages: totalPages,
-            filters: finalFilters
-        }), {
-            headers: {
-                "Content-Type": "application/json",
-                // 30s fresh, serve stale for 60s while revalidating in background.
-                // Products don't change per-second; this cuts repeat Magento round-trips.
-                "Cache-Control": "private, max-age=30, stale-while-revalidate=60",
-            },
-        });
-
-    } catch (error: any) {
-        console.error("category-products route error:", error.message);
-        return Response.json({ products: [], items: [], total_count: 0, filters: [], server_error: true });
+    return NextResponse.json(enriched, {
+      status: 200,
+      headers: {
+        "Cache-Control": "private, max-age=120, stale-while-revalidate=600",
+      },
+    });
+  } catch (error) {
+    if (isGraphQLRequestError(error)) {
+      return NextResponse.json(
+        { message: error.message, errors: error.errors },
+        { status: error.status >= 400 ? error.status : 500 },
+      );
     }
+    return NextResponse.json({ message: "Failed to load category products." }, { status: 500 });
+  }
 }

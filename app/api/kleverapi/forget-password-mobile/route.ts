@@ -1,34 +1,34 @@
 import { NextResponse } from "next/server";
-import { getBaseUrl } from "@/lib/api/magento-url";
+import { REQUEST_PASSWORD_RESET_EMAIL_MUTATION } from "@/src/graphql/mutations";
+import type { RequestPasswordResetEmailData } from "@/src/graphql/types";
+import { graphqlFetch, isGraphQLRequestError } from "@/src/lib/graphqlFetch";
 
 export async function POST(request: Request) {
-    try {
-        const BASE_URL = getBaseUrl(request);
-        const body = await request.json();
+  try {
+    const body = await request.json();
+    const email = body.email;
 
-        const response = await fetch(`${BASE_URL}/forget-password-mobile`, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                platform: "web",
-            },
-            body: JSON.stringify(body),
-        });
-
-        const data = await response.json();
-
-        if (!response.ok) {
-            return NextResponse.json(
-                { message: data.message || `Magento returned ${response.status}` },
-                { status: response.status }
-            );
-        }
-
-        return NextResponse.json(data);
-    } catch (error: any) {
-        return NextResponse.json(
-            { message: error.message || "Server error processing forgot password" },
-            { status: 500 }
-        );
+    if (!email) {
+      return NextResponse.json({ message: "Email is required" }, { status: 400 });
     }
+
+    const data = await graphqlFetch<RequestPasswordResetEmailData>({
+      query: REQUEST_PASSWORD_RESET_EMAIL_MUTATION,
+      variables: { email },
+      cache: "no-store",
+    });
+
+    return NextResponse.json(
+      { success: data.requestPasswordResetEmail !== false },
+      { status: 200 },
+    );
+  } catch (error) {
+    if (isGraphQLRequestError(error)) {
+      return NextResponse.json(
+        { message: error.message, errors: error.errors },
+        { status: error.status >= 400 ? error.status : 400 },
+      );
+    }
+    return NextResponse.json({ message: "Forgot-password request failed" }, { status: 500 });
+  }
 }

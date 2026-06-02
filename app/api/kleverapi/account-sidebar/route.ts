@@ -1,62 +1,46 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getBaseUrl } from "@/lib/api/magento-url";
+import { getRequestToken } from "@/lib/api/auth-helper";
+import { getLocaleFromRequest } from "@/lib/api/magento-url";
+import { KLEVER_ACCOUNT_SIDEBAR_QUERY } from "@/src/graphql/queries";
+import type { KleverAccountSidebarData } from "@/src/graphql/types";
+import { graphqlFetch } from "@/src/lib/graphqlFetch";
 
 const fallbackSidebar = {
-    user_type: "customer",
-    items: [
-        { label: "My Account", url: "/my-account", code: "my_account", is_visible: true, sort_order: 10 },
-        { label: "Dashboard", url: "/customer/dashboard", code: "dashboard", is_visible: true, sort_order: 20 },
-        { label: "My Orders", url: "/my-orders", code: "my_orders", is_visible: true, sort_order: 30 },
-        { label: "My Statement", url: "/customer/statement", code: "statement", is_visible: true, sort_order: 40 },
-        { label: "Favorite Products", url: "/favorites", code: "favourite_products", is_visible: true, sort_order: 50 },
-        { label: "Address Book", url: "/customer/address-book", code: "address_book", is_visible: true, sort_order: 60 },
-        { label: "Notifications", url: "/customer/notifications", code: "notifications", is_visible: true, sort_order: 70 },
-        { label: "Sign Out", url: "/logout", code: "sign_out", is_visible: true, sort_order: 999 },
-    ]
+  user_type: "customer",
+  items: [
+    { label: "My Account", url: "/my-account", code: "my_account", is_visible: true, sort_order: 10 },
+    { label: "Dashboard", url: "/customer/dashboard", code: "dashboard", is_visible: true, sort_order: 20 },
+    { label: "My Orders", url: "/my-orders", code: "my_orders", is_visible: true, sort_order: 30 },
+    { label: "My Statement", url: "/customer/statement", code: "statement", is_visible: true, sort_order: 40 },
+    { label: "Favorite Products", url: "/favorites", code: "favourite_products", is_visible: true, sort_order: 50 },
+    { label: "Address Book", url: "/customer/address-book", code: "address_book", is_visible: true, sort_order: 60 },
+    { label: "Notifications", url: "/customer/notifications", code: "notifications", is_visible: true, sort_order: 70 },
+    { label: "Sign Out", url: "/logout", code: "sign_out", is_visible: true, sort_order: 999 },
+  ],
 };
 
+const NO_CACHE_HEADERS = { "Cache-Control": "no-store, no-cache, must-revalidate" };
+
 export async function GET(request: NextRequest) {
-    try {
-        const BASE_URL = getBaseUrl(request);
+  const token = await getRequestToken(request);
+  if (!token) {
+    return NextResponse.json(fallbackSidebar, { headers: NO_CACHE_HEADERS });
+  }
 
-        let token: string | null = null;
-        const authHeader = request.headers.get("authorization");
-        if (authHeader?.startsWith("Bearer ")) {
-            token = authHeader.substring(7).replace(/['"]/g, "").trim();
-        }
-        if (!token) {
-            token = request.cookies.get("auth-token")?.value?.replace(/['"]/g, "").trim() || null;
-        }
-        if (!token || token === "null" || token === "undefined") {
-            return NextResponse.json(fallbackSidebar, {
-                headers: { "Cache-Control": "no-store, no-cache, must-revalidate" },
-            });
-        }
+  try {
+    const data = await graphqlFetch<KleverAccountSidebarData>({
+      query: KLEVER_ACCOUNT_SIDEBAR_QUERY,
+      token,
+      store: request.headers.get("x-store-code") || getLocaleFromRequest(request),
+      cache: "no-store",
+    });
 
-        const res = await fetch(`${BASE_URL}/account-sidebar`, {
-            headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${token}`,
-            },
-            cache: "no-store",
-        });
-
-        if (!res.ok) {
-            const errBody = await res.text();
-            console.warn("[account-sidebar] Magento error, serving fallback:", res.status, errBody);
-            return NextResponse.json(fallbackSidebar, {
-                headers: { "Cache-Control": "no-store, no-cache, must-revalidate" },
-            });
-        }
-
-        const data = await res.json();
-        return NextResponse.json(data, {
-            headers: { "Cache-Control": "no-store, no-cache, must-revalidate" },
-        });
-    } catch (error: any) {
-        console.warn("[account-sidebar] Route error, serving fallback:", error.message);
-        return NextResponse.json(fallbackSidebar, {
-            headers: { "Cache-Control": "no-store, no-cache, must-revalidate" },
-        });
+    if (!data.kleverAccountSidebar) {
+      return NextResponse.json(fallbackSidebar, { headers: NO_CACHE_HEADERS });
     }
+    return NextResponse.json(data.kleverAccountSidebar, { headers: NO_CACHE_HEADERS });
+  } catch (error) {
+    console.warn("[account-sidebar] GraphQL failed, serving fallback:", error);
+    return NextResponse.json(fallbackSidebar, { headers: NO_CACHE_HEADERS });
+  }
 }

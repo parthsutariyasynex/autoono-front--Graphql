@@ -1,98 +1,46 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getBaseUrl, getGlobalBaseUrl } from "@/lib/api/magento-url";
 import { getRequestToken } from "@/lib/api/auth-helper";
-import axios from "axios";
+import { KLEVER_NOTIFICATIONS_QUERY } from "@/src/graphql/queries";
+import type { KleverNotificationsData } from "@/src/graphql/types";
+import { graphqlFetch, isGraphQLRequestError } from "@/src/lib/graphqlFetch";
 
 export async function GET(req: NextRequest) {
-    try {
-        const BASE_URL = getBaseUrl(req);
-        const { searchParams } = new URL(req.url);
-        const pageSize = searchParams.get("pageSize") || "15";
-        const currentPage = searchParams.get("currentPage") || "1";
-
-        const tokenStart = Date.now();
-        const token = await getRequestToken(req);
-        const tokenEnd = Date.now();
-        console.log(`[Notifications Proxy] Token retrieved in ${tokenEnd - tokenStart}ms`);
-
-        if (!token) {
-            console.warn("[Notifications Proxy] No token found");
-            return NextResponse.json({ message: "Unauthorized: Missing customer token" }, { status: 401 });
-        }
-
-        const url = `${BASE_URL}/notifications?pageSize=${pageSize}&currentPage=${currentPage}`;
-        console.log(`[Notifications Proxy] Fetching from Magento: ${url}`);
-
-        let data: any;
-        let status: number;
-
-        try {
-            const fetchStart = Date.now();
-            const response = await axios.get(url, {
-                headers: {
-                    "Authorization": `Bearer ${token}`,
-                    "Content-Type": "application/json",
-                    "platform": "web",
-                },
-                timeout: 10000,
-            });
-            const fetchEnd = Date.now();
-            console.log(`[Notifications Proxy] Axios completed in ${fetchEnd - fetchStart}ms`);
-            data = response.data;
-            status = response.status;
-        } catch (error: any) {
-            if (error.response?.status === 404) {
-                const globalBase = getGlobalBaseUrl(req);
-                const globalUrl = `${globalBase}/notifications?pageSize=${pageSize}&currentPage=${currentPage}`;
-                if (globalUrl !== url) {
-                    console.log(`[Notifications Proxy] Not found at ${url}. Retrying global URL: ${globalUrl}`);
-                    const fallbackResponse = await axios.get(globalUrl, {
-                        headers: {
-                            "Authorization": `Bearer ${token}`,
-                            "Content-Type": "application/json",
-                            "platform": "web",
-                        },
-                        timeout: 10000,
-                    });
-                    data = fallbackResponse.data;
-                    status = fallbackResponse.status;
-                } else {
-                    throw error;
-                }
-            } else {
-                throw error;
-            }
-        }
-
-        console.log("[Notifications Proxy] Magento Response Status:", status);
-
-        // Normalize: find the notification items array from whatever key Magento uses
-        let items: any[] = [];
-        if (Array.isArray(data)) {
-            items = data;
-        } else {
-            for (const key of Object.keys(data)) {
-                if (Array.isArray(data[key]) && data[key].length > 0) {
-                    items = data[key];
-                    break;
-                }
-            }
-        }
-
-        return NextResponse.json({
-            items,
-            total_count: data.total_count ?? data.totalCount ?? items.length,
-            unread_count: data.unread_count ?? data.unreadCount ?? 0,
-        });
-    } catch (error: any) {
-        console.error("Proxy GET Notifications Error:", error.message);
-        if (error.response) {
-            console.error("Proxy GET Notifications Status:", error.response.status);
-            return NextResponse.json(error.response.data, { status: error.response.status });
-        }
-        return NextResponse.json({ 
-            message: "Internal server error",
-            code: error.code || 'unknown'
-        }, { status: 500 });
+  try {
+    const token = await getRequestToken(req);
+    if (!token) {
+      return NextResponse.json(
+        { message: "Unauthorized: Missing customer token" },
+        { status: 401 },
+      );
     }
+
+    const { searchParams } = new URL(req.url);
+    const pageSize = Number(searchParams.get("pageSize") || "15");
+    const currentPage = Number(searchParams.get("currentPage") || "1");
+
+    const data = await graphqlFetch<KleverNotificationsData>({
+      query: KLEVER_NOTIFICATIONS_QUERY,
+      variables: { pageSize, currentPage },
+      token,
+      cache: "no-store",
+    });
+
+    const result = data.kleverNotifications;
+    if (!result) {
+      return NextResponse.json({ items: [], total_count: 0, unread_count: 0 });
+    }
+    return NextResponse.json({
+      items: result.items,
+      total_count: result.total_count,
+      unread_count: result.unread_count,
+    });
+  } catch (error) {
+    if (isGraphQLRequestError(error)) {
+      return NextResponse.json(
+        { message: error.message, errors: error.errors },
+        { status: error.status >= 400 ? error.status : 500 },
+      );
+    }
+    return NextResponse.json({ message: "Internal server error" }, { status: 500 });
+  }
 }
