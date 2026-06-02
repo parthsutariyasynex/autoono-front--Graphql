@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Hourglass } from "lucide-react";
 import { useTranslation } from "@/hooks/useTranslation";
 import { api } from "@/lib/api/api-client";
@@ -21,19 +21,48 @@ interface CreditLimitResponse {
     available_credit_limit_formatted: string;
 }
 
+// Module-level in-flight dedup + 5-min TTL. Credit limit changes only after
+// orders/payments — fine to reuse for short windows. Stops React StrictMode
+// (dev) double-mount and concurrent CreditLimit instances from firing twice.
+let _creditInflight: Promise<CreditLimitResponse | null> | null = null;
+let _creditCache: { data: CreditLimitResponse; fetchedAt: number } | null = null;
+const CREDIT_TTL_MS = 5 * 60 * 1000;
+
 const CreditLimit = () => {
     const { t } = useTranslation();
     const [data, setData] = useState<CreditLimitResponse | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
+    const didInitialFetch = useRef(false);
     useEffect(() => {
+        if (didInitialFetch.current) return;
+        didInitialFetch.current = true;
         let isMounted = true;
+
         const fetchCreditInfo = async () => {
+            // Serve from cache when fresh
+            if (_creditCache && Date.now() - _creditCache.fetchedAt < CREDIT_TTL_MS) {
+                if (isMounted) {
+                    setData(_creditCache.data);
+                    setError(null);
+                    setLoading(false);
+                }
+                return;
+            }
             try {
                 setLoading(true);
-                const response = await api.get("/kleverapi/credit-account");
-                if (isMounted) {
+                // Share in-flight promise across concurrent callers
+                if (!_creditInflight) {
+                    _creditInflight = api.get("/kleverapi/credit-account")
+                        .then((res: CreditLimitResponse) => {
+                            _creditCache = { data: res, fetchedAt: Date.now() };
+                            return res;
+                        })
+                        .finally(() => { _creditInflight = null; });
+                }
+                const response = await _creditInflight;
+                if (isMounted && response) {
                     setData(response);
                     setError(null);
                 }

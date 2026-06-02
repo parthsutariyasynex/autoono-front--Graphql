@@ -6,6 +6,16 @@ import { NotificationsResponse, NotificationItem } from "../types";
 import toast from "react-hot-toast";
 import { useTranslation } from "@/hooks/useTranslation";
 
+// Module-level dedup: NextAuth re-polling the session can recreate
+// `fetchNotifications` (sessionToken dep) and re-fire Navbar's
+// `useEffect(() => pullNotifications(), [pullNotifications])` —
+// causing duplicate calls within seconds. Block refetches inside this
+// window unless a caller passes `force=true` (used after mark-as-read /
+// remove). Tracked per session token so a fresh login resets the clock.
+let _lastNotifFetchAt = 0;
+let _lastNotifFetchToken: string | undefined;
+const NOTIF_MIN_INTERVAL_MS = 60_000;
+
 export function useNotifications() {
     const { data: session } = useSession();
     const { t, isRtl } = useTranslation();
@@ -24,10 +34,19 @@ export function useNotifications() {
     // Inflight guard: prevents concurrent fetch calls (e.g. StrictMode double-mount)
     const fetchingRef = useRef(false);
 
-    const fetchNotifications = useCallback(async (pageSize = 15, currentPage = 1) => {
+    const fetchNotifications = useCallback(async (pageSize = 15, currentPage = 1, force = false) => {
         const token = sessionToken;
         if (!token) return;
         if (fetchingRef.current) return;
+        // TTL dedup — skip if we fetched recently for the same token.
+        // Reset whenever token changes (fresh login / impersonation switch).
+        if (
+            !force &&
+            _lastNotifFetchToken === token &&
+            Date.now() - _lastNotifFetchAt < NOTIF_MIN_INTERVAL_MS
+        ) {
+            return;
+        }
         fetchingRef.current = true;
 
         setIsLoading(true);
@@ -68,6 +87,8 @@ export function useNotifications() {
             setNotifications(normalizedItems);
             setUnreadCount(data.unread_count ?? data.unreadCount ?? 0);
             setTotalCount(data.total_count ?? data.totalCount ?? normalizedItems.length);
+            _lastNotifFetchAt = Date.now();
+            _lastNotifFetchToken = token;
         } catch {
             // Network error or backend unreachable — fail silently
         } finally {

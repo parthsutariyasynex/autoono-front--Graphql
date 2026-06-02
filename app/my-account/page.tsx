@@ -67,10 +67,13 @@ export default function MyAccountPage() {
             return;
         }
 
-        if (status === "authenticated" && token) {
+        // Navbar already dispatches fetchCustomerInfo when customer is missing.
+        // Skip here unless it really hasn't loaded (direct visit to this URL
+        // before Navbar mounts), to avoid a duplicate /my-account call.
+        if (status === "authenticated" && token && !customer) {
             dispatch(fetchCustomerInfo());
         }
-    }, [status, token, dispatch, router]);
+    }, [status, token, dispatch, router, customer]);
 
     if (loading || !customer) {
         return (

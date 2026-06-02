@@ -2,7 +2,7 @@
 import { useLocalePath } from "@/hooks/useLocalePath";
 import { useTranslation } from "@/hooks/useTranslation";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useDispatch, useSelector } from "react-redux";
 import { fetchAddresses, deleteAddress, setDefaultAddress } from "@/store/actions/addressActions";
@@ -95,7 +95,13 @@ export default function Addresses() {
   const [pageSize, setPageSize] = useState(10);
   const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
 
+  // Ref-based guard: stops React StrictMode (dev) from dispatching the
+  // initial fetch twice. Mutation flows (add/update/delete/setDefault)
+  // refetch via their own dispatch chain, not this effect.
+  const didInitialFetch = useRef(false);
   useEffect(() => {
+    if (didInitialFetch.current) return;
+    didInitialFetch.current = true;
     // @ts-ignore
     dispatch(fetchAddresses());
   }, [dispatch]);

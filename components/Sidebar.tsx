@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useTranslation } from "@/hooks/useTranslation";
 import { useLocalePath } from "@/hooks/useLocalePath";
 import { api } from "@/lib/api/api-client";
@@ -24,6 +24,13 @@ interface SidebarResponse {
 // Cache key for the last-successful sidebar fetch. Bumped if response shape
 // changes so stale caches are invalidated on deploy.
 const SIDEBAR_CACHE_KEY = "sidebar_cache_v1";
+
+// Module-level in-flight dedup + 10-minute TTL. Stops two concurrent Sidebar
+// mounts (e.g. React StrictMode in dev, navigation race) from both firing a
+// network call. Sidebar data rarely changes per session, so the TTL is long.
+let _sidebarInflight: Promise<SidebarResponse | null> | null = null;
+let _sidebarCache: { data: SidebarResponse; fetchedAt: number } | null = null;
+const SIDEBAR_TTL_MS = 10 * 60 * 1000;
 
 const Sidebar = () => {
     const pathname = usePathname();
@@ -57,26 +64,44 @@ const Sidebar = () => {
         } catch { /* ignore corrupt cache */ }
     }, []);
 
+    // Ref guard prevents the second StrictMode (dev) effect run from re-firing.
+    const didInitialFetch = useRef(false);
     useEffect(() => {
+        if (didInitialFetch.current) return;
+        didInitialFetch.current = true;
         let isMounted = true;
+
         const fetchSidebar = async () => {
-            try {
-                // Only show the loading skeleton if we have NOTHING to render yet.
-                // When cached items are already on screen, keep them visible
-                // while we refresh in the background.
-                setLoading((prev) => (sidebarData ? false : prev));
-                const data = await api.get("/kleverapi/account-sidebar");
+            // 1. Use in-memory module cache when fresh (≤ 10 min)
+            if (_sidebarCache && Date.now() - _sidebarCache.fetchedAt < SIDEBAR_TTL_MS) {
                 if (isMounted) {
+                    setSidebarData(_sidebarCache.data);
+                    setError(null);
+                    setLoading(false);
+                }
+                return;
+            }
+            // 2. Dedup concurrent fetches via shared in-flight promise
+            try {
+                setLoading((prev) => (sidebarData ? false : prev));
+                if (!_sidebarInflight) {
+                    _sidebarInflight = api.get("/kleverapi/account-sidebar")
+                        .then((data: SidebarResponse) => {
+                            _sidebarCache = { data, fetchedAt: Date.now() };
+                            try {
+                                localStorage.setItem(SIDEBAR_CACHE_KEY, JSON.stringify(data));
+                            } catch { /* quota / private mode — non-fatal */ }
+                            return data;
+                        })
+                        .finally(() => { _sidebarInflight = null; });
+                }
+                const data = await _sidebarInflight;
+                if (isMounted && data) {
                     setSidebarData(data);
                     setError(null);
-                    try {
-                        localStorage.setItem(SIDEBAR_CACHE_KEY, JSON.stringify(data));
-                    } catch { /* quota / private mode — non-fatal */ }
                 }
             } catch (err: any) {
                 console.error("[Sidebar] Fetch error:", err);
-                // If we have cached data on screen, keep it — don't switch to
-                // the "menu unavailable" error UI just because a refresh failed.
                 if (isMounted && !sidebarData) {
                     setError(err.message || "Failed to load sidebar");
                 }

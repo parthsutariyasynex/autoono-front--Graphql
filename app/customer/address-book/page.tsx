@@ -27,11 +27,14 @@ export default function AddressBookPage() {
             return;
         }
 
-        if (status === "authenticated" && token) {
+        // Navbar already dispatches fetchCustomerInfo when customer is missing;
+        // only fire here if it really hasn't been populated yet (e.g. direct
+        // hit on this URL before Navbar mounts).
+        if (status === "authenticated" && token && !customer) {
             // @ts-ignore
             dispatch(fetchCustomerInfo());
         }
-    }, [dispatch, status, router, token]);
+    }, [dispatch, status, router, token, customer]);
 
     if (status === "loading" || loading) {
         return (
