@@ -15,6 +15,7 @@ import { useCart } from "@/modules/cart/context/CartContext";
 import { toast } from "react-hot-toast";
 import MakePaymentModal from "@/components/MakePaymentModal";
 import { MyOrdersSkeleton, OrdersTableSkeleton, SidebarSkeleton } from "@/components/skeletons";
+import { getClientStoreCode } from "@/lib/api/api-client";
 
 function formatOrderDate(dateStr: string): string {
     if (!dateStr) return "";
@@ -170,8 +171,13 @@ function MyOrdersPageContent() {
         if (!token) return;
         try {
             // Fetch a large enough page size to get all orders for counts
+            const storeCode = getClientStoreCode();
             const res = await fetch(`/api/kleverapi/my-orders?pageSize=1000&currentPage=1`, {
-                headers: { Authorization: `Bearer ${token}`, "x-locale": typeof window !== "undefined" && window.location.pathname.startsWith("/ar") ? "ar" : "en" },
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                    "x-locale": typeof window !== "undefined" && window.location.pathname.startsWith("/ar") ? "ar" : "en",
+                    ...(storeCode ? { "x-store-code": storeCode } : {}),
+                },
             });
             const data = await res.json();
             if (res.ok) {
@@ -201,9 +207,11 @@ function MyOrdersPageContent() {
             }
             if (company && company !== "All") params.append("companyCode", company);
 
+            const storeCode = getClientStoreCode();
             const headers = {
                 Authorization: `Bearer ${token}`,
                 "x-locale": window.location.pathname.startsWith("/ar") ? "ar" : "en",
+                ...(storeCode ? { "x-store-code": storeCode } : {}),
             };
 
             // Fetch orders + payment history in parallel.
@@ -408,6 +416,8 @@ function MyOrdersPageContent() {
 
     const totalPages = Math.ceil(totalItems / pageSize);
     const isFiltered = !!(localSearch !== "All" || localStatus !== "All" || searchParams.get("orderNumber") || searchParams.get("status"));
+    const isInitializing = !hasFetched;
+    const isEmpty = hasFetched && !isLoading && orders.length === 0;
 
     if (authStatus === "loading") return (
         <div className="min-h-screen flex flex-col w-full bg-surfacePage">
@@ -434,34 +444,38 @@ function MyOrdersPageContent() {
                             </h1>
                             <div className="h-[2px] flex-1 bg-gradient-to-r from-primary to-transparent"></div>
                         </div>
-                        <button
-                            onClick={handleExportOrders}
-                            disabled={isExporting}
-                            className={`w-full sm:w-auto flex-shrink-0 justify-center flex items-center gap-2 border-2 border-primary text-black text-body-sm font-bold px-5 py-2 uppercase tracking-wide hover:bg-primary transition-colors ${isExporting ? 'opacity-70 cursor-not-allowed' : ''}`}
-                        >
-                            {isExporting ? (
-                                <span className="animate-pulse opacity-60">{t("orders.exporting")}</span>
-                            ) : (
-                                <>
-                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                                    </svg>
-                                    {t("orders.exportOrders")}
-                                </>
-                            )}
-                        </button>
+                        {!isInitializing && !isEmpty && (
+                            <button
+                                onClick={handleExportOrders}
+                                disabled={isExporting}
+                                className={`w-full sm:w-auto flex-shrink-0 justify-center flex items-center gap-2 border-2 border-primary text-black text-body-sm font-bold px-5 py-2 uppercase tracking-wide hover:bg-primary transition-colors ${isExporting ? 'opacity-70 cursor-not-allowed' : ''}`}
+                            >
+                                {isExporting ? (
+                                    <span className="animate-pulse opacity-60">{t("orders.exporting")}</span>
+                                ) : (
+                                    <>
+                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                                        </svg>
+                                        {t("orders.exportOrders")}
+                                    </>
+                                )}
+                            </button>
+                        )}
                     </div>
 
-                    <Filters
-                        status={localStatus}
-                        search={localSearch}
-                        onStatusChange={setLocalStatus}
-                        onSearchChange={setLocalSearch}
-                        onApplySearch={handleSearchClick}
-                        onReset={handleResetClick}
-                        isFiltered={isFiltered}
-                        statusCounts={statusCounts}
-                    />
+                    {!isInitializing && !isEmpty && (
+                        <Filters
+                            status={localStatus}
+                            search={localSearch}
+                            onStatusChange={setLocalStatus}
+                            onSearchChange={setLocalSearch}
+                            onApplySearch={handleSearchClick}
+                            onReset={handleResetClick}
+                            isFiltered={isFiltered}
+                            statusCounts={statusCounts}
+                        />
+                    )}
 
                     {/* Standard Magento Check: If totalCount=0 and searched, show nothing or reset.
                         But here we just show no orders.
@@ -472,7 +486,9 @@ function MyOrdersPageContent() {
                         </div>
                     )} */}
 
-                    {hasFetched && orders.length === 0 && !isLoading ? (
+                    {isInitializing ? (
+                        <OrdersTableSkeleton rows={8} />
+                    ) : isEmpty ? (
                         <div className="py-12 bg-white border border-gray-100 rounded-lg shadow-sm px-4 md:px-10">
                             <div className="mb-4">
                                 <button

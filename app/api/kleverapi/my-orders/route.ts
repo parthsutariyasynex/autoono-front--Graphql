@@ -1,10 +1,11 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getRequestToken } from "@/lib/api/auth-helper";
+import { getLocaleFromRequest } from "@/lib/api/magento-url";
 import { KLEVER_MY_ORDERS_QUERY } from "@/src/graphql/queries";
 import type { KleverMyOrdersData } from "@/src/graphql/types";
 import { graphqlFetch, isGraphQLRequestError } from "@/src/lib/graphqlFetch";
 
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
   try {
     const token = await getRequestToken(request);
     if (!token) {
@@ -18,6 +19,7 @@ export async function GET(request: Request) {
     const orderNumber = searchParams.get("orderNumber");
     const companyCode = searchParams.get("companyCode");
     const customerIdRaw = searchParams.get("customerId");
+    const store = request.headers.get("x-store-code") || getLocaleFromRequest(request);
 
     const variables: Record<string, unknown> = {
       pageSize,
@@ -32,6 +34,7 @@ export async function GET(request: Request) {
       query: KLEVER_MY_ORDERS_QUERY,
       variables,
       token,
+      store,
       cache: "no-store",
     });
 

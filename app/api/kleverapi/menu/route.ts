@@ -1,3 +1,4 @@
+
 import { NextRequest, NextResponse } from "next/server";
 import { getLocaleFromRequest } from "@/lib/api/magento-url";
 import { getRequestToken } from "@/lib/api/auth-helper";
@@ -120,17 +121,26 @@ export async function GET(request: NextRequest) {
   }
 
   if (!token) {
-    // Explicit guidance when env vars are missing — anonymous menu requires
-    // either MAGENTO_MENU_TOKEN or MAGENTO_SERVICE_EMAIL + MAGENTO_SERVICE_PASSWORD.
-    if (tokenSource === "missing-env") {
-      console.warn(
-        `[menu] No request token AND no service-token env vars (locale=${cacheKey}). ` +
-          `Set MAGENTO_MENU_TOKEN or MAGENTO_SERVICE_EMAIL + MAGENTO_SERVICE_PASSWORD to serve anonymous visitors.`,
-      );
-    } else {
-      console.warn(`[menu] No token available (source=${tokenSource}, locale=${cacheKey}) — returning empty menu`);
+    // Try guest (unauthenticated) GraphQL call — many Magento setups allow
+    // public menu queries without a customer token.
+    try {
+      const data = await graphqlFetch<KleverMenuItemsData>({
+        query: KLEVER_MENU_ITEMS_QUERY,
+        token: null,
+        store: request.headers.get("x-store-code") || locale,
+        revalidate: 3600,
+        tags: [`menu:${cacheKey}`],
+      });
+      const items = (data.kleverMenuItems ?? [])
+        .map(toMenuItem)
+        .filter((item) => item.is_visible)
+        .sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
+      menuCache.set(cacheKey, { items, expires: Date.now() + MENU_CACHE_TTL_MS });
+      return jsonResponse(items);
+    } catch {
+      console.warn(`[menu] Guest GraphQL call failed (locale=${cacheKey}) — returning empty menu`);
+      return jsonResponse([]);
     }
-    return jsonResponse([]);
   }
 
   try {

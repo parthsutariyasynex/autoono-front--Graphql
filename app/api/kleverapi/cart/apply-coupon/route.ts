@@ -23,11 +23,14 @@ export async function POST(req: Request) {
       return NextResponse.json({ message: "couponCode is required" }, { status: 400 });
     }
 
+    const storeCode = req.headers.get("x-store-code") || null;
+
     let cartId: string | null = body.cart_id ?? null;
     if (!cartId) {
       const idData = await graphqlFetch<CustomerCartIdData>({
         query: CUSTOMER_CART_ID_QUERY,
         token,
+        store: storeCode,
         cache: "no-store",
       });
       cartId = idData.customerCart?.id ?? null;
@@ -40,12 +43,14 @@ export async function POST(req: Request) {
       query: APPLY_COUPON_TO_CART_MUTATION,
       variables: { cartId, couponCode },
       token,
+      store: storeCode,
       cache: "no-store",
     });
 
     const cartData = await graphqlFetch<CustomerCartData>({
       query: CUSTOMER_CART_QUERY,
       token,
+      store: storeCode,
       cache: "no-store",
     });
     if (!cartData.customerCart) {

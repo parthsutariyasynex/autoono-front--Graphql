@@ -410,8 +410,20 @@ interface GiftContextType {
 
 const GiftContext = createContext<GiftContextType | undefined>(undefined);
 
+// Matches /cart, /en/cart, /ar/cart, /V101_en/cart, /V202_en/cart, etc.
+// Uses endsWith so /cart/something is NOT treated as the cart page.
+function isCartPathname(pathname: string | null): boolean {
+    if (!pathname) return false;
+    return (
+        pathname === "/cart" ||
+        pathname.endsWith("/cart") ||
+        pathname.endsWith("/cart/")
+    );
+}
+
 function parsePromoRules(
-    promoRules: any[]
+    promoRules: any[],
+    topLevelCommonQty?: number | null,
 ): { gifts: GiftItem[]; maxQty: number; firstRuleName: string } {
     const gifts: GiftItem[] = [];
     let maxQty = 0;
@@ -436,6 +448,7 @@ function parsePromoRules(
             rule.qty ??
             rule.common_qty ??
             rule.free_qty ??
+            topLevelCommonQty ??
             1;
 
         maxQty += ruleMaxQty;
@@ -532,6 +545,11 @@ export function GiftProvider({
 
     const [promoRuleName, setPromoRuleName] = useState("");
 
+    // auto_open_popup flag from kleverDiscountPopup API response.
+    // When false the server is signalling the popup should not auto-open
+    // (e.g. all gifts already in cart, rule disabled, etc.).
+    const [autoOpenPopup, setAutoOpenPopup] = useState(false);
+
     const [savedSelections, setSavedSelections] =
         useState<Record<string, number>>(
             loadSavedSelections
@@ -599,6 +617,29 @@ export function GiftProvider({
 
                 const data = await res.json();
 
+                console.log("[GiftContext] discount-popup raw:", {
+                    auto_open_popup: data.auto_open_popup,
+                    common_qty: data.common_qty,
+                    promo_rules_count: Array.isArray(data.promo_rules) ? data.promo_rules.length : "n/a",
+                });
+
+                // ── Full debug dump ──────────────────────────────────────
+                console.log("[GiftContext] raw popup response:", JSON.stringify(data).slice(0, 1000));
+                console.log("[GiftContext] promo_rules from response:", Array.isArray(data.promo_rules) ? data.promo_rules.length : "not array", data.promo_rules);
+                console.log("[GiftContext] auto_open_popup:", data.auto_open_popup);
+                console.log("[GiftContext] common_qty:", data.common_qty);
+                console.log("[GiftContext] subtotal:", data.subtotal);
+
+                // Store auto_open_popup from server — false means "don't trigger
+                // auto-open this time" (e.g. gifts already in cart, rule off).
+                const serverAutoOpen = Boolean(data.auto_open_popup);
+                setAutoOpenPopup(serverAutoOpen);
+
+                // Top-level common_qty is a global max across all rules; used as
+                // fallback when individual rule.max_qty is null.
+                const topCommonQty: number | null =
+                    typeof data.common_qty === "number" ? data.common_qty : null;
+
                 let promoRules: any[] = [];
 
                 if (Array.isArray(data)) {
@@ -623,18 +664,21 @@ export function GiftProvider({
                         [];
                 }
 
+                console.log("[GiftContext] promoRules extracted:", promoRules.length, promoRules.slice(0, 2));
+
                 if (promoRules.length === 0) {
                     setAvailableGifts([]);
                     return null;
                 }
 
                 const { gifts, maxQty, firstRuleName } =
-                    parsePromoRules(promoRules);
+                    parsePromoRules(promoRules, topCommonQty);
 
                 console.log("[GiftContext] Fetched gifts:", {
                     count: gifts.length,
                     maxQty,
                     firstRuleName,
+                    autoOpen: serverAutoOpen,
                 });
 
                 setAvailableGifts(gifts);
@@ -726,10 +770,7 @@ export function GiftProvider({
     // ]);
 
     useEffect(() => {
-        const isCartPage =
-            pathname?.endsWith("/cart") ||
-            pathname === "/cart" ||
-            pathname?.endsWith("/cart/");
+        const isCartPage = isCartPathname(pathname);
 
         if (
             (cart?.items_count && cart.items_count > 0) ||
@@ -778,8 +819,7 @@ export function GiftProvider({
     // ]);
     // reset hasSeenRef when navigating away from cart
     useEffect(() => {
-        const isCartPage = pathname?.includes("/cart");
-        if (!isCartPage) {
+        if (!isCartPathname(pathname)) {
             hasSeenRef.current = false;
         }
     }, [pathname]);
@@ -800,13 +840,15 @@ export function GiftProvider({
 
     // auto open if not all gifts selected
     useEffect(() => {
-        const isCartPage = pathname?.includes("/cart");
+        const isCartPage = isCartPathname(pathname);
         const totalUnits = cart?.items_count || 0;
 
         console.log("[GiftContext] Auto-open check:", {
+            pathname,
             isCartPage,
             totalUnits,
             availableGiftsCount: availableGifts.length,
+            autoOpenPopup,
             totalSelectedGifts,
             maxGifts,
             isAllGiftsSelected,
@@ -818,6 +860,7 @@ export function GiftProvider({
             isCartPage &&
             totalUnits > 0 &&
             availableGifts.length > 0 &&
+            autoOpenPopup &&
             !isAllGiftsSelected &&
             !hasSeenRef.current &&
             !isGiftModalOpen
@@ -834,6 +877,7 @@ export function GiftProvider({
         pathname,
         cart?.items_count,
         availableGifts,
+        autoOpenPopup,
         isAllGiftsSelected,
         isGiftModalOpen,
         maxGifts,

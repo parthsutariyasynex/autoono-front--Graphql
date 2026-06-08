@@ -8,6 +8,17 @@ import type {
 } from "@/src/graphql/types";
 import { graphqlFetch, isGraphQLRequestError } from "@/src/lib/graphqlFetch";
 
+// Magento's full-text search (Elasticsearch) only has indexes for base locale
+// store views ("en", "ar"). Warehouse store views (V101_en, V202_en, V301_en, …)
+// have no search index of their own. When a text search (searchQuery) is present
+// we must send Store: "en" / "ar" so the Elasticsearch lookup works. All other
+// attribute filters (itemCode, brand, width, …) work fine on warehouse store codes.
+function toSearchStore(storeCode: string | null): string | null {
+  if (!storeCode) return storeCode;
+  const m = storeCode.match(/_(en|ar)$/i);
+  return m ? m[1].toLowerCase() : storeCode;
+}
+
 // Derives the UI dot color from stock_label / is_in_stock. The GraphQL response
 // from kleverCategoryProducts (minimal selection) doesn't include stock_color
 // itself, so we compute it here for the frontend ProductCard.
@@ -141,12 +152,31 @@ export async function GET(request: NextRequest) {
       request.headers.get("x-store-code") ||
       getLocaleFromRequest(request);
 
+    // Business requirement: ALL search queries must use the base locale store so
+    // they hit Magento's Elasticsearch index (which only exists on "en"/"ar").
+    // Warehouse store views (V101_en, V202_en, V301_en, …) have no search index.
+    //
+    // This covers every search entry point:
+    //   searchby / searchBy / search / searchQuery  — free-text search
+    //   item_code / itemCode                        — SKU / item-code lookup
+    //
+    // Category browsing without any search param keeps the original store code
+    // so warehouse-specific data (stock, price) is preserved where relevant.
+    const isSearchRequest =
+      searchParams.has("searchby") ||
+      searchParams.has("searchBy") ||
+      searchParams.has("search") ||
+      searchParams.has("searchQuery") ||
+      searchParams.has("item_code") ||
+      searchParams.has("itemCode");
+    const effectiveStoreCode = isSearchRequest ? toSearchStore(storeCode) : storeCode;
+
     const data = await graphqlFetch<KleverCategoryProductsData>({
       query: KLEVER_CATEGORY_PRODUCTS_QUERY,
       variables: buildVariables(searchParams),
       token,
-      store: storeCode,
-      cache: "no-store",
+      store: effectiveStoreCode,
+      revalidate: 30,
     });
 
     const result = data.kleverCategoryProducts;

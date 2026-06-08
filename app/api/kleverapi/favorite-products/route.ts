@@ -22,11 +22,13 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const currentPage = Number(searchParams.get("currentPage") || "1");
     const pageSize = Number(searchParams.get("pageSize") || "10");
+    const storeCode = request.headers.get("x-store-code") || undefined;
 
     const data = await graphqlFetch<KleverFavoriteProductsData>({
       query: KLEVER_FAVORITE_PRODUCTS_QUERY,
       variables: { pageSize, currentPage },
       token,
+      store: storeCode,
       cache: "no-store",
     });
 
@@ -69,11 +71,13 @@ export async function POST(request: Request) {
     if (!productId) {
       return NextResponse.json({ message: "productId is required" }, { status: 400 });
     }
+    const storeCode = request.headers.get("x-store-code") || undefined;
 
     const data = await graphqlFetch<KleverAddFavoriteProductData>({
       query: KLEVER_ADD_FAVORITE_PRODUCT_MUTATION,
       variables: { productId },
       token,
+      store: storeCode,
       cache: "no-store",
     });
 

@@ -140,6 +140,8 @@ const Sidebar = () => {
         if (href === "/sales/order/history") href = "/my-orders";
         if (href === "/wishlist") href = "/wishlist";
         if (href === "/customer/account") href = "/my-account";
+        // Order Attachments: Magento returns kleverapi/orderupload or customer/orderupload
+        if (href.includes("/orderupload") || href.includes("/order-attachment")) href = "/customer/order-attachments";
 
         return lp(href);
     };
@@ -218,26 +220,34 @@ const Sidebar = () => {
 
     // Active item detection
     const activeCode = useMemo(() => {
-        const normalizedPathname = pathname.replace(/\/$/, "");
+        // Strip store-code prefix (e.g. /V101_en/, /WJ01_ar/) and locale prefix (e.g. /en/)
+        // so active-state detection is immune to store/locale changes.
+        const stripPrefix = (p: string) =>
+            p.replace(/^\/[A-Za-z0-9_]+_(en|ar)\//, "/").replace(/^\/(en|ar)\//, "/");
 
-        // 1. Direct code overrides for common sections to guarantee 100% perfect matching
-        if (normalizedPathname.includes("/address")) return "address_book";
+        const cleanPath = stripPrefix(pathname.replace(/\/$/, ""));
 
-        // Match "My Orders" but prevent it from matching "My Order Attachments" (/orderupload or /order-attachments)
+        // 1. Explicit hardcoded checks — order matters, most-specific first.
+        if (cleanPath.includes("/order-attachment") || cleanPath.includes("/orderupload")) return "my_order_attachments";
+        if (cleanPath.includes("/address")) return "address_book";
+
+        // Match "My Orders" but NOT "My Order Attachments"
         if (
-            (normalizedPathname.includes("/order") || normalizedPathname.includes("/my-orders") || normalizedPathname.includes("/sales/order")) &&
-            !normalizedPathname.includes("orderupload") &&
-            !normalizedPathname.includes("order-attachment")
+            (cleanPath.includes("/order") || cleanPath.includes("/my-orders") || cleanPath.includes("/sales/order")) &&
+            !cleanPath.includes("orderupload") &&
+            !cleanPath.includes("order-attachment")
         ) {
             return "my_orders";
         }
 
-        if (normalizedPathname.includes("/statement")) return "statement";
-        if (normalizedPathname.includes("/favorite") || normalizedPathname.includes("/favourite") || normalizedPathname.includes("/wishlist")) return "favourite_products";
-        if (normalizedPathname.includes("/dashboard")) return "dashboard";
-        if (normalizedPathname.includes("/notification")) return "notifications";
-        if (normalizedPathname.includes("/my-account") || normalizedPathname.includes("/customer/account")) return "my_account";
+        if (cleanPath.includes("/statement")) return "statement";
+        if (cleanPath.includes("/favorite") || cleanPath.includes("/favourite") || cleanPath.includes("/wishlist")) return "favourite_products";
+        if (cleanPath.includes("/forecast") || cleanPath.includes("/forcast") || cleanPath.includes("/viewforcast")) return "my_forecast";
+        if (cleanPath.includes("/dashboard")) return "dashboard";
+        if (cleanPath.includes("/notification")) return "notifications";
+        if (cleanPath.includes("/my-account") || cleanPath.includes("/customer/account")) return "my_account";
 
+        // 2. Fallback: compare stripped paths for exact or prefix match.
         let bestCode = "";
         let bestMatchLength = -1;
 
@@ -245,14 +255,14 @@ const Sidebar = () => {
             const isSignOut = item.code === "sign_out" || item.code === "logout" || item.code === "customer_logout";
             if (isSignOut) return;
 
-            const itemPath = item.internalUrl.split("?")[0].replace(/\/$/, "");
+            const itemPath = stripPrefix(item.internalUrl.split("?")[0].replace(/\/$/, ""));
 
-            if (normalizedPathname === itemPath) {
+            if (cleanPath === itemPath) {
                 bestCode = item.code;
                 bestMatchLength = 9999;
             } else if (
                 itemPath !== "" &&
-                normalizedPathname.startsWith(itemPath + "/") &&
+                cleanPath.startsWith(itemPath + "/") &&
                 bestMatchLength < 9999 &&
                 itemPath.length > bestMatchLength
             ) {

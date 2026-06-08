@@ -46,7 +46,7 @@ export async function GET(request: NextRequest) {
       },
       token,
       store: resolveStore(request, searchParams),
-      cache: "no-store",
+      revalidate: 30,
     });
 
     const result = data.kleverCategoryProducts;

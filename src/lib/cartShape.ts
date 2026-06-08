@@ -55,8 +55,8 @@ export function reshapeCustomerCart(cart: CustomerCart): KleverCartShape {
   const taxAmount = appliedTaxes.reduce((sum, t) => sum + (t.amount.value || 0), 0);
   const taxLabel = appliedTaxes[0]?.label || "Tax";
   const subtotal =
-    cart.prices?.subtotal_including_tax?.value ??
     cart.prices?.subtotal_excluding_tax?.value ??
+    cart.prices?.subtotal_including_tax?.value ??
     items.reduce((sum, i) => sum + i.row_total, 0);
   const grandTotal = cart.prices?.grand_total.value ?? subtotal;
   const currency = cart.prices?.grand_total.currency ?? "SAR";

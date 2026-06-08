@@ -28,11 +28,14 @@ export async function PUT(
       return NextResponse.json({ message: "Invalid itemId or qty" }, { status: 400 });
     }
 
+    const storeCode = req.headers.get("x-store-code") || null;
+
     let cartId: string | null = body.cart_id ?? null;
     if (!cartId) {
       const idData = await graphqlFetch<CustomerCartIdData>({
         query: CUSTOMER_CART_ID_QUERY,
         token,
+        store: storeCode,
         cache: "no-store",
       });
       cartId = idData.customerCart?.id ?? null;
@@ -45,12 +48,14 @@ export async function PUT(
       query: UPDATE_CART_ITEMS_MUTATION,
       variables: { cartId, items: [{ cart_item_id: cartItemId, quantity: qty }] },
       token,
+      store: storeCode,
       cache: "no-store",
     });
 
     const cartData = await graphqlFetch<CustomerCartData>({
       query: CUSTOMER_CART_QUERY,
       token,
+      store: storeCode,
       cache: "no-store",
     });
     if (!cartData.customerCart) {

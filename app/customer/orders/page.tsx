@@ -10,6 +10,7 @@ import Pagination from "@/components/Pagination";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { OrdersTableSkeleton } from "@/components/skeletons";
+import { getClientStoreCode } from "@/lib/api/api-client";
 // formatPrice removed — OrdersTable uses <Price> component directly
 
 /**
@@ -114,10 +115,12 @@ export default function MyOrdersPage() {
                 params.append("orderNumber", searchQuery);
             }
 
+            const storeCode = getClientStoreCode();
             const res = await fetch(`/api/kleverapi/my-orders?${params.toString()}`, {
                 headers: {
                     Authorization: `Bearer ${token}`,
                     "Content-Type": "application/json",
+                    ...(storeCode ? { "x-store-code": storeCode } : {}),
                 },
                 cache: "no-store",
             });
@@ -175,6 +178,8 @@ export default function MyOrdersPage() {
         }
     };
 
+    const isEmpty = hasFetched && !isLoading && !error && orders.length === 0;
+
     return (
         <div className="min-h-screen bg-white pb-20">
 
@@ -190,26 +195,29 @@ export default function MyOrdersPage() {
                                 {t("nav.myOrders")}
                             </h1>
                             <div className="h-[2px] flex-1 bg-gradient-to-r from-primary to-transparent"></div>
-                            <button className="hidden sm:flex items-center justify-center gap-2 bg-primary text-black text-label font-bold px-6 py-3 uppercase tracking-widest hover:bg-primaryHover transition-all rounded-lg shadow-sm active:scale-95">
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                </svg>
-                                {t("orders.export")}
-                            </button>
+                            {!isEmpty && (
+                                <button className="hidden sm:flex items-center justify-center gap-2 bg-primary text-black text-label font-bold px-6 py-3 uppercase tracking-widest hover:bg-primaryHover transition-all rounded-lg shadow-sm active:scale-95">
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                    </svg>
+                                    {t("orders.export")}
+                                </button>
+                            )}
                         </div>
 
-                        {/* Filters */}
-                        <Filters
-                            status={statusFilter}
-                            orderNumber={orderNumberFilter}
-                            onStatusChange={setStatusFilter}
-                            onOrderNumberChange={setOrderNumberFilter}
-                            onSearch={handleSearch}
-                            onReset={handleReset}
-                        />
+                        {/* Filters — hidden when no orders */}
+                        {!isEmpty && (
+                            <Filters
+                                status={statusFilter}
+                                orderNumber={orderNumberFilter}
+                                onStatusChange={setStatusFilter}
+                                onOrderNumberChange={setOrderNumberFilter}
+                                onSearch={handleSearch}
+                                onReset={handleReset}
+                            />
+                        )}
 
-
-                        {/* Table */}
+                        {/* Table / Empty state */}
                         <div className="relative">
                             {(isLoading || (authStatus === "loading") || (authStatus === "authenticated" && !hasFetched)) ? (
                                 <OrdersTableSkeleton rows={6} />
@@ -222,6 +230,23 @@ export default function MyOrdersPage() {
                                     >
                                         Try Again
                                     </button>
+                                </div>
+                            ) : isEmpty ? (
+                                <div className="py-12 bg-white border border-gray-100 rounded-lg shadow-sm px-4 md:px-10">
+                                    <div className="mb-4">
+                                        <button
+                                            onClick={handleReset}
+                                            className="px-4 py-1.5 bg-surfaceSoft border border-gray-300 text-body text-black hover:bg-gray-200 transition-colors rounded-[2px]"
+                                        >
+                                            {t("orders.reset")}
+                                        </button>
+                                    </div>
+                                    <div className="flex items-center gap-3 bg-warningBgPale border border-warningBgSoft p-4 rounded-md text-warningBadge">
+                                        <svg className="w-5 h-5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                                        </svg>
+                                        <span className="text-body-lg font-medium">{t("orders.noOrders")}</span>
+                                    </div>
                                 </div>
                             ) : (
                                 <>

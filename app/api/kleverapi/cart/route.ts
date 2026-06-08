@@ -12,9 +12,12 @@ export async function GET(req: Request) {
       return NextResponse.json({ message: "Unauthorized: Missing customer token" }, { status: 401 });
     }
 
+    const storeCode = req.headers.get("x-store-code") || null;
+
     const data = await graphqlFetch<CustomerCartData>({
       query: CUSTOMER_CART_QUERY,
       token,
+      store: storeCode,
       cache: "no-store",
     });
 

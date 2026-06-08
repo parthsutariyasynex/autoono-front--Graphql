@@ -19,6 +19,7 @@ export async function GET(request: NextRequest) {
       cache: "no-store",
     });
 
+    console.log("[credit-account] raw kleverCreditAccount:", JSON.stringify(data.kleverCreditAccount));
     return NextResponse.json(data.kleverCreditAccount ?? { is_visible: false }, { status: 200 });
   } catch (error) {
     console.warn("[credit-account GET] GraphQL failed, hiding widget:", error);

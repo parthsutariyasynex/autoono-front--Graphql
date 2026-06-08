@@ -1,12 +1,11 @@
 "use client";
 
 import { Suspense } from "react";
-import { useParams } from "next/navigation";
 import Sidebar from "@/components/Sidebar";
 import Addresses from "@/app/components/Addresses";
 import { useTranslation } from "@/hooks/useTranslation";
 
-export default function EditAddressPage() {
+export default function AddNewAddressPage() {
     return (
         <Suspense fallback={
             <div className="flex flex-col lg:flex-row flex-1 min-h-0 w-full">
@@ -20,27 +19,19 @@ export default function EditAddressPage() {
                 </div>
             </div>
         }>
-            <EditAddressPageContent />
+            <AddNewAddressContent />
         </Suspense>
     );
 }
 
-function EditAddressPageContent() {
-    const { addressId } = useParams();
+function AddNewAddressContent() {
     const { t } = useTranslation();
-    const id = String(addressId);
-    const isNew = id === "new";
-
     return (
-        <div className="min-h-screen bg-white text-black">
+        <div className="min-h-screen bg-white">
             <div className="flex flex-col lg:flex-row flex-1 min-h-0 w-full">
                 <Sidebar />
                 <main className="flex-1 w-full min-w-0 px-4 md:px-8 lg:px-10 py-6 md:py-10 bg-white">
-                    <Addresses
-                        mode={isNew ? "new" : "edit"}
-                        addressId={id}
-                        title={isNew ? t("addressBook.addNewAddress") : t("addressBook.editAddress")}
-                    />
+                    <Addresses mode="new" title={t("addressBook.addNewAddress")} />
                 </main>
             </div>
         </div>

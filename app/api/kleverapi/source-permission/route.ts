@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getRequestToken } from "@/lib/api/auth-helper";
+import { getLocaleFromRequest } from "@/lib/api/magento-url";
 import { KLEVER_SOURCE_PERMISSIONS_QUERY } from "@/src/graphql/queries";
 import type { KleverSourcePermissionsData } from "@/src/graphql/types";
-import { graphqlFetch } from "@/src/lib/graphqlFetch";
+import { graphqlFetch, isGraphQLRequestError } from "@/src/lib/graphqlFetch";
 
-const EMPTY = { permissions: [], stores: [], permitted_stores: [] };
+const EMPTY = { has_restrictions: null, total_count: 0, permitted_store_ids: [], permitted_stores: [] };
 const NO_CACHE_HEADERS = { "Cache-Control": "no-store, no-cache, must-revalidate" };
 
 export async function GET(request: NextRequest) {
@@ -13,10 +14,13 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const store = request.headers.get("x-store-code") || getLocaleFromRequest(request);
+
   try {
     const data = await graphqlFetch<KleverSourcePermissionsData>({
       query: KLEVER_SOURCE_PERMISSIONS_QUERY,
       token,
+      store,
       cache: "no-store",
     });
 
@@ -34,7 +38,11 @@ export async function GET(request: NextRequest) {
       { headers: NO_CACHE_HEADERS },
     );
   } catch (error) {
-    console.warn("[source-permission] GraphQL failed, serving empty:", error);
+    if (isGraphQLRequestError(error)) {
+      console.error("[source-permission] GraphQL error:", error.status, error.message);
+    } else {
+      console.error("[source-permission] Unexpected error:", error);
+    }
     return NextResponse.json(EMPTY, { headers: NO_CACHE_HEADERS });
   }
 }

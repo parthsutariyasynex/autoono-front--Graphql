@@ -209,6 +209,7 @@
 
 import { useTranslation } from "@/hooks/useTranslation";
 import React, { useState, useRef, useEffect, useMemo } from "react";
+import { api } from "@/lib/api/api-client";
 
 interface FiltersProps {
     status: string;
@@ -245,12 +246,7 @@ const Filters: React.FC<FiltersProps> = ({
     useEffect(() => {
         async function fetchFilterOptions() {
             try {
-                const res = await fetch("/api/kleverapi/my-orders/filter-options", {
-                    headers: {
-                        "Content-Type": "application/json",
-                    },
-                });
-                const data = await res.json();
+                const data = await api.get("/kleverapi/my-orders/filter-options");
 
                 // Handle FilterByStatus
                 let fetchedStatusOptions: any[] = [];

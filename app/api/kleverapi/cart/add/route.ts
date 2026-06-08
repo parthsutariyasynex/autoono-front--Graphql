@@ -28,9 +28,12 @@ export async function POST(req: Request) {
       return NextResponse.json({ message: "sku and qty are required" }, { status: 400 });
     }
 
+    const storeCode = req.headers.get("x-store-code") || null;
+
     const cartIdData = await graphqlFetch<CustomerCartIdData>({
       query: CUSTOMER_CART_ID_QUERY,
       token,
+      store: storeCode,
       cache: "no-store",
     });
     const cartId = cartIdData.customerCart?.id;
@@ -42,6 +45,7 @@ export async function POST(req: Request) {
       query: ADD_PRODUCTS_TO_CART_MUTATION,
       variables: { cartId, cartItems: [{ sku, quantity: qty }] },
       token,
+      store: storeCode,
       cache: "no-store",
     });
 
@@ -58,6 +62,7 @@ export async function POST(req: Request) {
     const cartData = await graphqlFetch<CustomerCartData>({
       query: CUSTOMER_CART_QUERY,
       token,
+      store: storeCode,
       cache: "no-store",
     });
     if (!cartData.customerCart) {

@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useState, useMemo, useCallback, useRef } from "react";
+import { useEffect, useState, useMemo, useCallback, useRef } from "react";
 import { X, Star, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, ChevronsUpDown, AlertTriangle, Check, Filter } from "lucide-react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import dynamic from "next/dynamic";
@@ -12,7 +12,7 @@ import { useCart } from "@/modules/cart/hooks/useCart";
 import SidebarFilter from "../components/SidebarFilter";
 import Drawer from "../components/Drawer";
 import Modal from "../components/Modal";
-import { api } from "@/lib/api/api-client";
+import { api, getClientStoreCode } from "@/lib/api/api-client";
 import { formatPrice, redirectToLogin, formatMagentoQueryParams, parseMagentoQueryParams } from "@/utils/helpers";
 import Price from "../components/Price";
 import PortalDropdown from "@/components/PortalDropdown";
@@ -55,13 +55,6 @@ function ShimmerRows({ colCount }: { colCount: number }) {
       ))}
     </>
   );
-}
-
-// Tiny wrapper to satisfy Next.js Suspense requirement for useSearchParams
-function SearchParamsReader({ onParams }: { onParams: (sp: URLSearchParams) => void }) {
-  const sp = useSearchParams();
-  useEffect(() => { onParams(sp); }, [sp, onParams]);
-  return null;
 }
 
 function MobileCardShimmer() {
@@ -109,8 +102,8 @@ export default function ProductsPage({ categoryId: propCategoryId, storeCode: pr
     const firstSeg = (pathname || "").split("/").filter(Boolean)[0] || "";
     return STORE_CODE_RE_PL.test(firstSeg) ? firstSeg : "";
   })();
-  const [searchParams, setSearchParamsState] = useState<URLSearchParams | null>(null);
-  const handleParams = useCallback((sp: URLSearchParams) => setSearchParamsState(sp), []);
+  // Direct hook call — component is inside <Suspense> in the page file so this is safe.
+  const rawSearchParams = useSearchParams();
   const { cart, addToCart } = useCart();
   const [addingToCart, setAddingToCart] = useState<string | null>(null);
   const [justAdded, setJustAdded] = useState<string | null>(null);
@@ -120,120 +113,136 @@ export default function ProductsPage({ categoryId: propCategoryId, storeCode: pr
 
   const [products, setProducts] = useState<any[]>([]);
   const [totalCount, setTotalCount] = useState(0);
-  const [currentPage, setCurrentPage] = useState(1);
+  const [currentPage, setCurrentPage] = useState(() => Math.max(1, Number(rawSearchParams.get("page") ?? "1") || 1));
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string>("");
   const [selectedProduct, setSelectedProduct] = useState<any | null>(null);
-  const [sortBy, setSortBy] = useState<string>("none");
-  const [selectedFilters, setSelectedFilters] = useState<Record<string, string[]>>({});
+  const [sortBy, setSortBy] = useState<string>(() => rawSearchParams.get("sortBy") ?? "none");
+  const [selectedFilters, setSelectedFilters] = useState<Record<string, string[]>>(() => {
+    const { filters } = parseMagentoQueryParams(new URLSearchParams(rawSearchParams.toString()));
+    return filters;
+  });
   const [selectedFilterLabels, setSelectedFilterLabels] = useState<Record<string, { value: string; label: string }[]>>({});
   const [apiFilters, setApiFilters] = useState<any[] | null>(null);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
   const [isMobileSortOpen, setIsMobileSortOpen] = useState(false);
-  const [searchByTerm, setSearchByTerm] = useState("");
-  const [itemCodeTerm, setItemCodeTerm] = useState("");
+  const [searchByTerm, setSearchByTerm] = useState(() =>
+    rawSearchParams.get("searchby") || rawSearchParams.get("search") || rawSearchParams.get("searchBy") || ""
+  );
+  const [itemCodeTerm, setItemCodeTerm] = useState(() =>
+    rawSearchParams.get("item_code") || rawSearchParams.get("itemCode") || ""
+  );
 
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
   const [selectedImage, setSelectedImage] = useState("");
   const [isInquiryModalOpen, setIsInquiryModalOpen] = useState(false);
   const [inquiryProduct, setInquiryProduct] = useState<any | null>(null);
   const [previewProduct, setPreviewProduct] = useState<any | null>(null);
-  const [urlCategoryId, setUrlCategoryId] = useState<string | null>(null);
+  const [urlCategoryId, setUrlCategoryId] = useState<string | null>(() => rawSearchParams.get("categoryId") || null);
 
   const [isMounted, setIsMounted] = useState(false);
-  const [isInitialized, setIsInitialized] = useState(false);
   const isSyncingFromUrl = useRef(false);
   const [isFavorite, setIsFavorite] = useState(false);
   const [favIds, setFavIds] = useState<number[]>([]);
-  const [selectedStoreCode, setSelectedStoreCode] = useState<string | null>(null);
+  const [selectedStoreCode, setSelectedStoreCode] = useState<string | null>(() => rawSearchParams.get("store") || null);
   const [storeName, setStoreName] = useState<string>("");
   const [serverError, setServerError] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
 
+  // Mount-only: read localStorage/sessionStorage (unavailable on server).
   useEffect(() => {
     setIsMounted(true);
     const stored = localStorage.getItem("favourites");
     if (stored) setFavIds(JSON.parse(stored));
-    if (searchParams) {
-      let changed = false;
 
-      const cid = searchParams.get("categoryId");
-      if (cid && cid !== urlCategoryId) {
-        setUrlCategoryId(cid);
-        setCurrentPage(1);
-        setProducts([]);
-        changed = true;
-      }
+    if (typeof sessionStorage !== "undefined") {
+      const sc = propStoreCode || pathStoreCode || rawSearchParams.get("store") || sessionStorage.getItem("defaultStoreCode") || "";
+      const sn = sessionStorage.getItem(`storeName_${sc}`);
+      if (sn) setStoreName(sn);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-      const sc = searchParams.get("store");
-      if (sc !== selectedStoreCode) {
-        setSelectedStoreCode(sc);
-        setCurrentPage(1); // Reset page on store change
-        setProducts([]);   // Clear old results
-        changed = true;
-        if (sc) {
-          try { localStorage.setItem("selectedStoreCode", sc); } catch { }
-        } else {
-          try { localStorage.removeItem("selectedStoreCode"); } catch { }
-        }
-      }
+  // URL → state: sync when the URL changes after mount (e.g. browser back/forward,
+  // external navigation). Skipped on first mount because state was already
+  // lazily initialized from rawSearchParams above.
+  useEffect(() => {
+    if (!isMounted) return;
 
-      const sb = searchParams.get("searchby") || searchParams.get("search") || searchParams.get("searchBy") || "";
-      if (sb !== searchByTerm) {
-        setSearchByTerm(sb);
-        setCurrentPage(1);
-        setProducts([]);
-        // Entering a new search: reset filters so results start clean.
-        setSelectedFilters({});
-        setSelectedFilterLabels({});
-        setApiFilters(null);
-        changed = true;
-      }
+    let changed = false;
 
-      const ic = searchParams.get("item_code") || searchParams.get("itemCode") || "";
-      if (ic !== itemCodeTerm) {
-        setItemCodeTerm(ic);
-        setCurrentPage(1);
-        setProducts([]);
-        setSelectedFilters({});
-        setSelectedFilterLabels({});
-        setApiFilters(null);
-        changed = true;
-      }
+    const cid = rawSearchParams.get("categoryId");
+    if (cid && cid !== urlCategoryId) {
+      setUrlCategoryId(cid);
+      setCurrentPage(1);
+      setProducts([]);
+      changed = true;
+    }
 
-      const { filters, page, sortBy: parsedSortBy } = parseMagentoQueryParams(searchParams);
-
-      if (JSON.stringify(filters) !== JSON.stringify(selectedFilters)) {
-        setSelectedFilters(filters);
-        setCurrentPage(1);
-        changed = true;
-      }
-      if (page !== currentPage && !changed) { // Only sync page if store/search didn't change (as they force page 1)
-        setCurrentPage(page);
-        changed = true;
-      }
-      if (parsedSortBy !== sortBy) {
-        setSortBy(parsedSortBy);
-        changed = true;
-      }
-
-      if (changed) {
-        isSyncingFromUrl.current = true;
-      }
-      setIsInitialized(true);
-
-      // Sync store name from session storage
-      if (typeof sessionStorage !== "undefined") {
-        const sc = propStoreCode || pathStoreCode || searchParams.get("store") || sessionStorage.getItem("defaultStoreCode") || "";
-        const sn = sessionStorage.getItem(`storeName_${sc}`);
-        if (sn) setStoreName(sn);
+    const sc = rawSearchParams.get("store");
+    if (sc !== selectedStoreCode) {
+      setSelectedStoreCode(sc);
+      setCurrentPage(1);
+      setProducts([]);
+      changed = true;
+      if (sc) {
+        try { localStorage.setItem("selectedStoreCode", sc); } catch { }
+      } else {
+        try { localStorage.removeItem("selectedStoreCode"); } catch { }
       }
     }
-  }, [searchParams]);
+
+    const sb = rawSearchParams.get("searchby") || rawSearchParams.get("search") || rawSearchParams.get("searchBy") || "";
+    if (sb !== searchByTerm) {
+      setSearchByTerm(sb);
+      setCurrentPage(1);
+      setProducts([]);
+      setSelectedFilters({});
+      setSelectedFilterLabels({});
+      setApiFilters(null);
+      changed = true;
+    }
+
+    const ic = rawSearchParams.get("item_code") || rawSearchParams.get("itemCode") || "";
+    if (ic !== itemCodeTerm) {
+      setItemCodeTerm(ic);
+      setCurrentPage(1);
+      setProducts([]);
+      setSelectedFilters({});
+      setSelectedFilterLabels({});
+      setApiFilters(null);
+      changed = true;
+    }
+
+    const { filters, page, sortBy: parsedSortBy } = parseMagentoQueryParams(new URLSearchParams(rawSearchParams.toString()));
+
+    if (JSON.stringify(filters) !== JSON.stringify(selectedFilters)) {
+      setSelectedFilters(filters);
+      setCurrentPage(1);
+      changed = true;
+    }
+    if (page !== currentPage && !changed) {
+      setCurrentPage(page);
+      changed = true;
+    }
+    if (parsedSortBy !== sortBy) {
+      setSortBy(parsedSortBy);
+      changed = true;
+    }
+
+    if (changed) isSyncingFromUrl.current = true;
+
+    if (typeof sessionStorage !== "undefined") {
+      const sc2 = propStoreCode || pathStoreCode || rawSearchParams.get("store") || sessionStorage.getItem("defaultStoreCode") || "";
+      const sn = sessionStorage.getItem(`storeName_${sc2}`);
+      if (sn) setStoreName(sn);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rawSearchParams, isMounted]);
 
   useEffect(() => {
-    if (!isMounted || !searchParams || !isInitialized) return;
+    if (!isMounted) return;
 
     if (isSyncingFromUrl.current) {
       isSyncingFromUrl.current = false;
@@ -253,36 +262,48 @@ export default function ProductsPage({ categoryId: propCategoryId, storeCode: pr
     });
 
     next.sort();
-    const current = new URLSearchParams(searchParams.toString());
+    const current = new URLSearchParams(rawSearchParams.toString());
     current.sort();
 
     if (next.toString() !== current.toString()) {
       const newUrl = `${window.location.pathname}${next.toString() ? `?${next.toString()}` : ""}`;
       router.replace(newUrl, { scroll: false });
     }
-  }, [selectedFilters, currentPage, sortBy, searchByTerm, itemCodeTerm, isMounted, router, searchParams, isInitialized]);
+  }, [selectedFilters, currentPage, sortBy, searchByTerm, itemCodeTerm, isMounted, router, rawSearchParams]);
 
   const toggleFavorite = useCallback(async (product: any) => {
     const { product_id: productId } = product;
     const stored = localStorage.getItem("favourites");
     const favIds: number[] = stored ? JSON.parse(stored) : [];
-    if (!favIds.includes(productId)) {
-      favIds.push(productId);
-      localStorage.setItem("favourites", JSON.stringify(favIds));
-      setFavIds(favIds);
-      const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
-      if (token) {
-        const toastId = toast.loading(t("favorites.addingToFavorites"));
-        try {
-          await api.post("/kleverapi/favorite-products", { product_id: productId });
-          toast.success(t("favorites.cartAdded"), { id: toastId });
-        } catch (err) {
-          console.error("API favorite add error:", err);
-          toast.error(t("favorites.syncFailed"), { id: toastId });
-        }
-      }
+    // Already favorited — just navigate without re-adding
+    if (favIds.includes(productId)) {
+      router.push(lp("/favorites"));
+      return;
     }
-    router.push(lp(`/favorites?added=${encodeURIComponent(product.name || "")}`));
+    // Optimistically update local state
+    favIds.push(productId);
+    localStorage.setItem("favourites", JSON.stringify(favIds));
+    setFavIds(favIds);
+    const toastId = toast.loading(t("favorites.addingToFavorites"));
+    try {
+      const storeCode = getClientStoreCode();
+      const result = await api.post(
+        "/kleverapi/favorite-products",
+        { product_id: productId },
+        storeCode ? { headers: { "x-store-code": storeCode } } : {},
+      );
+      if (result?.success === false) throw new Error("Server declined favorite add");
+      toast.success(t("favorites.cartAdded"), { id: toastId });
+      // Only navigate on confirmed success — banner is only shown when add worked
+      router.push(lp(`/favorites?added=${encodeURIComponent(product.name || "")}`));
+    } catch (err) {
+      console.error("API favorite add error:", err);
+      toast.error(t("favorites.syncFailed"), { id: toastId });
+      // Revert optimistic local state on failure
+      const reverted = favIds.filter((id: number) => id !== productId);
+      localStorage.setItem("favourites", JSON.stringify(reverted));
+      setFavIds(reverted);
+    }
   }, [t, router, lp]);
 
   const handleInquiry = useCallback((product: any) => {
@@ -300,21 +321,22 @@ export default function ProductsPage({ categoryId: propCategoryId, storeCode: pr
     setProductQtys(prev => ({ ...prev, [sku]: qty }));
   }, []);
 
-  const [debouncedFilters, setDebouncedFilters] = useState(selectedFilters);
+  // Initialize alongside selectedFilters so both start from URL on first render.
+  const [debouncedFilters, setDebouncedFilters] = useState<Record<string, string[]>>(() => {
+    const { filters } = parseMagentoQueryParams(new URLSearchParams(rawSearchParams.toString()));
+    return filters;
+  });
   const isFirstRender = useRef(true);
   useEffect(() => {
-    // On first render after init, apply filters immediately (no debounce)
-    if (isFirstRender.current && isInitialized) {
+    if (isFirstRender.current) {
       isFirstRender.current = false;
-      setDebouncedFilters(selectedFilters);
-      return;
+      return; // Both already initialized from URL — no debounce needed
     }
     const handler = setTimeout(() => setDebouncedFilters(selectedFilters), 300);
     return () => clearTimeout(handler);
-  }, [selectedFilters, isInitialized]);
+  }, [selectedFilters]);
 
   useEffect(() => {
-    if (!isInitialized) return;
     const abortController = new AbortController();
     const loadProducts = async () => {
       try {
@@ -346,17 +368,14 @@ export default function ProductsPage({ categoryId: propCategoryId, storeCode: pr
 
         const storeParam = tempStoreCode ? `&storeCode=${encodeURIComponent(tempStoreCode)}` : "";
 
-        // When an item code (SKU) is typed, use product-search — it matches exactly
-        // what the live Magento storefront does (/product-search?query=<sku>).
-        // category-products uses a different itemCode filter that the backend ignores.
+        // When an item code (SKU) is typed, route through /api/category-products with
+        // the native itemCode filter on kleverCategoryProducts — server-side exact match
+        // against the full catalog. The old /product-search path used a 200-product
+        // client-side pool which missed items not in the first page.
         let url: string;
         if (itemCodeTerm) {
-          const psParams = new URLSearchParams();
-          psParams.set("query", itemCodeTerm);
-          psParams.set("pageSize", String(PAGE_SIZE));
-          psParams.set("page", String(currentPage));
-          if (tempStoreCode) psParams.set("store", tempStoreCode);
-          url = `/api/kleverapi/product-search?${psParams.toString()}`;
+          const storeParam = tempStoreCode ? `&storeCode=${encodeURIComponent(tempStoreCode)}` : "";
+          url = `/api/category-products?item_code=${encodeURIComponent(itemCodeTerm)}&categoryId=${encodeURIComponent(categoryIdFromUrl)}&pageSize=${PAGE_SIZE}&page=${currentPage}&lang=${fetchLocale}${storeParam}`;
         } else {
           const searchByParam = searchByTerm ? `&searchby=${encodeURIComponent(searchByTerm)}` : "";
           url = `/api/category-products?${queryString ? queryString + "&" : ""}categoryId=${encodeURIComponent(categoryIdFromUrl)}&pageSize=${PAGE_SIZE}&lang=${fetchLocale}${storeParam}${searchByParam}`;
@@ -405,7 +424,7 @@ export default function ProductsPage({ categoryId: propCategoryId, storeCode: pr
     };
     loadProducts();
     return () => abortController.abort();
-  }, [currentPage, debouncedFilters, sortBy, pathStoreCode, selectedStoreCode, searchByTerm, itemCodeTerm, isInitialized, retryCount]);
+  }, [currentPage, debouncedFilters, sortBy, pathStoreCode, selectedStoreCode, searchByTerm, itemCodeTerm, retryCount]);
   // Note: locale intentionally excluded — fetchLocale reads from window.location directly
   // Adding locale here causes double-fetch and abort race condition
 
@@ -564,7 +583,6 @@ export default function ProductsPage({ categoryId: propCategoryId, storeCode: pr
   ══════════════════════════════════════════════════════════════ */
   return (
     <>
-      <Suspense fallback={null}><SearchParamsReader onParams={handleParams} /></Suspense>
       <div className="flex">
         {/* Desktop Sidebar — visible at lg+ (1024px) so iPad-landscape users
             don't have to open the mobile drawer just to use the filter. */}

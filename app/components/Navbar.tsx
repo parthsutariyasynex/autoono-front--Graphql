@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from "next/link";
@@ -31,6 +32,7 @@ import { useTranslation } from "@/hooks/useTranslation";
 import { useLocalePath } from "@/hooks/useLocalePath";
 import { isValidLocale } from "@/lib/i18n/config";
 import { setLocaleCookie } from "@/lib/i18n/client";
+import { getAuthToken } from "@/lib/api/api-client";
 
 interface NavLink {
   label: string;
@@ -51,6 +53,12 @@ const _menuInflight = new Map<string, Promise<any>>();
 const _sourcePermInflight = new Map<string, Promise<any>>();
 const _sourcePermCache = new Map<string, { data: any; fetchedAt: number }>();
 const SOURCE_PERM_TTL = 5 * 60 * 1000; // 5 minutes
+
+// available-stores: inflight dedup + 10-minute cache (changes rarely — admin config).
+// Used when has_restrictions=false (customer can see all stores).
+const _availStoresInflight = new Map<string, Promise<any[]>>();
+const _availStoresCache = new Map<string, { data: any[]; fetchedAt: number }>();
+const AVAIL_STORES_TTL = 10 * 60 * 1000; // 10 minutes
 
 // Any nav item that has a categoryId shows the warehouse dropdown on hover.
 function isWarehouseCategory(item: { label?: string; categoryId?: string | null }): boolean {
@@ -172,11 +180,18 @@ export default function Navbar() {
   }, [status, session]);
 
   useEffect(() => {
-    if (isAuthenticated) pullNotifications();
+    if (!isAuthenticated) return;
+    // Defer so the products fetch (critical path) gets a head start on the
+    // available Magento server connections before non-visible badge data lands.
+    const id = setTimeout(() => pullNotifications(), 500);
+    return () => clearTimeout(id);
   }, [isAuthenticated, pullNotifications]);
 
   useEffect(() => {
-    if (isAuthenticated && !customerData) dispatch(fetchCustomerInfo() as any);
+    if (!isAuthenticated || customerData) return;
+    // Defer slightly — the username display can wait a moment while products load.
+    const id = setTimeout(() => dispatch(fetchCustomerInfo() as any), 300);
+    return () => clearTimeout(id);
   }, [isAuthenticated, customerData, dispatch]);
 
   useEffect(() => {
@@ -284,137 +299,72 @@ export default function Navbar() {
       return null;
     };
 
-    // const fetchMenu = async () => {
-    //   // Immediately show cached data so menu appears before API responds
-    //   const localCached = readLocalCache();
-    //   if (localCached) {
-    //     applyLinks(localCached);
-    //     setNavLoading(false);
-    //   } else {
-    //     setNavLoading(true);
-    //   }
-
-    //   try {
-    //     const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
-
-    //     // Deduplicate concurrent fetches (e.g. StrictMode double-mount).
-    //     // The cached promise ALWAYS resolves (never rejects) so it can't
-    //     // trigger Next.js's unhandled-rejection overlay when Magento is down.
-    //     let menuPromise = _menuInflight.get(locale);
-    //     if (!menuPromise) {
-    //       menuPromise = fetch("/api/kleverapi/menu", {
-    //         headers: {
-    //           "Content-Type": "application/json",
-    //           ...(token && { "Authorization": `Bearer ${token}` }),
-    //           "x-locale": locale,
-    //         },
-    //       })
-    //         .then(r => r.json())
-    //         .catch(err => {
-    //           // Network error (ETIMEDOUT, DNS, offline). Resolve with null
-    //           // so the consumer's null-check below applies the fallback links.
-    //           console.error("[Navbar] Menu fetch network error:", err);
-    //           return null;
-    //         })
-    //         .finally(() => _menuInflight.delete(locale));
-    //       _menuInflight.set(locale, menuPromise);
-    //     }
-
-    //     const data = await menuPromise;
-    //     if (cancelled) return;
-
-    //     // Menu fetch completed — treat null / error payload as failure
-    //     if (!data || data.message) {
-    //       throw new Error("Menu fetch failed");
-    //     }
-
-    //     const fallbackLinks: NavLink[] = [
-    //       { label: t("nav.aboutUs") || "About Us", href: lp("/about") },
-    //       { label: t("nav.branchLocations") || "Locations", href: lp("/locations") },
-    //       { label: t("nav.productCatalogue") || "Catalogue", href: lp("/catalogue") },
-    //     ];
-
-    //     if (Array.isArray(data) && data.length > 0) {
-    //       const links = toLinks(data);
-    //       applyLinks(links);
-    //       // Save fresh data to localStorage for future page loads
-    //       try {
-    //         localStorage.setItem(CACHE_KEY, JSON.stringify({ items: links, expires: Date.now() + CACHE_TTL }));
-    //       } catch { }
-    //     } else if (!localCached) {
-    //       applyLinks(fallbackLinks);
-    //     }
-    //   } catch (err) {
-    //     console.error("[Navbar] Menu fetch error:", err);
-    //     const fallbackLinks: NavLink[] = [
-    //       { label: t("nav.aboutUs") || "About Us", href: lp("/about") },
-    //       { label: t("nav.branchLocations") || "Locations", href: lp("/locations") },
-    //       { label: t("nav.productCatalogue") || "Catalogue", href: lp("/catalogue") },
-    //     ];
-    //     // Keep the locally-cached links if we had them; only clear if nothing
-    //     if (!cancelled && !localCached) applyLinks(fallbackLinks);
-    //   } finally {
-    //     if (!cancelled) setNavLoading(false);
-    //   }
-    // };
-
-    // fetchMenu();
-
-
-
     const fetchMenu = async () => {
-      setNavLoading(true);
+      // Immediately show cached data so menu appears before API responds
+      const localCached = readLocalCache();
+      if (localCached) {
+        applyLinks(localCached);
+        setNavLoading(false);
+      } else {
+        setNavLoading(true);
+      }
 
       try {
-        const token =
-          typeof window !== "undefined"
-            ? localStorage.getItem("token")
-            : null;
+        const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
 
         let menuPromise = _menuInflight.get(locale);
-
         if (!menuPromise) {
           menuPromise = fetch("/api/kleverapi/menu", {
             headers: {
               "Content-Type": "application/json",
-              ...(token && { Authorization: `Bearer ${token}` }),
+              ...(token && { "Authorization": `Bearer ${token}` }),
               "x-locale": locale,
             },
           })
-            .then((r) => {
-              if (!r.ok) {
-                throw new Error("Menu API failed");
-              }
-
-              return r.json();
+            .then(r => r.json())
+            .catch(err => {
+              console.error("[Navbar] Menu fetch network error:", err);
+              return null;
             })
             .finally(() => _menuInflight.delete(locale));
-
           _menuInflight.set(locale, menuPromise);
         }
 
         const data = await menuPromise;
-
         if (cancelled) return;
+
+        if (!data || data.message) {
+          throw new Error("Menu fetch failed");
+        }
+
+        const fallbackLinks: NavLink[] = [
+          { label: t("nav.allLubricants") || "All Lubricants", href: lp("/lubricants") },
+          { label: t("nav.aboutUs") || "About Us", href: lp("/about") },
+          { label: t("nav.branchLocations") || "Branch Locations", href: lp("/locations") },
+        ];
 
         if (Array.isArray(data) && data.length > 0) {
           const links = toLinks(data);
           applyLinks(links);
-        } else {
-          applyLinks([]);
+          try {
+            localStorage.setItem(CACHE_KEY, JSON.stringify({ items: links, expires: Date.now() + CACHE_TTL }));
+          } catch { }
+        } else if (!localCached) {
+          applyLinks(fallbackLinks);
         }
       } catch (err) {
         console.error("[Navbar] Menu fetch error:", err);
-
-        if (!cancelled) {
-          applyLinks([]);
-        }
+        const fallbackLinks: NavLink[] = [
+          { label: t("nav.allLubricants") || "All Lubricants", href: lp("/lubricants") },
+          { label: t("nav.aboutUs") || "About Us", href: lp("/about") },
+          { label: t("nav.branchLocations") || "Branch Locations", href: lp("/locations") },
+        ];
+        if (!cancelled && !localCached) applyLinks(fallbackLinks);
       } finally {
-        if (!cancelled) {
-          setNavLoading(false);
-        }
+        if (!cancelled) setNavLoading(false);
       }
     };
+
     fetchMenu();
 
 
@@ -430,10 +380,10 @@ export default function Navbar() {
       // Clear cache on sign-out so the next user gets fresh data
       _sourcePermCache.clear();
       _sourcePermInflight.clear();
+      _availStoresCache.clear();
+      _availStoresInflight.clear();
       return;
     }
-    const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
-    if (!token) return;
     let cancelled = false;
 
     const applySourcePerm = (data: any) => {
@@ -454,17 +404,16 @@ export default function Navbar() {
 
       const mapped: WarehouseItem[] = filtered.map((s) => {
         const storeCode = String(s.store_code ?? "");
-        console.log("[Navbar] warehouse store_url:", s.store_url, "store_code:", storeCode);
-        // Dropdown label uses the human-readable warehouse/dealer name from
-        // `group_name` (e.g. "All Warehouse", "Anwar Khaled"). Falls back to
-        // the technical store identifier (V101, V202) if group_name is unset.
+        // Dropdown label: group_name → store_name → website_name → store_code
+        // Never filter out a store just because admin left group_name/store_name blank.
+        const label = String(s.group_name || s.store_name || s.website_name || storeCode);
         return {
-          label: String(s.group_name || s.store_name || s.website_name || ""),
+          label,
           code: storeCode,
           storeUrl: String(s.store_url ?? ""),
-          name: String(s.store_name || ""),
+          name: String(s.store_name || s.group_name || storeCode),
         };
-      }).filter((w) => !!w.label);
+      }).filter((w) => !!w.code);
 
       setWarehouseItems(mapped);
     };
@@ -478,17 +427,25 @@ export default function Navbar() {
           return;
         }
 
-        // 2. Deduplicate concurrent fetches — StrictMode double-mount or rapid
+        // 2. Resolve token via getAuthToken() — handles sub-account tokens and
+        //    the post-login race where localStorage isn't written yet.
+        const token = await getAuthToken();
+        if (!token) {
+          if (!cancelled) { setWarehouseItems([]); setAllPermittedStores([]); }
+          return;
+        }
+
+        const authHeaders = {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+          "x-locale": locale,
+        };
+
+        // 3. Deduplicate concurrent fetches — StrictMode double-mount or rapid
         //    locale+auth changes both resolve from the same in-flight Promise.
         let perm = _sourcePermInflight.get(locale);
         if (!perm) {
-          perm = fetch("/api/kleverapi/source-permission", {
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${token}`,
-              "x-locale": locale,
-            },
-          })
+          perm = fetch("/api/kleverapi/source-permission", { headers: authHeaders })
             .then(async (res) => {
               if (!res.ok) {
                 if (res.status === 401) return null;
@@ -496,25 +453,80 @@ export default function Navbar() {
               }
               return res.json();
             })
-            .then((data) => {
-              if (data !== null) {
-                _sourcePermCache.set(locale, { data, fetchedAt: Date.now() });
-              }
-              return data;
-            })
             .finally(() => _sourcePermInflight.delete(locale));
           _sourcePermInflight.set(locale, perm);
         }
 
-        const data = await perm;
-        if (data === null) {
+        const permData = await perm;
+        if (permData === null) {
           if (!cancelled) { setWarehouseItems([]); setAllPermittedStores([]); }
           return;
         }
-        applySourcePerm(data);
+
+        // 4. Always fetch kleverSourceAvailableStores so that base locale stores
+        //    (store_code "en" / "ar", group_name "All Warehouse") are always available.
+        //    These are never included in kleverSourcePermissions.permitted_stores even
+        //    for restricted customers, so they must come from the available-stores list.
+        const permittedStores: any[] = Array.isArray(permData?.permitted_stores)
+          ? permData.permitted_stores
+          : [];
+
+        // Serve available-stores from cache if fresh
+        const availCached = _availStoresCache.get(locale);
+        let availPromise: Promise<any[]>;
+        if (availCached && Date.now() - availCached.fetchedAt < AVAIL_STORES_TTL) {
+          availPromise = Promise.resolve(availCached.data);
+        } else {
+          // Deduplicate concurrent fetches
+          let avail = _availStoresInflight.get(locale);
+          if (!avail) {
+            avail = fetch("/api/kleverapi/source-permission/stores", { headers: authHeaders })
+              .then(async (res) => {
+                if (!res.ok) return [];
+                const stores = await res.json();
+                const arr = Array.isArray(stores) ? stores : [];
+                _availStoresCache.set(locale, { data: arr, fetchedAt: Date.now() });
+                return arr;
+              })
+              .catch(() => [])
+              .finally(() => _availStoresInflight.delete(locale));
+            _availStoresInflight.set(locale, avail);
+          }
+          availPromise = avail;
+        }
+
+        const allStores = await availPromise;
+
+        // Build the final store list:
+        // - Unrestricted (has_restrictions=false) OR no permitted stores → show all available
+        // - Restricted (has_restrictions=true, has stores) → show base locale stores
+        //   ("All Warehouse") + customer's specific permitted stores, deduped by store_code
+        let finalStores: any[];
+        if (permData?.has_restrictions === false || permittedStores.length === 0) {
+          finalStores = allStores.length > 0 ? allStores : permittedStores;
+        } else {
+          // Base locale stores are those whose store_code is exactly "en" or "ar"
+          // (not a warehouse prefix like V101_en) — they represent "All Warehouse"
+          const baseStores = allStores.filter(
+            (s: any) => s.store_code === "en" || s.store_code === "ar"
+          );
+          const combined = [...baseStores, ...permittedStores];
+          // Deduplicate — base stores listed first so they win on code collision
+          const seen = new Set<string>();
+          finalStores = combined.filter((s: any) => {
+            const code = String(s.store_code ?? "");
+            if (!code || seen.has(code)) return false;
+            seen.add(code);
+            return true;
+          });
+        }
+
+        const merged = { ...permData, permitted_stores: finalStores };
+        _sourcePermCache.set(locale, { data: merged, fetchedAt: Date.now() });
+        applySourcePerm(merged);
       } catch (err) {
         if (process.env.NODE_ENV !== "production") {
-          console.warn("[Navbar] source-permission/stores fetch failed:", err);
+          console.warn("[Navbar] source-permission fetch failed:", err);
         }
         if (!cancelled) setWarehouseItems([]);
       }
@@ -1108,3 +1120,4 @@ export default function Navbar() {
     </>
   );
 }
+

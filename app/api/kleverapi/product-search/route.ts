@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getRequestToken } from "@/lib/api/auth-helper";
 import {
   KLEVER_SEARCH_POOL_QUERY,
@@ -21,6 +21,16 @@ import { graphqlFetch, isGraphQLRequestError } from "@/src/lib/graphqlFetch";
 const DEFAULT_CATEGORY_ID = Number(process.env.MAGENTO_DEFAULT_CATEGORY_ID || "5");
 const SEARCH_POOL_SIZE = 200;
 
+// Magento's products(search:) full-text query runs against a per-store Elasticsearch
+// index. Warehouse store views (V101_en, V301_ar, …) don't have their own populated
+// index — the index lives on the base locale stores ("en" / "ar").
+// Sending Store: V301_en returns 0 results; mapping it to "en" hits the real index.
+function toSearchStore(storeCode: string | undefined): string | undefined {
+  if (!storeCode) return storeCode;
+  const m = storeCode.match(/_(en|ar)$/i);
+  return m ? m[1].toLowerCase() : storeCode;
+}
+
 async function handleLight(
   token: string,
   query: string,
@@ -32,7 +42,7 @@ async function handleLight(
     query: PRODUCTS_SEARCH_QUERY,
     variables: { search: query, pageSize, currentPage },
     token,
-    store: storeCode ?? null,
+    store: toSearchStore(storeCode) ?? null,
     cache: "no-store",
   });
   const result = data.products;
@@ -66,7 +76,7 @@ async function handleFull(
     query: KLEVER_SEARCH_POOL_QUERY,
     variables: { categoryId, pageSize: SEARCH_POOL_SIZE, currentPage: 1 },
     token,
-    store: storeCode ?? null,
+    store: toSearchStore(storeCode) ?? null,
     cache: "no-store",
   });
   const pool = data.kleverCategoryProducts?.products ?? [];
@@ -89,7 +99,7 @@ async function handleFull(
   };
 }
 
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
   try {
     const token = await getRequestToken(request);
     if (!token) {
@@ -114,6 +124,7 @@ export async function GET(request: Request) {
       searchParams.get("storeCode") ||
       request.headers.get("x-store-code") ||
       undefined;
+
 
     const result = light
       ? await handleLight(token, query, pageSize, currentPage, storeCode)
