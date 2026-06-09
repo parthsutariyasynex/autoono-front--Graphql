@@ -486,6 +486,7 @@ export const PRODUCTS_SEARCH_QUERY = /* GraphQL */ `
   }
 `;
 
+
 export const CUSTOMER_CART_QUERY = /* GraphQL */ `
   query CustomerCart {
     customerCart {

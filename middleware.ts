@@ -323,7 +323,8 @@ export async function middleware(request: NextRequest) {
                 const loginUrl = request.nextUrl.clone();
                 loginUrl.pathname = `/${locale}/login`;
                 loginUrl.search = "";
-                loginUrl.searchParams.set("callbackUrl", `${pathname}${request.nextUrl.search}`);
+                const cb = `${pathname}${request.nextUrl.search}`;
+        if (!cb.includes("/login")) loginUrl.searchParams.set("callbackUrl", cb);
                 return withCookies(NextResponse.redirect(loginUrl), locale, storeCode);
             }
             return rewriteTo(internalPath, extraParams);
@@ -409,7 +410,8 @@ export async function middleware(request: NextRequest) {
             const loginUrl = request.nextUrl.clone();
             loginUrl.pathname = `/${locale}/login`;
             loginUrl.search = "";
-            loginUrl.searchParams.set("callbackUrl", `${pathname}${request.nextUrl.search}`);
+            const cb = `${pathname}${request.nextUrl.search}`;
+        if (!cb.includes("/login")) loginUrl.searchParams.set("callbackUrl", cb);
             return withCookies(NextResponse.redirect(loginUrl), locale);
         }
         return rewriteTo(internalPath, extraParams);

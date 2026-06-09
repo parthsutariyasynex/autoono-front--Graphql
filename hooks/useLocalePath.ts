@@ -1,5 +1,6 @@
 "use client";
 
+import { useCallback } from "react";
 import { useLocale } from "../lib/i18n/client";
 import { usePathname } from "next/navigation";
 import { isValidLocale } from "../lib/i18n/config";
@@ -19,7 +20,7 @@ export function useLocalePath() {
   const firstSeg = (pathname || "").split("/").filter(Boolean)[0] || "";
   const currentStore = STORE_CODE_RE.test(firstSeg) ? firstSeg : "";
 
-  return (path: string): string => {
+  return useCallback((path: string): string => {
     if (!path || path === "#") return path;
 
     // Extract path and query string
@@ -42,5 +43,5 @@ export function useLocalePath() {
 
     if (cleanPath === "/") return `/${prefix}${qs}`;
     return `/${prefix}${cleanPath}${qs}`;
-  };
+  }, [locale, currentStore]);
 }
