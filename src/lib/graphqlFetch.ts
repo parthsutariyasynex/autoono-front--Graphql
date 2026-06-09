@@ -80,7 +80,7 @@ export async function graphqlFetch<
     },
     body: JSON.stringify({ query, variables }),
     cache,
-    ...(revalidate || tags
+    ...(revalidate !== undefined || tags?.length
       ? {
           next: {
             ...(typeof revalidate === "number" ? { revalidate } : {}),
@@ -95,9 +95,12 @@ export async function graphqlFetch<
   if (!response.ok || payload.errors?.length) {
     const firstError = payload.errors?.[0];
     const message =
-      firstError?.debugMessage ||
       firstError?.message ||
       `GraphQL request failed with status ${response.status}`;
+    // debugMessage may contain internal server details — keep server-side only
+    if (firstError?.debugMessage) {
+      console.error("[GraphQL debugMessage]", firstError.debugMessage);
+    }
     throw new GraphQLRequestError(message, response.status, payload.errors ?? []);
   }
 

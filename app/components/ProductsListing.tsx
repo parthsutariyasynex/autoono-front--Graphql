@@ -12,7 +12,7 @@ import { useCart } from "@/modules/cart/hooks/useCart";
 import SidebarFilter from "../components/SidebarFilter";
 import Drawer from "../components/Drawer";
 import Modal from "../components/Modal";
-import { api } from "@/lib/api/api-client";
+import { api, getClientStoreCode } from "@/lib/api/api-client";
 import { formatPrice, redirectToLogin, formatMagentoQueryParams, parseMagentoQueryParams } from "@/utils/helpers";
 import Price from "../components/Price";
 import PortalDropdown from "@/components/PortalDropdown";
@@ -277,23 +277,35 @@ export default function ProductsPage({ categoryId: propCategoryId, storeCode: pr
     const { product_id: productId } = product;
     const stored = localStorage.getItem("favourites");
     const favIds: number[] = stored ? JSON.parse(stored) : [];
-    if (!favIds.includes(productId)) {
-      favIds.push(productId);
-      localStorage.setItem("favourites", JSON.stringify(favIds));
-      setFavIds(favIds);
-      const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
-      if (token) {
-        const toastId = toast.loading(t("favorites.addingToFavorites"));
-        try {
-          await api.post("/kleverapi/favorite-products", { product_id: productId });
-          toast.success(t("favorites.cartAdded"), { id: toastId });
-        } catch (err) {
-          console.error("API favorite add error:", err);
-          toast.error(t("favorites.syncFailed"), { id: toastId });
-        }
-      }
+    // Already favorited — just navigate without re-adding
+    if (favIds.includes(productId)) {
+      router.push(lp("/favorites"));
+      return;
     }
-    router.push(lp(`/favorites?added=${encodeURIComponent(product.name || "")}`));
+    // Optimistically update local state
+    favIds.push(productId);
+    localStorage.setItem("favourites", JSON.stringify(favIds));
+    setFavIds(favIds);
+    const toastId = toast.loading(t("favorites.addingToFavorites"));
+    try {
+      const storeCode = getClientStoreCode();
+      const result = await api.post(
+        "/kleverapi/favorite-products",
+        { product_id: productId },
+        storeCode ? { headers: { "x-store-code": storeCode } } : {},
+      );
+      if (result?.success === false) throw new Error("Server declined favorite add");
+      toast.success(t("favorites.cartAdded"), { id: toastId });
+      // Only navigate on confirmed success — banner is only shown when add worked
+      router.push(lp(`/favorites?added=${encodeURIComponent(product.name || "")}`));
+    } catch (err) {
+      console.error("API favorite add error:", err);
+      toast.error(t("favorites.syncFailed"), { id: toastId });
+      // Revert optimistic local state on failure
+      const reverted = favIds.filter((id: number) => id !== productId);
+      localStorage.setItem("favourites", JSON.stringify(reverted));
+      setFavIds(reverted);
+    }
   }, [t, router, lp]);
 
   const handleInquiry = useCallback((product: any) => {
@@ -358,17 +370,14 @@ export default function ProductsPage({ categoryId: propCategoryId, storeCode: pr
 
         const storeParam = tempStoreCode ? `&storeCode=${encodeURIComponent(tempStoreCode)}` : "";
 
-        // When an item code (SKU) is typed, use product-search — it matches exactly
-        // what the live Magento storefront does (/product-search?query=<sku>).
-        // category-products uses a different itemCode filter that the backend ignores.
+        // When an item code (SKU) is typed, route through /api/category-products with
+        // the native itemCode filter on kleverCategoryProducts — server-side exact match
+        // against the full catalog. The old /product-search path used a 200-product
+        // client-side pool which missed items not in the first page.
         let url: string;
         if (itemCodeTerm) {
-          const psParams = new URLSearchParams();
-          psParams.set("query", itemCodeTerm);
-          psParams.set("pageSize", String(PAGE_SIZE));
-          psParams.set("page", String(currentPage));
-          if (tempStoreCode) psParams.set("store", tempStoreCode);
-          url = `/api/kleverapi/product-search?${psParams.toString()}`;
+          const storeParam = tempStoreCode ? `&storeCode=${encodeURIComponent(tempStoreCode)}` : "";
+          url = `/api/category-products?item_code=${encodeURIComponent(itemCodeTerm)}&categoryId=${encodeURIComponent(categoryIdFromUrl)}&pageSize=${PAGE_SIZE}&page=${currentPage}&lang=${fetchLocale}${storeParam}`;
         } else {
           const searchByParam = searchByTerm ? `&searchby=${encodeURIComponent(searchByTerm)}` : "";
           url = `/api/category-products?${queryString ? queryString + "&" : ""}categoryId=${encodeURIComponent(categoryIdFromUrl)}&pageSize=${PAGE_SIZE}&lang=${fetchLocale}${storeParam}${searchByParam}`;

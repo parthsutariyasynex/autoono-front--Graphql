@@ -12,7 +12,7 @@ import Modal from "./Modal";
 import Price from "./Price";
 import AddToCartPopup from "./AddToCartPopup";
 
-import { api } from "@/lib/api/api-client";
+import { api, getClientStoreCode } from "@/lib/api/api-client";
 import { FavouriteProductsSkeleton } from "@/components/skeletons";
 import { useTranslation } from "@/hooks/useTranslation";
 import Pagination, { PageSizeSelect } from "@/components/Pagination";
@@ -146,7 +146,11 @@ export default function FavouriteProducts({ title }: { title?: React.ReactNode }
         setLoading(true);
         try {
             // Using centralized api client which handles tokens and sessions
-            const data = await api.get(`/kleverapi/favorite-products?currentPage=${currentPage}&pageSize=${pageSize}`);
+            const storeCode = getClientStoreCode();
+            const data = await api.get(
+                `/kleverapi/favorite-products?currentPage=${currentPage}&pageSize=${pageSize}`,
+                storeCode ? { headers: { "x-store-code": storeCode } } : {},
+            );
 
             // Handle different API response formats
             const rawItems = Array.isArray(data.products) ? data.products : (Array.isArray(data.items) ? data.items : []);
@@ -219,20 +223,31 @@ export default function FavouriteProducts({ title }: { title?: React.ReactNode }
         setRemoving(product.product_id);
         const toastId = toast.loading(t("favorites.remove"));
         try {
-            // Updating local storage to maintain consistency with other components
+            const deleteId = product.favorite_id || product.product_id;
+            const storeCode = getClientStoreCode();
+            const result = await api.delete(
+                `/kleverapi/favorite-products/${deleteId}`,
+                storeCode ? { headers: { "x-store-code": storeCode } } : {},
+            );
+            // Treat an explicit success:false as an error (API returns 422 for this,
+            // but guard here too in case the route is called from other contexts).
+            if (result?.success === false) throw new Error("Server declined remove");
+
+            // Update local state only AFTER confirmed API success to prevent
+            // stale localStorage when the backend remove fails silently.
             const stored = localStorage.getItem("favourites");
             const favIds: number[] = stored ? JSON.parse(stored) : [];
-            const updated = favIds.filter(id => id !== product.product_id);
-            localStorage.setItem("favourites", JSON.stringify(updated));
-
-            // Proper API call to remove using the unique favorite item ID
-            const deleteId = product.favorite_id || product.product_id;
-            await api.delete(`/kleverapi/favorite-products/${deleteId}`);
+            localStorage.setItem("favourites", JSON.stringify(favIds.filter((id: number) => id !== product.product_id)));
 
             setFavProducts(prev => prev.filter(p => p.product_id !== product.product_id));
             setTotalCount(prev => Math.max(0, prev - 1));
-            toast.success(t("favorites.removeSuccess"), { id: toastId });
+            const label = product.brand || product.name || "";
+            toast.success(
+                label ? `"${label}" ${t("favorites.removeSuccess")}` : t("favorites.removeSuccess"),
+                { id: toastId },
+            );
         } catch (err) {
+            console.error("[FavouriteProducts] Remove error:", err);
             toast.error(t("favorites.removeFailed"), { id: toastId });
         } finally {
             setRemoving(null);

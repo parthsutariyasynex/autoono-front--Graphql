@@ -220,7 +220,10 @@ async function resolveMagentoUrl(slugPath: string, storeCode: string): Promise<R
                     }
                 }
                 if (r.type === "CMS_PAGE") {
-                    const result: ResolvedUrl = { kind: "cms", nextjsPath: "/products" };
+                    // CMS pages don't map 1:1 to a Next.js route — treat as unknown
+                    // so the caller's fallback logic applies (e.g. guardedRewrite(rawPath)).
+                    // Previously this sent every CMS_PAGE hit to /products which was wrong.
+                    const result: ResolvedUrl = { kind: "unknown" };
                     urlResolutionCache.set(cacheKey, result);
                     return result;
                 }

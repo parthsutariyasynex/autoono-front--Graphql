@@ -12,9 +12,12 @@ export async function POST(req: Request) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
 
+    const storeCode = req.headers.get("x-store-code") || null;
+
     const idData = await graphqlFetch<CustomerCartIdData>({
       query: CUSTOMER_CART_ID_QUERY,
       token,
+      store: storeCode,
       cache: "no-store",
     });
     const cart = idData.customerCart;
@@ -28,6 +31,7 @@ export async function POST(req: Request) {
           query: REMOVE_ITEM_FROM_CART_MUTATION,
           variables: { cartId: cart.id, cartItemId: Number(item.id) },
           token,
+          store: storeCode,
           cache: "no-store",
         });
       } catch (err) {

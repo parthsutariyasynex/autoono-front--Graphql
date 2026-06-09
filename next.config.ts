@@ -18,10 +18,25 @@ const nextConfig: NextConfig = {
         remotePatterns: [
             {
                 protocol: "https",
-                hostname: "autoono-demo.btire.com",
+                hostname: "autoono.btire.com",
                 pathname: "/**",
             },
         ],
+    },
+    async headers() {
+        return [
+            {
+                // All page routes — prevent browsers from caching HTML so stale
+                // chunk hashes never cause ChunkLoadError after a redeployment.
+                source: "/((?!_next/static|_next/image|favicon\\.ico).*)",
+                headers: [
+                    {
+                        key: "Cache-Control",
+                        value: "no-cache, no-store, must-revalidate",
+                    },
+                ],
+            },
+        ];
     },
 };
 

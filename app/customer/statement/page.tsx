@@ -9,6 +9,7 @@ import { toast } from "react-hot-toast";
 import { redirectToLogin } from "@/utils/helpers";
 import { useTranslation } from "@/hooks/useTranslation";
 import { StatementSkeleton } from "@/components/skeletons";
+import { getClientStoreCode } from "@/lib/api/api-client";
 
 export default function MyStatementPage() {
     const { data: session, status: authStatus } = useSession();
@@ -42,8 +43,12 @@ export default function MyStatementPage() {
             if (!token) return;
 
             try {
+                const storeCode = getClientStoreCode();
                 const res = await fetch("/api/kleverapi/my-statement/types", {
-                    headers: { Authorization: `Bearer ${token}` },
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                        ...(storeCode ? { "x-store-code": storeCode } : {}),
+                    },
                 });
                 if (res.ok) {
                     const data = await res.json();
@@ -106,9 +111,11 @@ export default function MyStatementPage() {
                 type: statementType,
             });
 
+            const storeCode = getClientStoreCode();
             const response = await fetch(`/api/kleverapi/my-statement?${queryParams.toString()}`, {
                 headers: {
                     Authorization: `Bearer ${token}`,
+                    ...(storeCode ? { "x-store-code": storeCode } : {}),
                 },
             });
 

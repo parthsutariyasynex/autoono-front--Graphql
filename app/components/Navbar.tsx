@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from "next/link";
@@ -31,6 +32,7 @@ import { useTranslation } from "@/hooks/useTranslation";
 import { useLocalePath } from "@/hooks/useLocalePath";
 import { isValidLocale } from "@/lib/i18n/config";
 import { setLocaleCookie } from "@/lib/i18n/client";
+import { getAuthToken } from "@/lib/api/api-client";
 
 interface NavLink {
   label: string;
@@ -51,6 +53,12 @@ const _menuInflight = new Map<string, Promise<any>>();
 const _sourcePermInflight = new Map<string, Promise<any>>();
 const _sourcePermCache = new Map<string, { data: any; fetchedAt: number }>();
 const SOURCE_PERM_TTL = 5 * 60 * 1000; // 5 minutes
+
+// available-stores: inflight dedup + 10-minute cache (changes rarely — admin config).
+// Used when has_restrictions=false (customer can see all stores).
+const _availStoresInflight = new Map<string, Promise<any[]>>();
+const _availStoresCache = new Map<string, { data: any[]; fetchedAt: number }>();
+const AVAIL_STORES_TTL = 10 * 60 * 1000; // 10 minutes
 
 // Any nav item that has a categoryId shows the warehouse dropdown on hover.
 function isWarehouseCategory(item: { label?: string; categoryId?: string | null }): boolean {
@@ -372,10 +380,10 @@ export default function Navbar() {
       // Clear cache on sign-out so the next user gets fresh data
       _sourcePermCache.clear();
       _sourcePermInflight.clear();
+      _availStoresCache.clear();
+      _availStoresInflight.clear();
       return;
     }
-    const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
-    if (!token) return;
     let cancelled = false;
 
     const applySourcePerm = (data: any) => {
@@ -396,17 +404,16 @@ export default function Navbar() {
 
       const mapped: WarehouseItem[] = filtered.map((s) => {
         const storeCode = String(s.store_code ?? "");
-        console.log("[Navbar] warehouse store_url:", s.store_url, "store_code:", storeCode);
-        // Dropdown label uses the human-readable warehouse/dealer name from
-        // `group_name` (e.g. "All Warehouse", "Anwar Khaled"). Falls back to
-        // the technical store identifier (V101, V202) if group_name is unset.
+        // Dropdown label: group_name → store_name → website_name → store_code
+        // Never filter out a store just because admin left group_name/store_name blank.
+        const label = String(s.group_name || s.store_name || s.website_name || storeCode);
         return {
-          label: String(s.group_name || s.store_name || s.website_name || ""),
+          label,
           code: storeCode,
           storeUrl: String(s.store_url ?? ""),
-          name: String(s.store_name || ""),
+          name: String(s.store_name || s.group_name || storeCode),
         };
-      }).filter((w) => !!w.label);
+      }).filter((w) => !!w.code);
 
       setWarehouseItems(mapped);
     };
@@ -420,17 +427,25 @@ export default function Navbar() {
           return;
         }
 
-        // 2. Deduplicate concurrent fetches — StrictMode double-mount or rapid
+        // 2. Resolve token via getAuthToken() — handles sub-account tokens and
+        //    the post-login race where localStorage isn't written yet.
+        const token = await getAuthToken();
+        if (!token) {
+          if (!cancelled) { setWarehouseItems([]); setAllPermittedStores([]); }
+          return;
+        }
+
+        const authHeaders = {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+          "x-locale": locale,
+        };
+
+        // 3. Deduplicate concurrent fetches — StrictMode double-mount or rapid
         //    locale+auth changes both resolve from the same in-flight Promise.
         let perm = _sourcePermInflight.get(locale);
         if (!perm) {
-          perm = fetch("/api/kleverapi/source-permission", {
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${token}`,
-              "x-locale": locale,
-            },
-          })
+          perm = fetch("/api/kleverapi/source-permission", { headers: authHeaders })
             .then(async (res) => {
               if (!res.ok) {
                 if (res.status === 401) return null;
@@ -438,25 +453,80 @@ export default function Navbar() {
               }
               return res.json();
             })
-            .then((data) => {
-              if (data !== null) {
-                _sourcePermCache.set(locale, { data, fetchedAt: Date.now() });
-              }
-              return data;
-            })
             .finally(() => _sourcePermInflight.delete(locale));
           _sourcePermInflight.set(locale, perm);
         }
 
-        const data = await perm;
-        if (data === null) {
+        const permData = await perm;
+        if (permData === null) {
           if (!cancelled) { setWarehouseItems([]); setAllPermittedStores([]); }
           return;
         }
-        applySourcePerm(data);
+
+        // 4. Always fetch kleverSourceAvailableStores so that base locale stores
+        //    (store_code "en" / "ar", group_name "All Warehouse") are always available.
+        //    These are never included in kleverSourcePermissions.permitted_stores even
+        //    for restricted customers, so they must come from the available-stores list.
+        const permittedStores: any[] = Array.isArray(permData?.permitted_stores)
+          ? permData.permitted_stores
+          : [];
+
+        // Serve available-stores from cache if fresh
+        const availCached = _availStoresCache.get(locale);
+        let availPromise: Promise<any[]>;
+        if (availCached && Date.now() - availCached.fetchedAt < AVAIL_STORES_TTL) {
+          availPromise = Promise.resolve(availCached.data);
+        } else {
+          // Deduplicate concurrent fetches
+          let avail = _availStoresInflight.get(locale);
+          if (!avail) {
+            avail = fetch("/api/kleverapi/source-permission/stores", { headers: authHeaders })
+              .then(async (res) => {
+                if (!res.ok) return [];
+                const stores = await res.json();
+                const arr = Array.isArray(stores) ? stores : [];
+                _availStoresCache.set(locale, { data: arr, fetchedAt: Date.now() });
+                return arr;
+              })
+              .catch(() => [])
+              .finally(() => _availStoresInflight.delete(locale));
+            _availStoresInflight.set(locale, avail);
+          }
+          availPromise = avail;
+        }
+
+        const allStores = await availPromise;
+
+        // Build the final store list:
+        // - Unrestricted (has_restrictions=false) OR no permitted stores → show all available
+        // - Restricted (has_restrictions=true, has stores) → show base locale stores
+        //   ("All Warehouse") + customer's specific permitted stores, deduped by store_code
+        let finalStores: any[];
+        if (permData?.has_restrictions === false || permittedStores.length === 0) {
+          finalStores = allStores.length > 0 ? allStores : permittedStores;
+        } else {
+          // Base locale stores are those whose store_code is exactly "en" or "ar"
+          // (not a warehouse prefix like V101_en) — they represent "All Warehouse"
+          const baseStores = allStores.filter(
+            (s: any) => s.store_code === "en" || s.store_code === "ar"
+          );
+          const combined = [...baseStores, ...permittedStores];
+          // Deduplicate — base stores listed first so they win on code collision
+          const seen = new Set<string>();
+          finalStores = combined.filter((s: any) => {
+            const code = String(s.store_code ?? "");
+            if (!code || seen.has(code)) return false;
+            seen.add(code);
+            return true;
+          });
+        }
+
+        const merged = { ...permData, permitted_stores: finalStores };
+        _sourcePermCache.set(locale, { data: merged, fetchedAt: Date.now() });
+        applySourcePerm(merged);
       } catch (err) {
         if (process.env.NODE_ENV !== "production") {
-          console.warn("[Navbar] source-permission/stores fetch failed:", err);
+          console.warn("[Navbar] source-permission fetch failed:", err);
         }
         if (!cancelled) setWarehouseItems([]);
       }

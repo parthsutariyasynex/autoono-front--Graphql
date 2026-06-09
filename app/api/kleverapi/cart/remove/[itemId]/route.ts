@@ -26,9 +26,12 @@ export async function DELETE(
       return NextResponse.json({ message: "Invalid itemId" }, { status: 400 });
     }
 
+    const storeCode = req.headers.get("x-store-code") || null;
+
     const idData = await graphqlFetch<CustomerCartIdData>({
       query: CUSTOMER_CART_ID_QUERY,
       token,
+      store: storeCode,
       cache: "no-store",
     });
     const cartId = idData.customerCart?.id;
@@ -45,6 +48,7 @@ export async function DELETE(
       const cartData = await graphqlFetch<CustomerCartData>({
         query: CUSTOMER_CART_QUERY,
         token,
+        store: storeCode,
         cache: "no-store",
       });
       if (!cartData.customerCart) return NextResponse.json({ success: true });
@@ -55,12 +59,14 @@ export async function DELETE(
       query: REMOVE_ITEM_FROM_CART_MUTATION,
       variables: { cartId, cartItemId },
       token,
+      store: storeCode,
       cache: "no-store",
     });
 
     const cartData = await graphqlFetch<CustomerCartData>({
       query: CUSTOMER_CART_QUERY,
       token,
+      store: storeCode,
       cache: "no-store",
     });
     if (!cartData.customerCart) {

@@ -17,6 +17,8 @@ async function handle(req: Request) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
 
+    const storeCode = req.headers.get("x-store-code") || null;
+
     let cartId: string | null = null;
     try {
       const body = await req.json();
@@ -29,6 +31,7 @@ async function handle(req: Request) {
       const idData = await graphqlFetch<CustomerCartIdData>({
         query: CUSTOMER_CART_ID_QUERY,
         token,
+        store: storeCode,
         cache: "no-store",
       });
       cartId = idData.customerCart?.id ?? null;
@@ -41,12 +44,14 @@ async function handle(req: Request) {
       query: REMOVE_COUPON_FROM_CART_MUTATION,
       variables: { cartId },
       token,
+      store: storeCode,
       cache: "no-store",
     });
 
     const cartData = await graphqlFetch<CustomerCartData>({
       query: CUSTOMER_CART_QUERY,
       token,
+      store: storeCode,
       cache: "no-store",
     });
     if (!cartData.customerCart) {

@@ -20,15 +20,27 @@ export async function DELETE(
       return NextResponse.json({ message: "Invalid product id" }, { status: 400 });
     }
 
+    const storeCode = request.headers.get("x-store-code") || undefined;
+
     const data = await graphqlFetch<KleverRemoveFavoriteProductData>({
       query: KLEVER_REMOVE_FAVORITE_PRODUCT_MUTATION,
       variables: { productId },
       token,
+      store: storeCode,
       cache: "no-store",
     });
 
+    // Return a non-2xx status when the mutation explicitly returns false so
+    // apiClient throws and the client catch block can revert the UI correctly.
+    if (data.kleverRemoveFavoriteProduct === false) {
+      return NextResponse.json(
+        { message: "Failed to remove from favorites", product_id: productId },
+        { status: 422 },
+      );
+    }
+
     return NextResponse.json(
-      { success: data.kleverRemoveFavoriteProduct !== false, product_id: productId },
+      { success: true, product_id: productId },
       { status: 200 },
     );
   } catch (error) {

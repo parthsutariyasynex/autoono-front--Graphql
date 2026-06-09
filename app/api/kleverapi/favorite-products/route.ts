@@ -8,26 +8,6 @@ import type {
 } from "@/src/graphql/types";
 import { graphqlFetch, isGraphQLRequestError } from "@/src/lib/graphqlFetch";
 
-// Resolve the real store-view code (e.g. V101_en) so the kleverFavoriteProducts
-// resolver loads the products in the correct store. Without it Magento resolves
-// against the default store where the customer's products aren't visible, so
-// `products` comes back empty even though `total_count` is correct.
-//   1. x-store-code header (set by middleware from the NEXT_STORE cookie)
-//   2. "store" header (some callers send this directly)
-//   3. NEXT_STORE cookie parsed from the Cookie header
-//   4. x-locale header / "en" fallback — last resort only
-function resolveStore(request: Request): string {
-  const cookie = request.headers.get("cookie") || "";
-  const m = cookie.match(/NEXT_STORE=([^;]+)/);
-  return (
-    request.headers.get("x-store-code") ||
-    request.headers.get("store") ||
-    (m ? decodeURIComponent(m[1]) : "") ||
-    request.headers.get("x-locale") ||
-    "en"
-  );
-}
-
 export async function GET(request: Request) {
   const isDev = process.env.NODE_ENV !== "production";
   try {
@@ -42,21 +22,21 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const currentPage = Number(searchParams.get("currentPage") || "1");
     const pageSize = Number(searchParams.get("pageSize") || "10");
-    const store = resolveStore(request);
+    const storeCode = request.headers.get("x-store-code") || undefined;
 
     const data = await graphqlFetch<KleverFavoriteProductsData>({
       query: KLEVER_FAVORITE_PRODUCTS_QUERY,
       variables: { pageSize, currentPage },
       token,
-      store,
+      store: storeCode,
       cache: "no-store",
     });
 
     const payload = data.kleverFavoriteProducts ?? { products: [], total_count: 0 };
     if (isDev) {
       console.log(
-        `[favorite-products] OK — store="${store}" page=${currentPage} size=${pageSize} ` +
-          `returned=${payload.products?.length ?? 0} total=${payload.total_count ?? 0}`,
+        `[favorite-products] OK — page=${currentPage} size=${pageSize} ` +
+        `returned=${payload.products?.length ?? 0} total=${payload.total_count ?? 0}`,
       );
     }
     return NextResponse.json(payload, { status: 200 });
@@ -91,12 +71,13 @@ export async function POST(request: Request) {
     if (!productId) {
       return NextResponse.json({ message: "productId is required" }, { status: 400 });
     }
+    const storeCode = request.headers.get("x-store-code") || undefined;
 
     const data = await graphqlFetch<KleverAddFavoriteProductData>({
       query: KLEVER_ADD_FAVORITE_PRODUCT_MUTATION,
       variables: { productId },
       token,
-      store: resolveStore(request),
+      store: storeCode,
       cache: "no-store",
     });
 

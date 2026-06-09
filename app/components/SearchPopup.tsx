@@ -6,7 +6,7 @@ import { Search, X } from "lucide-react";
 import { useTranslation } from "@/hooks/useTranslation";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useLocalePath } from "@/hooks/useLocalePath";
-import { getClientStoreCode } from "@/lib/api/api-client";
+import { getAuthToken, getClientStoreCode } from "@/lib/api/api-client";
 
 interface SearchPopupProps {
     isOpen: boolean;
@@ -157,7 +157,7 @@ const SearchPopup: React.FC<SearchPopupProps> = ({ isOpen, onClose }) => {
             setIsSearching(true);
             setNoResults(false);
             try {
-                const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+                const token = await getAuthToken();
 
                 // Use the lightweight /product-search proxy (pure Magento passthrough)
                 // for typeahead — the heavy /category-products proxy with filter

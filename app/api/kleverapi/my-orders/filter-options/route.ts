@@ -1,19 +1,23 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getRequestToken } from "@/lib/api/auth-helper";
+import { getLocaleFromRequest } from "@/lib/api/magento-url";
 import { KLEVER_ORDER_FILTER_OPTIONS_QUERY } from "@/src/graphql/queries";
 import type { KleverOrderFilterOptionsData } from "@/src/graphql/types";
 import { graphqlFetch, isGraphQLRequestError } from "@/src/lib/graphqlFetch";
 
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
   try {
     const token = await getRequestToken(request);
     if (!token) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
 
+    const store = request.headers.get("x-store-code") || getLocaleFromRequest(request);
+
     const data = await graphqlFetch<KleverOrderFilterOptionsData>({
       query: KLEVER_ORDER_FILTER_OPTIONS_QUERY,
       token,
+      store,
       cache: "no-store",
     });
 

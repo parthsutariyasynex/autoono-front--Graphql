@@ -1,10 +1,24 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getRequestToken } from "@/lib/api/auth-helper";
+import { getLocaleFromRequest } from "@/lib/api/magento-url";
 import { KLEVER_MY_STATEMENT_QUERY } from "@/src/graphql/queries";
 import type { KleverMyStatementData } from "@/src/graphql/types";
 import { graphqlFetch, isGraphQLRequestError } from "@/src/lib/graphqlFetch";
 
-export async function GET(request: Request) {
+function resolveStatementError(raw: string): string {
+  if (/not defined in company code/i.test(raw)) {
+    return "Your account is not configured for statements. Please contact your account manager.";
+  }
+  if (/unauthorized|unauthenticated/i.test(raw)) {
+    return "Your session has expired. Please log in and try again.";
+  }
+  if (/no such entity|not found/i.test(raw)) {
+    return "No statement found for the selected criteria.";
+  }
+  return raw;
+}
+
+export async function GET(request: NextRequest) {
   try {
     const token = await getRequestToken(request);
     if (!token) {
@@ -16,17 +30,22 @@ export async function GET(request: Request) {
     const toDate = searchParams.get("toDate") || "2026-03-16";
     const statementType =
       searchParams.get("statementType") || searchParams.get("type") || "account_statement";
+    const store = request.headers.get("x-store-code") || getLocaleFromRequest(request);
 
     const data = await graphqlFetch<KleverMyStatementData>({
       query: KLEVER_MY_STATEMENT_QUERY,
       variables: { fromDate, toDate, statementType },
       token,
+      store,
       cache: "no-store",
     });
 
     const pdfUrl = data.kleverMyStatement?.pdf_url;
     if (!pdfUrl) {
-      return NextResponse.json(data.kleverMyStatement ?? {}, { status: 200 });
+      return NextResponse.json(
+        { message: "No statement available for the selected date range and type." },
+        { status: 404 },
+      );
     }
 
     const pdfResponse = await fetch(pdfUrl, {
@@ -41,12 +60,19 @@ export async function GET(request: Request) {
         },
       });
     }
-    return NextResponse.json({ pdf_url: pdfUrl }, { status: 200 });
+    // PDF URL returned by Magento but server could not fetch it — stream failed
+    return NextResponse.json(
+      { message: "Statement could not be downloaded. Please try again." },
+      { status: 502 },
+    );
   } catch (error) {
     if (isGraphQLRequestError(error)) {
+      // "Customer X is not defined in company code Y" — Magento/Klever config error.
+      // Show a friendly message instead of exposing internal customer/company codes.
+      const friendlyMessage = resolveStatementError(error.message);
       return NextResponse.json(
-        { message: error.message, errors: error.errors },
-        { status: error.status >= 400 ? error.status : 500 },
+        { message: friendlyMessage, errors: error.errors },
+        { status: error.status >= 400 ? error.status : 422 },
       );
     }
     return NextResponse.json({ message: "Server error" }, { status: 500 });
