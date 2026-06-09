@@ -1,10 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getRequestToken } from "@/lib/api/auth-helper";
 import { getLocaleFromRequest } from "@/lib/api/magento-url";
-import { KLEVER_CATEGORY_PRODUCTS_QUERY } from "@/src/graphql/queries";
+import {
+  KLEVER_CATEGORY_PRODUCTS_QUERY,
+  PRODUCTS_SEARCH_QUERY,
+} from "@/src/graphql/queries";
 import type {
   KleverCategoryProductItem,
   KleverCategoryProductsData,
+  ProductsSearchData,
 } from "@/src/graphql/types";
 import { graphqlFetch, isGraphQLRequestError } from "@/src/lib/graphqlFetch";
 
@@ -142,6 +146,101 @@ function buildVariables(searchParams: URLSearchParams) {
   return variables;
 }
 
+// Handle cross-category text searches using a two-phase approach:
+//   Phase 1 — products(search:) Elasticsearch: finds all matching products across
+//             every category and returns sku + url_key.
+//   Phase 2 — kleverCategoryProducts(itemCode:): enriches those SKUs with real B2B
+//             data (brand, final_price, stock_label) using the existing itemCode filter.
+//             item_code == sku for all products in this catalog.
+async function handleElasticsearchSearch(
+  token: string | null,
+  searchQuery: string,
+  pageSize: number,
+  currentPage: number,
+  searchLocale: string,
+  store: string | null,
+): Promise<NextResponse> {
+  const emptyResponse = {
+    total_count: 0,
+    page_size: pageSize,
+    current_page: currentPage,
+    total_pages: 0,
+    products: [],
+    filters: [],
+  };
+  const cacheHeaders = { "Cache-Control": "private, max-age=120, stale-while-revalidate=600" };
+
+  // Phase 1: Elasticsearch — find all matching products (cross-category)
+  const searchData = await graphqlFetch<ProductsSearchData>({
+    query: PRODUCTS_SEARCH_QUERY,
+    variables: { search: searchQuery, pageSize, currentPage },
+    token,
+    store,
+    revalidate: 30,
+  });
+
+  const elasticResult = searchData.products;
+  if (!elasticResult || !elasticResult.items.length) {
+    return NextResponse.json(emptyResponse, { status: 200, headers: cacheHeaders });
+  }
+
+  // Phase 2: Klever enrichment — get real B2B data for the matched SKUs.
+  // Passes all found SKUs as comma-separated itemCode. The klever extension
+  // returns actual stock_label ("Available", "Limited", etc.), B2B final_price, and brand.
+  const skus = elasticResult.items.map((p) => p.sku).join(",");
+  const kleverData = await graphqlFetch<KleverCategoryProductsData>({
+    query: KLEVER_CATEGORY_PRODUCTS_QUERY,
+    variables: {
+      categoryId: 15,
+      itemCode: skus,
+      pageSize: elasticResult.items.length,
+      currentPage: 1,
+    },
+    token,
+    store,
+    revalidate: 30,
+  }).catch(() => null);
+
+  // Build SKU → klever product map for O(1) merge
+  const kleverMap = new Map<string, KleverCategoryProductItem>();
+  for (const kp of kleverData?.kleverCategoryProducts?.products ?? []) {
+    kleverMap.set(kp.sku, kp);
+  }
+
+  // Merge: use Elasticsearch for total_count/pagination and url_key;
+  // use klever data (brand, price, stock_label) where available.
+  const products = elasticResult.items.map((ep) => {
+    const kp = kleverMap.get(ep.sku);
+    return {
+      product_id: ep.id,
+      sku: ep.sku,
+      name: kp?.name ?? ep.name,
+      final_price: kp?.final_price ?? null,
+      image_url: kp?.image_url ?? ep.small_image?.url ?? null,
+      brand: kp?.brand ?? null,
+      tyre_size: kp?.tyre_size ?? null,
+      is_in_stock: kp?.is_in_stock ?? null,
+      stock_label: kp?.stock_label ?? null,
+      stock_color: kp ? deriveStockColor(kp) : "gray",
+      product_url: ep.url_key ? `/${searchLocale}/${ep.url_key}` : null,
+      item_code: null,
+      is_action: "Yes",
+    };
+  });
+
+  return NextResponse.json(
+    {
+      total_count: elasticResult.total_count,
+      page_size: elasticResult.page_info.page_size,
+      current_page: elasticResult.page_info.current_page,
+      total_pages: elasticResult.page_info.total_pages,
+      products,
+      filters: [],
+    },
+    { status: 200, headers: cacheHeaders },
+  );
+}
+
 export async function GET(request: NextRequest) {
   try {
     const token = await getRequestToken(request);
@@ -170,6 +269,26 @@ export async function GET(request: NextRequest) {
       searchParams.has("item_code") ||
       searchParams.has("itemCode");
     const effectiveStoreCode = isSearchRequest ? toSearchStore(storeCode) : storeCode;
+
+    // When no categoryId is in the URL, the frontend is doing a cross-category
+    // text search (e.g. user typed "adnoc" with no category selected).
+    // Route through Elasticsearch (products(search:)) so the search is not
+    // restricted to a single category's product pool.
+    const searchQuery =
+      searchParams.get("searchby") ||
+      searchParams.get("searchBy") ||
+      searchParams.get("search") ||
+      searchParams.get("searchQuery") ||
+      null;
+    const isElasticsearchSearch = !!searchQuery && !searchParams.has("categoryId");
+    if (isElasticsearchSearch) {
+      const pageSize = Number(searchParams.get("pageSize") || "20");
+      const currentPage = Number(
+        searchParams.get("page") || searchParams.get("currentPage") || "1",
+      );
+      const searchLocale = effectiveStoreCode ?? "en";
+      return handleElasticsearchSearch(token, searchQuery, pageSize, currentPage, searchLocale, effectiveStoreCode);
+    }
 
     const data = await graphqlFetch<KleverCategoryProductsData>({
       query: KLEVER_CATEGORY_PRODUCTS_QUERY,

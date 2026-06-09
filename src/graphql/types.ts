@@ -1239,6 +1239,7 @@ export interface ProductsSearchData {
   };
 }
 
+
 export interface KleverMenuItem {
   code: string | null;
   label: string;

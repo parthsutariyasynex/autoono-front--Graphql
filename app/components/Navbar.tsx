@@ -623,7 +623,7 @@ export default function Navbar() {
                     <div className="absolute right-0 mt-2 w-48 bg-white rounded-sm shadow-2xl border border-gray-200 py-1 z-[100]" dir={isRtl ? "rtl" : "ltr"}>
                       <Link
                         href={lp("/customer/account")}
-                        className="block px-4 py-2.5 text-body font-semibold text-black hover:bg-primary transition-colors ltr:text-left rtl:text-right"
+                        className="block px-4 py-2.5 text-body font-semibold text-black hover:bg-primary hover:text-white transition-colors ltr:text-left rtl:text-right"
                         onClick={() => setIsProfileOpen(false)}
                       >
                         {t("nav.myAccount")}
@@ -647,7 +647,7 @@ export default function Navbar() {
                       )}
                       <button
                         onClick={handleLogout}
-                        className="w-full ltr:text-left rtl:text-right px-4 py-2.5 text-body font-semibold text-black hover:bg-primary transition-colors cursor-pointer border-t border-gray-100"
+                        className="w-full ltr:text-left rtl:text-right px-4 py-2.5 text-body font-semibold text-black hover:bg-primary hover:text-white transition-colors cursor-pointer border-t border-gray-100"
                       >
                         {t("nav.signOut")}
                       </button>
@@ -698,7 +698,7 @@ export default function Navbar() {
                             setLocaleCookie(targetLocale);
                             i18n.changeLanguage(targetLocale);
                           }}
-                          className="flex items-center gap-1.5 rounded px-3 py-1.5 text-body font-semibold text-black hover:bg-primary transition-colors"
+                          className="flex items-center gap-1.5 rounded px-3 py-1.5 text-body font-semibold text-black hover:bg-primary hover:text-white transition-colors"
                           title={`Switch to ${oppositeEntry.store_name || oppositeCode}`}
                         >
                           <span>{buttonLabel}</span>
@@ -722,7 +722,7 @@ export default function Navbar() {
                             setLocaleCookie(targetLocale);
                             i18n.changeLanguage(targetLocale);
                           }}
-                          className="flex items-center gap-1.5 rounded px-3 py-1.5 text-body font-semibold text-black hover:bg-primary transition-colors"
+                          className="flex items-center gap-1.5 rounded px-3 py-1.5 text-body font-semibold text-black hover:bg-primary hover:text-white transition-colors"
                           title={`Switch to ${oppositeCode}`}
                         >
                           <span>{friendlyName}</span>
@@ -747,7 +747,7 @@ export default function Navbar() {
                         setLocaleCookie(targetLocale);
                         i18n.changeLanguage(targetLocale);
                       }}
-                      className="flex items-center gap-1.5 rounded px-3 py-1.5 text-body font-semibold text-black hover:bg-primary transition-colors"
+                      className="flex items-center gap-1.5 rounded px-3 py-1.5 text-body font-semibold text-black hover:bg-primary hover:text-white transition-colors"
                     >
                       <span>{targetLabel}</span>
                     </Link>
@@ -911,7 +911,7 @@ export default function Navbar() {
                                       document.cookie = `NEXT_STORE=${w.code};path=/;max-age=${60 * 60 * 24 * 365};samesite=lax`;
                                       setOpenWarehouseMenu(null);
                                     }}
-                                    className={`text-start px-6 py-2.5 text-body font-bold transition-colors cursor-pointer !text-black ${isSelected ? "bg-primary  border-l-2 border-black" : "hover:bg-primary"}`}
+                                    className={`text-start px-6 py-2.5 text-body font-bold transition-colors cursor-pointer !text-black ${isSelected ? "bg-primary border-l-2 border-black" : "hover:bg-primary hover:!text-white"}`}
                                   >
                                     {w.label}
                                   </Link>
@@ -926,7 +926,7 @@ export default function Navbar() {
                                   key={idx}
                                   href={childHref}
                                   onClick={() => setOpenWarehouseMenu(null)}
-                                  className="px-6 py-2.5 text-body font-semibold text-black hover:bg-primary transition-colors"
+                                  className="px-6 py-2.5 text-body font-semibold text-black hover:bg-primary hover:text-white transition-colors"
                                 >
                                   {child.label}
                                 </Link>

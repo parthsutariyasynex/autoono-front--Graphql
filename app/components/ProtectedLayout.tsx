@@ -79,13 +79,15 @@ export default function ProtectedLayout({ children }: ProtectedLayoutProps) {
   const hideFooter = ['/login', '/register', '/forgot-password'].some(p => pathnameWithoutLocale.startsWith(p));
   const isLoading = status === 'loading';
 
-  // Redirect unauthenticated users to login on protected pages
+  // Redirect unauthenticated users to login on protected pages.
+  // Uses locale directly (stable string) instead of lp() to avoid the effect
+  // re-running on every render due to lp being a new function reference each time.
   useEffect(() => {
     if (status === 'unauthenticated' && !isPublicPage) {
       localStorage.removeItem('token');
-      window.location.href = `${lp("/login")}?callbackUrl=${encodeURIComponent(pathname)}`;
+      window.location.href = `/${locale}/login?callbackUrl=${encodeURIComponent(pathname)}`;
     }
-  }, [status, isPublicPage, lp, pathname]);
+  }, [status, isPublicPage, locale, pathname]);
 
   // Status still resolving on a protected page → user is likely unauthenticated
   // and will be redirected to /login. Show LoginSkeleton so the visual matches

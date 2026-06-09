@@ -365,6 +365,8 @@ export default function ProductsPage({ categoryId: propCategoryId, storeCode: pr
 
         // Priority for categoryId: Prop > URL Param > Default (15)
         const categoryIdFromUrl = propCategoryId || urlCategoryId || "15";
+        // Whether the user/page has explicitly chosen a category (vs the fallback default)
+        const isExplicitCategory = !!(propCategoryId || urlCategoryId);
 
         const storeParam = tempStoreCode ? `&storeCode=${encodeURIComponent(tempStoreCode)}` : "";
 
@@ -378,7 +380,12 @@ export default function ProductsPage({ categoryId: propCategoryId, storeCode: pr
           url = `/api/category-products?item_code=${encodeURIComponent(itemCodeTerm)}&categoryId=${encodeURIComponent(categoryIdFromUrl)}&pageSize=${PAGE_SIZE}&page=${currentPage}&lang=${fetchLocale}${storeParam}`;
         } else {
           const searchByParam = searchByTerm ? `&searchby=${encodeURIComponent(searchByTerm)}` : "";
-          url = `/api/category-products?${queryString ? queryString + "&" : ""}categoryId=${encodeURIComponent(categoryIdFromUrl)}&pageSize=${PAGE_SIZE}&lang=${fetchLocale}${storeParam}${searchByParam}`;
+          // For pure text searches with no explicit category, omit categoryId so the
+          // route handler routes through Elasticsearch (cross-category full-text search).
+          // With a categoryId, the custom kleverCategoryProducts query restricts results
+          // to that category's pool, returning nothing for brands outside that category.
+          const catParam = (isExplicitCategory || !searchByTerm) ? `&categoryId=${encodeURIComponent(categoryIdFromUrl)}` : "";
+          url = `/api/category-products?${queryString ? queryString + "&" : ""}pageSize=${PAGE_SIZE}&lang=${fetchLocale}${storeParam}${catParam}${searchByParam}`;
         }
 
         const res = await fetch(url, { headers, signal: abortController.signal });

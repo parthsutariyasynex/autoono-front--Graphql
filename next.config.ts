@@ -21,6 +21,11 @@ const nextConfig: NextConfig = {
                 hostname: "autoono.btire.com",
                 pathname: "/**",
             },
+            {
+                protocol: "https",
+                hostname: "autoono-demo.btire.com",
+                pathname: "/**",
+            },
         ],
     },
     async headers() {
