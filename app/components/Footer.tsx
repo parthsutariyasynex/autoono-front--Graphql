@@ -18,16 +18,16 @@ const Footer: React.FC = () => {
     const isProductsPage = pathname.includes("/products");
 
     return (
-        <footer className={`bg-black text-white py-12 md:py-20 ${isProductsPage ? "xl:pb-44" : ""}`}>
-            <div className="w-full max-w-[1200px] mx-auto px-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-12 md:gap-0 text-center items-start">
+        <footer className={`bg-black text-white py-9 sm:py-9 md:py-9 ${isProductsPage ? "" : ""}`}>
+            <div className="w-full max-w-[1200px] mx-auto px-3">
+                <div className="grid grid-cols-2 gap-6 md:gap-0 text-center items-start">
 
                     {/* Left: Call Section */}
                     <div className="flex flex-col items-center group">
                         <div className="mb-4 text-white">
                             <Phone className="w-10 h-10" strokeWidth={1} />
                         </div>
-                        <h3 className="text-[20px] font-semibold mb-3 tracking-tight">{t("footer.call")}</h3>
+                        <h3 className="text-[18px] md:text-[20px] font-semibold mb-3 tracking-tight">{t("footer.call")}</h3>
                         <a
                             href="tel:8003040001"
                             dir="ltr"
@@ -42,7 +42,7 @@ const Footer: React.FC = () => {
                         <div className="mb-4 text-white">
                             <Mail className="w-10 h-10" strokeWidth={1} />
                         </div>
-                        <h3 className="text-[20px] font-semibold mb-3 tracking-tight">{t("footer.email")}</h3>
+                        <h3 className="text-[18px] md:text-[20px] font-semibold mb-3 tracking-tight">{t("footer.email")}</h3>
                         <a
                             href="mailto:info@autoono.sa"
                             className="text-white text-[15px] font-medium tracking-wider"
@@ -53,7 +53,7 @@ const Footer: React.FC = () => {
                 </div>
 
                 {/* Bottom Bar */}
-                <div className="mt-16 md:mt-24 pt-8 border-t border-white/10">
+                <div className="mt-7 md:mt-9 pt-6 md:pt-8 border-t border-white/10">
                     <div className="flex flex-wrap items-center justify-center gap-x-10 gap-y-4 text-[13px] font-medium text-center uppercase tracking-wide">
                         <Link href={lp("/privacy-policy")} className="text-white hover:text-primary transition-colors">{t("footer.privacyPolicy")}</Link>
                         <Link href={lp("/return-exchange-policy")} className="text-white hover:text-primary transition-colors">{t("footer.returnExchangePolicy")}</Link>

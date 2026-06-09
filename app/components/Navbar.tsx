@@ -172,11 +172,18 @@ export default function Navbar() {
   }, [status, session]);
 
   useEffect(() => {
-    if (isAuthenticated) pullNotifications();
+    if (!isAuthenticated) return;
+    // Defer so the products fetch (critical path) gets a head start on the
+    // available Magento server connections before non-visible badge data lands.
+    const id = setTimeout(() => pullNotifications(), 500);
+    return () => clearTimeout(id);
   }, [isAuthenticated, pullNotifications]);
 
   useEffect(() => {
-    if (isAuthenticated && !customerData) dispatch(fetchCustomerInfo() as any);
+    if (!isAuthenticated || customerData) return;
+    // Defer slightly — the username display can wait a moment while products load.
+    const id = setTimeout(() => dispatch(fetchCustomerInfo() as any), 300);
+    return () => clearTimeout(id);
   }, [isAuthenticated, customerData, dispatch]);
 
   useEffect(() => {
@@ -284,137 +291,72 @@ export default function Navbar() {
       return null;
     };
 
-    // const fetchMenu = async () => {
-    //   // Immediately show cached data so menu appears before API responds
-    //   const localCached = readLocalCache();
-    //   if (localCached) {
-    //     applyLinks(localCached);
-    //     setNavLoading(false);
-    //   } else {
-    //     setNavLoading(true);
-    //   }
-
-    //   try {
-    //     const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
-
-    //     // Deduplicate concurrent fetches (e.g. StrictMode double-mount).
-    //     // The cached promise ALWAYS resolves (never rejects) so it can't
-    //     // trigger Next.js's unhandled-rejection overlay when Magento is down.
-    //     let menuPromise = _menuInflight.get(locale);
-    //     if (!menuPromise) {
-    //       menuPromise = fetch("/api/kleverapi/menu", {
-    //         headers: {
-    //           "Content-Type": "application/json",
-    //           ...(token && { "Authorization": `Bearer ${token}` }),
-    //           "x-locale": locale,
-    //         },
-    //       })
-    //         .then(r => r.json())
-    //         .catch(err => {
-    //           // Network error (ETIMEDOUT, DNS, offline). Resolve with null
-    //           // so the consumer's null-check below applies the fallback links.
-    //           console.error("[Navbar] Menu fetch network error:", err);
-    //           return null;
-    //         })
-    //         .finally(() => _menuInflight.delete(locale));
-    //       _menuInflight.set(locale, menuPromise);
-    //     }
-
-    //     const data = await menuPromise;
-    //     if (cancelled) return;
-
-    //     // Menu fetch completed — treat null / error payload as failure
-    //     if (!data || data.message) {
-    //       throw new Error("Menu fetch failed");
-    //     }
-
-    //     const fallbackLinks: NavLink[] = [
-    //       { label: t("nav.aboutUs") || "About Us", href: lp("/about") },
-    //       { label: t("nav.branchLocations") || "Locations", href: lp("/locations") },
-    //       { label: t("nav.productCatalogue") || "Catalogue", href: lp("/catalogue") },
-    //     ];
-
-    //     if (Array.isArray(data) && data.length > 0) {
-    //       const links = toLinks(data);
-    //       applyLinks(links);
-    //       // Save fresh data to localStorage for future page loads
-    //       try {
-    //         localStorage.setItem(CACHE_KEY, JSON.stringify({ items: links, expires: Date.now() + CACHE_TTL }));
-    //       } catch { }
-    //     } else if (!localCached) {
-    //       applyLinks(fallbackLinks);
-    //     }
-    //   } catch (err) {
-    //     console.error("[Navbar] Menu fetch error:", err);
-    //     const fallbackLinks: NavLink[] = [
-    //       { label: t("nav.aboutUs") || "About Us", href: lp("/about") },
-    //       { label: t("nav.branchLocations") || "Locations", href: lp("/locations") },
-    //       { label: t("nav.productCatalogue") || "Catalogue", href: lp("/catalogue") },
-    //     ];
-    //     // Keep the locally-cached links if we had them; only clear if nothing
-    //     if (!cancelled && !localCached) applyLinks(fallbackLinks);
-    //   } finally {
-    //     if (!cancelled) setNavLoading(false);
-    //   }
-    // };
-
-    // fetchMenu();
-
-
-
     const fetchMenu = async () => {
-      setNavLoading(true);
+      // Immediately show cached data so menu appears before API responds
+      const localCached = readLocalCache();
+      if (localCached) {
+        applyLinks(localCached);
+        setNavLoading(false);
+      } else {
+        setNavLoading(true);
+      }
 
       try {
-        const token =
-          typeof window !== "undefined"
-            ? localStorage.getItem("token")
-            : null;
+        const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
 
         let menuPromise = _menuInflight.get(locale);
-
         if (!menuPromise) {
           menuPromise = fetch("/api/kleverapi/menu", {
             headers: {
               "Content-Type": "application/json",
-              ...(token && { Authorization: `Bearer ${token}` }),
+              ...(token && { "Authorization": `Bearer ${token}` }),
               "x-locale": locale,
             },
           })
-            .then((r) => {
-              if (!r.ok) {
-                throw new Error("Menu API failed");
-              }
-
-              return r.json();
+            .then(r => r.json())
+            .catch(err => {
+              console.error("[Navbar] Menu fetch network error:", err);
+              return null;
             })
             .finally(() => _menuInflight.delete(locale));
-
           _menuInflight.set(locale, menuPromise);
         }
 
         const data = await menuPromise;
-
         if (cancelled) return;
+
+        if (!data || data.message) {
+          throw new Error("Menu fetch failed");
+        }
+
+        const fallbackLinks: NavLink[] = [
+          { label: t("nav.allLubricants") || "All Lubricants", href: lp("/lubricants") },
+          { label: t("nav.aboutUs") || "About Us", href: lp("/about") },
+          { label: t("nav.branchLocations") || "Branch Locations", href: lp("/locations") },
+        ];
 
         if (Array.isArray(data) && data.length > 0) {
           const links = toLinks(data);
           applyLinks(links);
-        } else {
-          applyLinks([]);
+          try {
+            localStorage.setItem(CACHE_KEY, JSON.stringify({ items: links, expires: Date.now() + CACHE_TTL }));
+          } catch { }
+        } else if (!localCached) {
+          applyLinks(fallbackLinks);
         }
       } catch (err) {
         console.error("[Navbar] Menu fetch error:", err);
-
-        if (!cancelled) {
-          applyLinks([]);
-        }
+        const fallbackLinks: NavLink[] = [
+          { label: t("nav.allLubricants") || "All Lubricants", href: lp("/lubricants") },
+          { label: t("nav.aboutUs") || "About Us", href: lp("/about") },
+          { label: t("nav.branchLocations") || "Branch Locations", href: lp("/locations") },
+        ];
+        if (!cancelled && !localCached) applyLinks(fallbackLinks);
       } finally {
-        if (!cancelled) {
-          setNavLoading(false);
-        }
+        if (!cancelled) setNavLoading(false);
       }
     };
+
     fetchMenu();
 
 
@@ -686,7 +628,7 @@ export default function Navbar() {
                             setLocaleCookie(targetLocale);
                             i18n.changeLanguage(targetLocale);
                           }}
-                          className="flex items-center gap-1.5 rounded px-3 py-1.5 text-body font-semibold text-black hover:bg-primary transition-colors"
+                          className="flex items-center gap-1.5 rounded px-3 py-1.5 text-body font-semibold text-black hover:bg-primary transition-colors hover:text-white"
                           title={`Switch to ${oppositeEntry.store_name || oppositeCode}`}
                         >
                           <span>{buttonLabel}</span>
@@ -710,7 +652,7 @@ export default function Navbar() {
                             setLocaleCookie(targetLocale);
                             i18n.changeLanguage(targetLocale);
                           }}
-                          className="flex items-center gap-1.5 rounded px-3 py-1.5 text-body font-semibold text-black hover:bg-primary transition-colors"
+                          className="flex items-center gap-1.5 rounded px-3 py-1.5 text-body font-semibold text-black hover:bg-primary transition-colors hover:text-white"
                           title={`Switch to ${oppositeCode}`}
                         >
                           <span>{friendlyName}</span>
@@ -735,7 +677,7 @@ export default function Navbar() {
                         setLocaleCookie(targetLocale);
                         i18n.changeLanguage(targetLocale);
                       }}
-                      className="flex items-center gap-1.5 rounded px-3 py-1.5 text-body font-semibold text-black hover:bg-primary transition-colors"
+                      className="flex items-center gap-1.5 rounded px-3 py-1.5 text-body font-semibold text-black hover:bg-primary transition-colors hover:text-white"
                     >
                       <span>{targetLabel}</span>
                     </Link>
@@ -811,7 +753,7 @@ export default function Navbar() {
             measures ~16px during loading and jumps to ~40px after
             hydration, pushing every page section below it down. */}
         <nav ref={warehouseNavRef} className="bg-primary w-full hidden md:block h-9">
-          <div className="flex items-center justify-center w-full h-full px-2 lg:px-4">
+          <div className="flex items-center justify-center w-full h-full px-4">
             {navLoading ? (
               <div className="flex items-center gap-6">
                 {[1, 2, 3, 4, 5].map(i => (
@@ -847,7 +789,7 @@ export default function Navbar() {
                     {hasChildren ? (
                       <span
                         onClick={() => setOpenWarehouseMenu(isOpen ? null : item.href)}
-                        className={`py-3 flex items-center h-full px-2.5 lg:px-7 text-body font-semibold capitalize transition-all duration-200 whitespace-nowrap cursor-pointer select-none ${isActive
+                        className={`py-3 flex items-center h-full px-2.5 lg:px-7 text-base font-medium capitalize transition-all duration-200 whitespace-nowrap cursor-pointer select-none ${isActive
                           ? "bg-black text-white"
                           : "text-black hover:bg-black hover:text-white"
                           }`}
@@ -857,7 +799,7 @@ export default function Navbar() {
                     ) : (
                       <Link
                         href={href}
-                        className={`py-3 flex items-center h-full px-2.5 lg:px-7 text-body font-semibold capitalize transition-all duration-200 whitespace-nowrap ${isActive
+                        className={`py-3 flex items-center h-full px-2.5 lg:px-7 text-base font-medium capitalize transition-all duration-200 whitespace-nowrap ${isActive
                           ? "bg-black text-white"
                           : "text-black hover:bg-black hover:text-white"
                           }`}
@@ -899,7 +841,7 @@ export default function Navbar() {
                                       document.cookie = `NEXT_STORE=${w.code};path=/;max-age=${60 * 60 * 24 * 365};samesite=lax`;
                                       setOpenWarehouseMenu(null);
                                     }}
-                                    className={`text-start px-6 py-2.5 text-body font-bold transition-colors cursor-pointer !text-black ${isSelected ? "bg-primary  border-l-2 border-black" : "hover:bg-primary"}`}
+                                    className={`text-start px-6 py-2.5 text-body font-bold transition-colors cursor-pointer hover:!text-white !text-black ${isSelected ? "bg-primary  border-l-2 border-black" : "hover:bg-primary"}`}
                                   >
                                     {w.label}
                                   </Link>
@@ -1108,3 +1050,4 @@ export default function Navbar() {
     </>
   );
 }
+

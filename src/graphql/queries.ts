@@ -1,46 +1,6 @@
 export const CATEGORY_PRODUCTS_QUERY = /* GraphQL */ `
-  query CategoryProducts(
-    $filter: ProductAttributeFilterInput!
-    $pageSize: Int!
-    $currentPage: Int!
-  ) {
-    products(
-      filter: $filter
-      pageSize: $pageSize
-      currentPage: $currentPage
-    ) {
-      total_count
-      page_info {
-        current_page
-        page_size
-        total_pages
-      }
-      items {
-        uid
-        id
-        sku
-        name
-        url_key
-        stock_status
-        small_image {
-          url
-          label
-        }
-        price_range {
-          minimum_price {
-            regular_price {
-              value
-              currency
-            }
-            final_price {
-              value
-              currency
-            }
-          }
-        }
-      }
-    }
-  }
+  
+
 `;
 
 export const CATEGORIES_QUERY = /* GraphQL */ `

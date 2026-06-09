@@ -5,7 +5,7 @@ import { getSession } from "next-auth/react";
 // WHY THIS EXISTS:
 //   getSession() from next-auth/react makes an HTTP request to /api/auth/session
 //   every time it is called. Multiple components mounting simultaneously (Navbar,
-//   CartContext, CreditLimit, …) each call getAuthToken() which previously each
+//   CartContext, …) each call getAuthToken() which previously each
 //   called getSession() independently, producing N×HTTP requests.
 //
 //   This module provides ONE shared cache + inflight deduplicator so the entire

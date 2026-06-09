@@ -47,6 +47,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ message: "Authentication required." }, { status: 401 });
     }
 
+    
     const data = await graphqlFetch<CustomerData>({
       query: CUSTOMER_QUERY,
       token,

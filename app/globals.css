@@ -452,3 +452,15 @@
 .cms-content th,
 .cms-content td   { border: 1px solid #e5e7eb; padding: 0.5em 0.75em; }
 .cms-content th   { background: #f9fafb; font-weight: 700; }
+
+/* Bold tags from the CMS body render as bold (not relying on UA defaults). */
+.cms-content strong,
+.cms-content b    { font-weight: 700; color: #111; }
+
+/* Ensure list bullets/numbers are always visible even under CSS resets. */
+.cms-content ul   { list-style: disc; }
+.cms-content ol   { list-style: decimal; }
+
+/* RTL (Arabic): flip list indentation to the right side. */
+.cms-content[dir="rtl"] ul,
+.cms-content[dir="rtl"] ol { padding-left: 0; padding-right: 1.5em; }

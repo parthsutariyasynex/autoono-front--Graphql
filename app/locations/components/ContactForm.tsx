@@ -88,7 +88,7 @@ const ContactForm: React.FC = () => {
     }
 
     return (
-        <section className="w-full pb-20">
+        <section className="w-full">
             <form onSubmit={handleSubmit} className="space-y-4">
                 {/* Row 1: Name and Phone */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -143,7 +143,7 @@ const ContactForm: React.FC = () => {
                 </div>
 
                 {/* Submit Button */}
-                <div className="pt-4">
+                <div className="submit-button">
                     <button
                         type="submit"
                         disabled={isLoading}

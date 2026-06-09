@@ -16,10 +16,10 @@ export default function ContactPage() {
                 <MapSection />
             </div>
 
-            <div className="max-w-[1170px] mx-auto px-4 sm:px-6 lg:px-8 py-14 sm:py-20">
+            <div className="max-w-[1170px] mx-auto px-3 py-10 sm:py-12 md:py-14">
 
                 {/* Title */}
-                <h1 className="text-2xl sm:text-3xl font-black text-center uppercase tracking-widest text-black mb-14">
+                <h1 className="text-2xl sm:text-3xl md:text-[2rem] font-black text-center mb-4 md:mb-6 text-black uppercase font-bold tracking-[0.6px]">
                     {t("contact.getInTouch")}
                 </h1>
 
@@ -27,7 +27,7 @@ export default function ContactPage() {
                     full main-area width on tablet portrait (Tab A9 800px would
                     otherwise squeeze the address card to ~243px). At lg+ go
                     side-by-side at 4/12 + 8/12. */}
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-16">
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-8">
 
                     {/* Address Card */}
                     <div className="lg:col-span-4">

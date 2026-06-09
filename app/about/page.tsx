@@ -110,6 +110,55 @@ function lazyifyImages(html: string): string {
     });
 }
 
+/**
+ * Magento Page Builder's "HTML Code" content-type stores its payload
+ * HTML-entity-encoded inside a <div data-content-type="html"> wrapper — i.e.
+ * the real tags arrive as `&lt;div&gt;…`. dangerouslySetInnerHTML decodes those
+ * entities to TEXT ("<div>") instead of parsing them as elements, so the tags
+ * appear as raw text on screen. Decode them back to real markup before render.
+ * `&amp;` is decoded last so an intentionally-escaped "&amp;lt;" survives as the
+ * literal text "&lt;" rather than collapsing into "<".
+ */
+function decodeHtmlEntities(html: string): string {
+    return html
+        .replace(/&lt;/g, "<")
+        .replace(/&gt;/g, ">")
+        .replace(/&quot;/g, '"')
+        .replace(/&#0?39;/g, "'")
+        .replace(/&apos;/g, "'")
+        .replace(/&nbsp;/g, " ")
+        .replace(/&amp;/g, "&");
+}
+
+/**
+ * Removes the Magento CMS hero / page-title block from a CMS HTML string.
+ * The React page renders its own next/image hero above the content, so the
+ * CMS `<div class="page-title…">…</div>` block must be stripped to avoid a
+ * duplicate hero image. Counts nested <div> depth so the correct closing tag
+ * is matched (a naive non-greedy regex would cut at the first inner </div>).
+ * The CMS body (e.g. <div class="cms-page-section">…</div>) is preserved.
+ */
+function removeCmsHero(html: string): string {
+    const openRe = /<div\b[^>]*\bclass\s*=\s*["'][^"']*page-title[^"']*["'][^>]*>/i;
+    const open = openRe.exec(html);
+    if (!open) return html;
+
+    const start = open.index;
+    const tagRe = /<(\/?)div\b[^>]*>/gi;
+    tagRe.lastIndex = start + open[0].length;
+    let depth = 1;
+    let m: RegExpExecArray | null;
+    while ((m = tagRe.exec(html)) !== null) {
+        depth += m[1] === "/" ? -1 : 1;
+        if (depth === 0) {
+            const end = m.index + m[0].length;
+            return (html.slice(0, start) + html.slice(end)).trim();
+        }
+    }
+    // Unbalanced markup — leave the HTML untouched rather than corrupt it.
+    return html;
+}
+
 /** Clean up common typographic typos/errors in Magento plain text responses */
 function cleanText(text: string): string {
     return text
@@ -226,140 +275,150 @@ export default function AboutPage() {
         title = t("nav.aboutUs") || title;
     }
     const content = page?.content || "";
-    const isHtml = content.trimStart().startsWith("<");
+    // Detect HTML anywhere in the content (not just a leading "<") so CMS markup
+    // with leading whitespace/text is still rendered as HTML rather than being
+    // dumped through the plain-text parser (which would escape tags to text).
+    const isHtml = /<\/?[a-z][\s\S]*>/i.test(content.trim());
 
-    const parsed = parseAboutUs(content);
+    // Only run the plain-text parser for non-HTML content.
+    const parsed = isHtml ? null : parseAboutUs(content);
+
+    // For HTML: decode Page Builder entity-encoded markup, then strip the
+    // duplicate CMS hero (page-title) before rendering. Decode must run first —
+    // the page-title block arrives encoded (&lt;div…&gt;) and removeCmsHero only
+    // matches real tags.
+    const cleanedHtml = isHtml ? removeCmsHero(decodeHtmlEntities(content)) : "";
 
     // Get Intro Paragraphs
     const getIntroParagraphs = () => {
-        if (!parsed.intro) return [];
-        const cleanIntro = parsed.intro
-            .replace(/^About Autoono\s+/i, "")
-            .replace(/^المقدمة عن الشركة\s+/, "")
-            .trim();
+            if (!parsed?.intro) return [];
+            const cleanIntro = parsed?.intro
+                .replace(/^About Autoono\s+/i, "")
+                .replace(/^المقدمة عن الشركة\s+/, "")
+                .trim();
 
-        // Magento sometimes drops the period at a logical paragraph boundary
-        // (e.g. "...energy production in 2022 Our commitment is to..."). Insert
-        // a paragraph break when a 4-digit year is followed by a capital word
-        // so the downstream block-split picks it up.
-        const preProcessed = cleanIntro.replace(
-            /(\d{4})\s+([A-Z][a-z])/g,
-            "$1\n\n$2"
-        );
+            // Magento sometimes drops the period at a logical paragraph boundary
+            // (e.g. "...energy production in 2022 Our commitment is to..."). Insert
+            // a paragraph break when a 4-digit year is followed by a capital word
+            // so the downstream block-split picks it up.
+            const preProcessed = cleanIntro.replace(
+                /(\d{4})\s+([A-Z][a-z])/g,
+                "$1\n\n$2"
+            );
 
-        // Split on blank-line paragraph breaks (real ones in source + inserted).
-        const blocks = preProcessed
-            .split(/\n\s*\n+/)
-            .map(p => p.replace(/\s+/g, " ").trim())
-            .filter(Boolean);
-
-        // For English, within each block apply the live page's grouping:
-        //   para 1 = sentence 0
-        //   para 2 = sentences 1 + 2 combined
-        //   para 3+ = remaining sentences, one per paragraph
-        // For Arabic and short blocks, return one paragraph per sentence.
-        const result: string[] = [];
-        for (const block of blocks) {
-            const sentences = block
-                .split(/(?<=[.!?])\s+/)
-                .map(s => s.trim())
+            // Split on blank-line paragraph breaks (real ones in source + inserted).
+            const blocks = preProcessed
+                .split(/\n\s*\n+/)
+                .map(p => p.replace(/\s+/g, " ").trim())
                 .filter(Boolean);
-            if (!isRtl && sentences.length >= 4) {
-                result.push(sentences[0]);
-                result.push(sentences.slice(1, 3).join(" "));
-                result.push(...sentences.slice(3));
-            } else {
-                result.push(...sentences);
+
+            // For English, within each block apply the live page's grouping:
+            //   para 1 = sentence 0
+            //   para 2 = sentences 1 + 2 combined
+            //   para 3+ = remaining sentences, one per paragraph
+            // For Arabic and short blocks, return one paragraph per sentence.
+            const result: string[] = [];
+            for (const block of blocks) {
+                const sentences = block
+                    .split(/(?<=[.!?])\s+/)
+                    .map(s => s.trim())
+                    .filter(Boolean);
+                if (!isRtl && sentences.length >= 4) {
+                    result.push(sentences[0]);
+                    result.push(sentences.slice(1, 3).join(" "));
+                    result.push(...sentences.slice(3));
+                } else {
+                    result.push(...sentences);
+                }
             }
-        }
-        return result;
-    };
+            return result;
+        };
 
     // Get Vision Items (paragraphs) — matches live grouping:
     //   sentences 0+1 combined, then each remaining sentence is its own paragraph.
     const getVisionItems = () => {
-        if (!parsed.vision) return [];
-        const sentences = parsed.vision
-            .split(/(?<=[.!?])\s+/)
-            .map(s => s.trim())
-            .filter(Boolean);
-        if (!isRtl && sentences.length >= 3) {
-            return [
-                sentences[0] + " " + sentences[1],
-                ...sentences.slice(2),
-            ];
-        }
-        return sentences;
-    };
+            if (!parsed?.vision) return [];
+            const sentences = parsed?.vision
+                .split(/(?<=[.!?])\s+/)
+                .map(s => s.trim())
+                .filter(Boolean);
+            if (!isRtl && sentences.length >= 3) {
+                return [
+                    sentences[0] + " " + sentences[1],
+                    ...sentences.slice(2),
+                ];
+            }
+            return sentences;
+        };
 
     // Get Product Items
     const getProductsList = () => {
-        if (!parsed.products) return [];
-        if (isRtl) {
-            return parsed.products.split(/(?<=\.)\s+/).map(s => s.replace(/\.$/, "").trim()).filter(Boolean);
-        } else {
-            const knownProducts = [
-                "Automotive Lubricants",
-                "Industrial Lubricants",
-                "Marine Lubricants",
-                "Greases",
-                "Brake Fluids",
-                "Coolants"
-            ];
-            const found: string[] = [];
-            knownProducts.forEach(kp => {
-                if (parsed.products.toLowerCase().includes(kp.toLowerCase())) {
-                    found.push(kp);
-                }
-            });
-            if (found.length > 0) return found;
-            return parsed.products.split(/(?=[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)/).map(s => s.trim()).filter(Boolean);
-        }
-    };
+            if (!parsed?.products) return [];
+            if (isRtl) {
+                return parsed?.products.split(/(?<=\.)\s+/).map(s => s.replace(/\.$/, "").trim()).filter(Boolean);
+            } else {
+                const knownProducts = [
+                    "Automotive Lubricants",
+                    "Industrial Lubricants",
+                    "Marine Lubricants",
+                    "Greases",
+                    "Brake Fluids",
+                    "Coolants"
+                ];
+                const found: string[] = [];
+                knownProducts.forEach(kp => {
+                    if (parsed?.products.toLowerCase().includes(kp.toLowerCase())) {
+                        found.push(kp);
+                    }
+                });
+                if (found.length > 0) return found;
+                return parsed?.products.split(/(?=[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)/).map(s => s.trim()).filter(Boolean);
+            }
+        };
 
     // Get Values List
     const getValuesList = () => {
-        if (!parsed.values) return [];
-        if (isRtl) {
-            return parsed.values.split(".").map(s => s.trim()).filter(Boolean);
-        } else {
-            const knownValues = [
-                "Quality",
-                "Service",
-                "Trust",
-                "Efficiency with continuous improvement",
-                "Customer Centric"
-            ];
-            const found: string[] = [];
-            knownValues.forEach(kv => {
-                if (parsed.values.toLowerCase().includes(kv.toLowerCase())) {
-                    found.push(kv);
-                }
-            });
-            if (found.length > 0) return found;
-            return parsed.values.split(/\s{2,}/).map(s => s.trim()).filter(Boolean);
-        }
-    };
+            if (!parsed?.values) return [];
+            if (isRtl) {
+                return parsed?.values.split(".").map(s => s.trim()).filter(Boolean);
+            } else {
+                const knownValues = [
+                    "Quality",
+                    "Service",
+                    "Trust",
+                    "Efficiency with continuous improvement",
+                    "Customer Centric"
+                ];
+                const found: string[] = [];
+                knownValues.forEach(kv => {
+                    if (parsed?.values.toLowerCase().includes(kv.toLowerCase())) {
+                        found.push(kv);
+                    }
+                });
+                if (found.length > 0) return found;
+                return parsed?.values.split(/\s{2,}/).map(s => s.trim()).filter(Boolean);
+            }
+        };
 
     // Get Branch Network Paragraphs — matches live grouping:
     //   para 1 = sentence 0
     //   para 2 = sentences 1 + 2 combined
     //   para 3+ = remaining sentences, one per paragraph
     const getNetworkParagraphs = () => {
-        if (!parsed.network) return [];
-        const sentences = parsed.network
-            .split(/(?<=[.!?])\s+/)
-            .map(s => s.trim())
-            .filter(Boolean);
-        if (!isRtl && sentences.length >= 3) {
-            return [
-                sentences[0],
-                sentences.slice(1, 3).join(" "),
-                ...sentences.slice(3),
-            ];
-        }
-        return sentences;
-    };
+            if (!parsed?.network) return [];
+            const sentences = parsed?.network
+                .split(/(?<=[.!?])\s+/)
+                .map(s => s.trim())
+                .filter(Boolean);
+            if (!isRtl && sentences.length >= 3) {
+                return [
+                    sentences[0],
+                    sentences.slice(1, 3).join(" "),
+                    ...sentences.slice(3),
+                ];
+            }
+            return sentences;
+        };
 
     const introParagraphs = getIntroParagraphs();
     const visionItems = getVisionItems();
@@ -415,7 +474,7 @@ export default function AboutPage() {
                   • onLoad fade-in → swap from "loader" placeholder to real image
                   • aspect-custom + relative reserves space (no CLS)              */}
             <div
-                className={`image-wrap picture aspect-custom ${!loaded ? "loader" : ""}`}
+                className={`image-wrap picture pb-[68%] md:pb-[17.7%] ${!loaded ? "loader" : ""}`}
             >
                 <Image
                     src="/images/about-tyresonline-uae.jpg"
@@ -424,13 +483,24 @@ export default function AboutPage() {
                     priority
                     fetchPriority="high"
                     sizes="100vw"
-                    className={`object-cover transition-opacity duration-300 ${loaded ? "opacity-100" : "opacity-0"}`}
+                    className={`object-cover transition-opacity duration-300 hidden md:block ${loaded ? "opacity-100" : "opacity-0"}`}
+                    onLoad={() => setLoaded(true)}
+                />
+
+                <Image
+                    src="/images/about-tyresonline-uae-mobile.jpg"
+                    alt="About Autoono"
+                    fill
+                    priority
+                    fetchPriority="high"
+                    sizes="100vw"
+                    className={`object-cover transition-opacity duration-300 block md:hidden ${loaded ? "opacity-100" : "opacity-0"}`}
                     onLoad={() => setLoaded(true)}
                 />
             </div>
 
             <div
-                className="max-w-[1000px] mx-auto px-5 sm:px-8 md:px-12 py-10 sm:py-16 md:py-20 pb-28"
+                className="max-w-[1170px] mx-auto px-3 py-10 sm:py-12 md:py-14"
                 dir={isRtl ? "rtl" : "ltr"}
             >
                 {isLoading ? (
@@ -445,14 +515,15 @@ export default function AboutPage() {
                        loading="lazy" + decoding="async" injected. */
                     <div
                         className="cms-content"
-                        dangerouslySetInnerHTML={{ __html: lazyifyImages(content) }}
+                        dir={isRtl ? "rtl" : "ltr"}
+                        dangerouslySetInnerHTML={{ __html: lazyifyImages(cleanedHtml) }}
                     />
                 ) : (
                     /* Plain text — parse sections and render cleanly exactly as in image */
-                    <div className={`space-y-6 text-[15px] leading-[1.9] text-black/75 font-medium ${isRtl ? "text-right" : "text-left"}`}>
+                    <div className={`space-y-3 text-[16px] text-black font-normal text-left ${isRtl ? "text-right" : "text-left"}`}>
 
                         {title && (
-                            <h1 className="text-2xl sm:text-3xl md:text-[2rem] font-black text-center mb-10 sm:mb-14 tracking-tight text-black uppercase">
+                            <h1 className="text-2xl sm:text-3xl md:text-[2rem] font-black text-center mb-4 md:mb-6 text-black uppercase font-bold tracking-[0.6px]">
                                 {title}
                             </h1>
                         )}
@@ -463,16 +534,16 @@ export default function AboutPage() {
                         ))}
 
                         {/* Vision & Mission Heading */}
-                        {(parsed.vision || parsed.mission) && (
-                            <h2 className="text-base font-black text-black uppercase tracking-widest mb-2 mt-4">
+                        {(parsed?.vision || parsed?.mission) && (
+                            <h2 className="text-xl font-bold tracking-[0.6px] font-black text-black uppercase tracking-widest mb-2 mt-4">
                                 {isRtl ? "الرؤية والرسالة" : "Vision and Mission:"}
                             </h2>
                         )}
 
                         {/* Vision Section */}
-                        {parsed.vision && (
-                            <div className="space-y-4">
-                                <h3 className="font-black text-black">{isRtl ? "الرؤية:" : "Vision:"}</h3>
+                        {parsed?.vision && (
+                            <div className="space-y-3">
+                                <h3 className="font-black text-black font-bold">{isRtl ? "الرؤية:" : "Vision:"}</h3>
                                 {visionItems.map((item, idx) => (
                                     <p key={idx}>{item}</p>
                                 ))}
@@ -480,17 +551,17 @@ export default function AboutPage() {
                         )}
 
                         {/* Mission Section */}
-                        {parsed.mission && (
-                            <p>
-                                <span className="font-black text-black">{isRtl ? "الرسالة:" : "Mission:"}</span>{" "}
-                                {parsed.mission}
-                            </p>
+                        {parsed?.mission && (
+                            <h3>
+                                <span className="font-black text-black font-bold">{isRtl ? "الرسالة:" : "Mission:"}</span>{" "}
+                                {parsed?.mission}
+                            </h3>
                         )}
 
                         {/* Our Products Section */}
                         {productList.length > 0 && (
                             <div className="space-y-2">
-                                <h2 className="text-base font-black text-black uppercase tracking-widest mb-2 mt-4">
+                                <h2 className="text-xl font-bold tracking-[0.6px] font-black text-black uppercase mb-2 mt-4 font-bold">
                                     {isRtl ? "منتجاتنا:" : "Our Products:"}
                                 </h2>
                                 <ul className={`list-disc ${isRtl ? "pr-5" : "pl-5"} space-y-1`}>
@@ -502,19 +573,19 @@ export default function AboutPage() {
                         )}
 
                         {/* Brands Section */}
-                        {parsed.brands && (
+                        {parsed?.brands && (
                             <div className="space-y-2">
-                                <h2 className="text-base font-black text-black uppercase tracking-widest mb-2 mt-4">
+                                <h2 className="text-xl font-bold tracking-[0.6px] font-black text-black uppercase mb-2 mt-4 font-bold">
                                     {isRtl ? "العلامات التجارية المعتمدة" : "Brands Owned"}
                                 </h2>
-                                <p>{parsed.brands}</p>
+                                <p>{parsed?.brands}</p>
                             </div>
                         )}
 
                         {/* Core Values Section */}
                         {valuesList.length > 0 && (
                             <div className="space-y-2">
-                                <h2 className="text-base font-black text-black uppercase tracking-widest mb-2 mt-4">
+                                <h2 className="text-xl font-bold tracking-[0.6px] font-black text-black uppercase mb-2 mt-4 font-bold">
                                     {isRtl ? "القيم الأساسية:" : "Autoono Core Values:"}
                                 </h2>
                                 <ul className={`list-disc ${isRtl ? "pr-5" : "pl-5"} space-y-1`}>
@@ -526,9 +597,9 @@ export default function AboutPage() {
                         )}
 
                         {/* Branch Network Section */}
-                        {parsed.network && (
+                        {parsed?.network && (
                             <div className="space-y-2">
-                                <h2 className="text-base font-black text-black uppercase tracking-widest mb-2 mt-4">
+                                <h2 className="text-xl font-bold tracking-[0.6px] font-black text-black uppercase mb-2 mt-4 font-bold">
                                     {isRtl ? "فروعنا وانتشارنا" : "Branch Network:"}
                                 </h2>
                                 {networkParagraphs.map((para, idx) => (
@@ -538,12 +609,12 @@ export default function AboutPage() {
                         )}
 
                         {/* Closing Section */}
-                        {parsed.closing && (
+                        {parsed?.closing && (
                             <div className="space-y-2">
-                                <h2 className="text-base font-black text-black uppercase tracking-widest mb-2 mt-4">
+                                <h2 className="text-xl font-bold tracking-[0.6px] font-black text-black uppercase mb-2 mt-4 font-bold">
                                     {isRtl ? "كلمة ختامية" : "Closing Statement:"}
                                 </h2>
-                                <p>{parsed.closing.replace(/[“”"”]/g, "")}</p>
+                                <p>{parsed?.closing.replace(/[“”"”]/g, "")}</p>
                             </div>
                         )}
 

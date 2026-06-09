@@ -31,6 +31,26 @@ type Block =
     | { type: "p"; text: string }
     | { type: "ol" | "ul"; items: string[] };
 
+/**
+ * Magento Page Builder's "HTML Code" content-type stores its payload
+ * HTML-entity-encoded inside a <div data-content-type="html"> wrapper — i.e.
+ * the real tags arrive as `&lt;div&gt;…`. dangerouslySetInnerHTML decodes those
+ * entities to TEXT ("<div>") instead of parsing them as elements, so the tags
+ * appear as raw text on screen. Decode them back to real markup before render.
+ * `&amp;` is decoded last so an intentionally-escaped "&amp;lt;" survives as the
+ * literal text "&lt;" rather than collapsing into "<".
+ */
+function decodeHtmlEntities(html: string): string {
+    return html
+        .replace(/&lt;/g, "<")
+        .replace(/&gt;/g, ">")
+        .replace(/&quot;/g, '"')
+        .replace(/&#0?39;/g, "'")
+        .replace(/&apos;/g, "'")
+        .replace(/&nbsp;/g, " ")
+        .replace(/&amp;/g, "&");
+}
+
 /** Split a paragraph into sentences by ". " followed by a capital letter or opening quote. */
 function splitSentences(text: string): string[] {
     return text
@@ -285,7 +305,10 @@ export default function CmsPage({ identifier, fallbackTitleKey, arabicHeadings }
         (fallbackTitleKey ? t(fallbackTitleKey) : "");
 
     const content = page?.content || "";
-    const isHtml = content.trimStart().startsWith("<");
+    // Detect HTML anywhere in the content (not just a leading "<") so CMS markup
+    // with leading whitespace/text is still rendered as HTML rather than being
+    // dumped through the plain-text parser (which would escape tags to text).
+    const isHtml = /<\/?[a-z][\s\S]*>/i.test(content.trim());
 
     // Parse plain-text content into structured blocks (skipped when content is HTML).
     // For AR with provided heading phrases, use explicit heading-based splitting
@@ -324,7 +347,7 @@ export default function CmsPage({ identifier, fallbackTitleKey, arabicHeadings }
                 ) : isHtml ? (
                     <div
                         className={`text-body sm:text-body-lg md:text-[15px] leading-[1.8] sm:leading-[1.9] text-black/80 font-medium ${isRtl ? "text-right" : "text-left"} prose prose-sm sm:prose max-w-none`}
-                        dangerouslySetInnerHTML={{ __html: content }}
+                        dangerouslySetInnerHTML={{ __html: decodeHtmlEntities(content) }}
                     />
                 ) : (
                     <div

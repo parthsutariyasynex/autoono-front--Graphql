@@ -97,11 +97,12 @@ export default function FavouriteProducts({ title }: { title?: React.ReactNode }
     const [previewProduct, setPreviewProduct] = useState<Product | null>(null);
     const [sortBy, setSortBy] = useState<string>("none");
 
+    // Only fields where sorting is meaningful. Image (sort by presence) and Stock
+    // (favorites GraphQL has no reliable stock data) are intentionally excluded,
+    // so their headers render as plain labels with no sort affordance.
     const HEADER_SORT_FIELDS: Record<string, string> = {
         "m.brand": "brand",
         "m.name": "name",
-        "m.image": "image",
-        "m.stock": "stock",
         "m.price": "price",
     };
 
@@ -129,22 +130,11 @@ export default function FavouriteProducts({ title }: { title?: React.ReactNode }
         const field = sortBy.slice(0, lastDash);
         const order = sortBy.slice(lastDash + 1);
         const direction = order === "asc" ? 1 : -1;
-        const stockPriority = (p: Product) => {
-            const c = (p.stock_color || "").toLowerCase();
-            if (c === "green") return 3;
-            if (c === "yellow" || c === "orange") return 2;
-            if (c === "red") return 1;
-            return 0;
-        };
         switch (field) {
             case "brand":
                 return result.sort((a, b) => ((a.brand || a.name?.split(" ")[0] || "").localeCompare(b.brand || b.name?.split(" ")[0] || "")) * direction);
             case "name":
                 return result.sort((a, b) => (a.name || "").localeCompare(b.name || "") * direction);
-            case "image":
-                return result.sort((a, b) => ((b.image_url ? 1 : 0) - (a.image_url ? 1 : 0)) * direction);
-            case "stock":
-                return result.sort((a, b) => (stockPriority(b) - stockPriority(a)) * direction);
             case "price":
                 return result.sort((a, b) => ((a.final_price ?? 0) - (b.final_price ?? 0)) * direction);
             default:
@@ -464,7 +454,7 @@ export default function FavouriteProducts({ title }: { title?: React.ReactNode }
                         <thead className="sticky top-0 z-20">
                             <tr className="bg-gray-50/80 text-black text-label font-semibold uppercase tracking-widest h-[60px] border-b border-gray-200">
                                 {TABLE_HEADER_KEYS.map(key => {
-                                    const sortable = key !== "m.action";
+                                    const sortable = !!HEADER_SORT_FIELDS[key];
                                     return (
                                         <th key={key} className="px-2 md:px-4 text-center whitespace-nowrap">
                                             {sortable ? (

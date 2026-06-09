@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createHash } from "node:crypto";
 import { getRequestToken } from "@/lib/api/auth-helper";
 import { getLocaleFromRequest } from "@/lib/api/magento-url";
 import { KLEVER_CATEGORY_PRODUCTS_QUERY } from "@/src/graphql/queries";
@@ -7,6 +8,57 @@ import type {
   KleverCategoryProductsData,
 } from "@/src/graphql/types";
 import { graphqlFetch, isGraphQLRequestError } from "@/src/lib/graphqlFetch";
+
+// Server-side response cache. kleverCategoryProducts is slow on the backend
+// (~10s direct, ~12-18s through the dev server). Keyed by tokenHash + store +
+// variables so different users / stores / filters get their own entries.
+// 60-second TTL keeps stock & price drift inside what users tolerate while
+// making pagination, back-button, and rapid filter toggles feel instant.
+//
+// Token hashing avoids holding raw JWTs in memory while still partitioning
+// the cache per user (different customer-groups have different B2B prices).
+//
+// Promoting to Redis would survive process restarts; for now a per-process
+// Map is enough since the slow path is the backend, not memory.
+const CATEGORY_CACHE_TTL_MS = 60_000;
+const MAX_CATEGORY_CACHE_ENTRIES = 200;
+const _categoryCache = new Map<string, { data: unknown; expires: number }>();
+const _categoryInflight = new Map<string, Promise<unknown>>();
+
+function hashToken(token: string | null): string {
+  if (!token) return "anon";
+  return createHash("sha1").update(token).digest("hex").slice(0, 12);
+}
+
+function buildCacheKey(
+  tokenHash: string,
+  storeCode: string,
+  variables: Record<string, unknown>,
+): string {
+  // Sort keys for stable hashing — same variables in any order → same key.
+  const sortedVars: Record<string, unknown> = {};
+  for (const k of Object.keys(variables).sort()) sortedVars[k] = variables[k];
+  return `${tokenHash}|${storeCode}|${JSON.stringify(sortedVars)}`;
+}
+
+function getCached(key: string): unknown | null {
+  const entry = _categoryCache.get(key);
+  if (!entry) return null;
+  if (entry.expires <= Date.now()) {
+    _categoryCache.delete(key);
+    return null;
+  }
+  return entry.data;
+}
+
+function setCached(key: string, data: unknown): void {
+  // Naive eviction: when over capacity, drop the oldest entry by insertion order.
+  if (_categoryCache.size >= MAX_CATEGORY_CACHE_ENTRIES) {
+    const oldest = _categoryCache.keys().next().value;
+    if (oldest) _categoryCache.delete(oldest);
+  }
+  _categoryCache.set(key, { data, expires: Date.now() + CATEGORY_CACHE_TTL_MS });
+}
 
 // Derives the UI dot color from stock_label / is_in_stock. The GraphQL response
 // from kleverCategoryProducts (minimal selection) doesn't include stock_color
@@ -141,29 +193,59 @@ export async function GET(request: NextRequest) {
       request.headers.get("x-store-code") ||
       getLocaleFromRequest(request);
 
-    const data = await graphqlFetch<KleverCategoryProductsData>({
-      query: KLEVER_CATEGORY_PRODUCTS_QUERY,
-      variables: buildVariables(searchParams),
-      token,
-      store: storeCode,
-      cache: "no-store",
-    });
+    const variables = buildVariables(searchParams);
+    const cacheKey = buildCacheKey(hashToken(token), storeCode, variables);
 
-    const result = data.kleverCategoryProducts;
-    const enriched = result
-      ? {
-          ...result,
-          products: result.products.map((p) => ({
-            ...p,
-            stock_color: deriveStockColor(p),
-          })),
-        }
-      : null;
+    // 1) Serve from cache when fresh — the typical hit path.
+    const cached = getCached(cacheKey);
+    if (cached) {
+      return NextResponse.json(cached, {
+        status: 200,
+        headers: {
+          "Cache-Control": "private, max-age=60",
+          "X-Cache": "HIT",
+        },
+      });
+    }
+
+    // 2) Dedup concurrent identical requests — only one upstream call regardless
+    //    of how many callers arrive while it's in flight.
+    let inflight = _categoryInflight.get(cacheKey);
+    if (!inflight) {
+      inflight = (async () => {
+        const data = await graphqlFetch<KleverCategoryProductsData>({
+          query: KLEVER_CATEGORY_PRODUCTS_QUERY,
+          variables,
+          token,
+          store: storeCode,
+          cache: "force-cache",
+          revalidate: 30,
+        });
+        const result = data.kleverCategoryProducts;
+        return result
+          ? {
+              ...result,
+              products: result.products.map((p) => ({
+                ...p,
+                stock_color: deriveStockColor(p),
+              })),
+            }
+          : null;
+      })()
+        .finally(() => { _categoryInflight.delete(cacheKey); });
+      _categoryInflight.set(cacheKey, inflight);
+    }
+
+    const enriched = await inflight;
+
+    // Only cache successful, non-null payloads. Empty/failed responses retry next time.
+    if (enriched) setCached(cacheKey, enriched);
 
     return NextResponse.json(enriched, {
       status: 200,
       headers: {
-        "Cache-Control": "private, max-age=120, stale-while-revalidate=600",
+        "Cache-Control": "private, max-age=60",
+        "X-Cache": "MISS",
       },
     });
   } catch (error) {

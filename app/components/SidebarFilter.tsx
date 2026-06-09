@@ -74,7 +74,7 @@ const FilterGroup = memo(({
 }) => {
     const { t, isRtl } = useTranslation();
     const [searchTerm, setSearchTerm] = useState("");
-    
+
     const translatedLabel = t(`filter.${group.code}`) !== `filter.${group.code}` ? t(`filter.${group.code}`) : group.label;
 
     const filteredOptions = useMemo(() =>
@@ -107,8 +107,7 @@ const FilterGroup = memo(({
                                 placeholder={isRtl ? `${t("m.search")}...` : `${t("m.search")} ${translatedLabel}...`}
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
-                                className="w-full pl-8 pr-3 py-1.5 text-xs border border-gray-200 rounded-md outline-none"
-                            />
+                                className="w-full pl-3 pr-3 py-1.5 text-xs border border-gray-200 rounded-md outline-none" />
                             <X className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-black/50 cursor-pointer" onClick={() => setSearchTerm("")} />
                         </div>
                     )}

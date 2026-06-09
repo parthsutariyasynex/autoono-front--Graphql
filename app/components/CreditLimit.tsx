@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { Hourglass } from "lucide-react";
 import { useTranslation } from "@/hooks/useTranslation";
 import { api } from "@/lib/api/api-client";
@@ -34,10 +34,13 @@ const CreditLimit = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
-    const didInitialFetch = useRef(false);
     useEffect(() => {
-        if (didInitialFetch.current) return;
-        didInitialFetch.current = true;
+        // NOTE: no useRef "did-fetch" guard here. Under React StrictMode (dev) the
+        // effect mounts → cleans up → mounts again on the SAME instance; a ref guard
+        // makes the 2nd mount skip the fetch, while the 1st mount's result is dropped
+        // (its isMounted was already set false by cleanup) → data never reaches state.
+        // The module-level _creditInflight below dedups the actual network call, so it
+        // is safe for both mounts to re-enter; the surviving mount's isMounted is true.
         let isMounted = true;
 
         const fetchCreditInfo = async () => {
