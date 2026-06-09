@@ -17,8 +17,11 @@ const nextConfig: NextConfig = {
     images: {
         remotePatterns: [
             {
+                // Matches every btire.com subdomain (autoono.btire.com,
+                // autoono-demo.btire.com, future media/warehouse hosts) so
+                // switching environments never breaks next/image again.
                 protocol: "https",
-                hostname: "autoono.btire.com",
+                hostname: "**.btire.com",
                 pathname: "/**",
             },
         ],
