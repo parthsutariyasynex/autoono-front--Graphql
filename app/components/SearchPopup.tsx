@@ -277,11 +277,11 @@ const SearchPopup: React.FC<SearchPopupProps> = ({ isOpen, onClose }) => {
                                     ))}
                                 </div>
                             )}
-                            {!isSearching && suggestions.length > 0 && (
+                            {/* {!isSearching && suggestions.length > 0 && (
                                 <div className="px-6 md:px-10 py-2 border-b border-gray-100 bg-gray-50/50 text-caption font-bold text-black/40 uppercase tracking-widest">
                                     {t("m.found")} {totalFound} {t("m.products")}
                                 </div>
-                            )}
+                            )} */}
                             {!isSearching && noResults && (
                                 <div className="px-6 md:px-10 py-6 text-center text-black/50 text-sm font-medium">
                                     {t("quickOrder.noProducts")}

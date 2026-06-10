@@ -40,14 +40,15 @@ const CartItem: React.FC<CartItemProps> = ({ item, currencyCode, onUpdateQty, on
                 onClick={() => {
                     onRemove(item.item_id);
                 }}
-                className="absolute top-2 right-2 w-6 h-6 flex items-center justify-center bg-gray-50 text-black/50 rounded-full transition-all z-10 cursor-pointer hover:bg-dangerBright hover:text-black hover:scale-110 active:scale-95 opacity-0 group-hover/item:opacity-100 shadow-sm border border-gray-100"
+                className="absolute top-2 right-2 w-7 h-7 lg:w-6 lg:h-6 flex items-center justify-center bg-gray-50 text-black/60 rounded-full transition-all z-10 cursor-pointer hover:bg-dangerBright hover:text-black hover:scale-110 active:scale-95 opacity-100 lg:opacity-0 lg:group-hover/item:opacity-100 shadow-sm border border-gray-100"
                 title={t("m.remove-item")}
             >
-                <X size={10} strokeWidth={4} />
+                <X size={12} strokeWidth={3.5} className="lg:hidden" />
+                <X size={10} strokeWidth={4} className="hidden lg:block" />
             </button>
 
-            {/* Mobile Layout — below md (matches CartPage's md grid switch) */}
-            <div className="md:hidden">
+            {/* Mobile + tablet card layout — below lg (matches CartPage's lg grid switch) */}
+            <div className="lg:hidden">
                 <div className="flex gap-4">
                     <div className="w-20 h-20 bg-white border border-gray-100 p-2 flex items-center justify-center rounded-2xl shadow-sm">
                         <img src={item.image_url || "/images/tyre-sample.png"} alt={item.name} className="max-w-full max-h-full object-contain" />
@@ -111,8 +112,8 @@ const CartItem: React.FC<CartItemProps> = ({ item, currencyCode, onUpdateQty, on
                 </div>
             </div>
 
-            {/* Desktop Layout — md+ */}
-            <div className="hidden md:flex items-center">
+            {/* Desktop Layout — lg+ */}
+            <div className="hidden lg:flex items-center">
                 <div className="w-[45%] flex items-center gap-4">
                     <div className="w-16 xl:w-20 h-16 xl:h-20 bg-white border border-gray-100 p-1.5 flex items-center justify-center rounded-xl shadow-sm group-hover/item:shadow-md transition-all flex-shrink-0">
                         <img src={item.image_url || "/images/tyre-sample.png"} alt={item.name} className="max-w-full max-h-full object-contain" />

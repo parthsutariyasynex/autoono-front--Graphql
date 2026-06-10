@@ -587,6 +587,11 @@ export default function ProductsPage({ categoryId: propCategoryId, storeCode: pr
   // so the sidebar stays in sync with the result set automatically.
   const sidebarFilters: any[] = apiFilters ?? [];
 
+  // Hide the sidebar/filter UI for search results (free-text searchby OR exact
+  // item-code lookup). Search spans categories, so the category-scoped filters
+  // don't apply — only category browsing shows the filter sidebar.
+  const hideFilters = !!itemCodeTerm || !!searchByTerm;
+
   /* ══════════════════════════════════════════════════════════════
      RENDER
   ══════════════════════════════════════════════════════════════ */
@@ -595,7 +600,7 @@ export default function ProductsPage({ categoryId: propCategoryId, storeCode: pr
       <div className="flex">
         {/* Desktop Sidebar — visible at lg+ (1024px) so iPad-landscape users
             don't have to open the mobile drawer just to use the filter. */}
-        {!itemCodeTerm && (loading || products.length > 0) && (
+        {!hideFilters && (loading || products.length > 0) && (
           <div className="hidden lg:flex flex-col flex-shrink-0 self-stretch bg-white border-r border-gray-200">
             <SidebarFilter
               onFilterChange={handleFilterChange}
@@ -607,8 +612,8 @@ export default function ProductsPage({ categoryId: propCategoryId, storeCode: pr
           </div>
         )}
 
-        {/* Mobile Filter Drawer — not available for exact SKU lookup */}
-        {!itemCodeTerm && (
+        {/* Mobile Filter Drawer — not available for search results (item-code or free-text) */}
+        {!hideFilters && (
           <Drawer isOpen={isMobileFilterOpen} onClose={() => setIsMobileFilterOpen(false)}>
             <div className="flex flex-col h-full">
               <div className="bg-primary px-5 py-4 flex items-center justify-between flex-shrink-0">
@@ -618,7 +623,7 @@ export default function ProductsPage({ categoryId: propCategoryId, storeCode: pr
                 )}
               </div>
               <div className="flex-1 overflow-y-auto">
-                <div className="[&>aside]:!w-full [&>aside]:!h-auto [&>aside]:!static [&>aside]:!border-0 [&>aside]:!overflow-visible [&>aside>div]:!static [&>aside>div]:!h-auto [&>aside>div>div:first-child]:!hidden">
+                <div className="[&>aside]:!w-full [&>aside]:!h-auto [&>aside]:!static [&>aside]:!border-0 [&>aside]:!overflow-visible [&>aside>div]:!static [&>aside>div]:!h-auto [&>aside>div:first-child]:!hidden">
                   <SidebarFilter onFilterChange={(f, l) => { handleFilterChange(f, l); setIsMobileFilterOpen(false); }} selectedFilters={selectedFilters} isCollapsed={false} setIsCollapsed={() => { }} initialFilters={sidebarFilters} />
                 </div>
               </div>
@@ -646,7 +651,7 @@ export default function ProductsPage({ categoryId: propCategoryId, storeCode: pr
             {/* Controls: 2 cols for SKU lookup (no filters), 3 cols otherwise.
                 At lg+ the Filter button is hidden (sidebar replaces it), so the
                 grid drops to 2 cols to fill the row evenly with Favorites + Sort. */}
-            <div className={`grid ${itemCodeTerm ? "grid-cols-2" : "grid-cols-3 lg:grid-cols-2"} gap-2`}>
+            <div className={`grid ${hideFilters ? "grid-cols-2" : "grid-cols-3 lg:grid-cols-2"} gap-2`}>
               <button onClick={() => router.push(lp("/favorites"))} className="h-[44px] bg-white border border-gray-200 rounded-xl flex items-center justify-center gap-2 text-label font-semibold uppercase tracking-wider shadow-sm active:scale-95 cursor-pointer">
                 <Star className="w-4 h-4 fill-black text-black" /> {t("m.favourite-products")}
               </button>
@@ -654,7 +659,7 @@ export default function ProductsPage({ categoryId: propCategoryId, storeCode: pr
                 <ChevronDown className="w-4 h-4" />
                 {sortBy === "none" ? t("products.sortByDefault") : sortBy === "price-asc" ? t("products.sortByLowToHigh") : t("products.sortByHighToLow")}
               </button>
-              {!itemCodeTerm && (
+              {!hideFilters && (
                 <button onClick={() => setIsMobileFilterOpen(true)} className="lg:hidden h-[44px] bg-white border border-gray-200 rounded-xl flex items-center justify-center gap-2 text-label font-semibold uppercase tracking-wider shadow-sm active:scale-95 cursor-pointer">
                   <Filter className="w-4 h-4" /> Filter
                   {Object.keys(selectedFilters).length > 0 && <span className="w-5 h-5 bg-primary rounded-full text-caption font-semibold flex items-center justify-center">{Object.keys(selectedFilters).length}</span>}
@@ -763,8 +768,8 @@ export default function ProductsPage({ categoryId: propCategoryId, storeCode: pr
           <div className="xl:hidden">{renderPagination(true)}</div>
 
           {/* ── DESKTOP CONTROLS + TABLE ── */}
-          {/* For SKU lookup or empty results the sidebar is gone → full rounding; otherwise right-rounded only */}
-          <div className={`hidden xl:flex flex-col bg-white shadow-sm border border-gray-200 overflow-hidden ${itemCodeTerm || (!loading && products.length === 0) ? "md:rounded-2xl" : "md:rounded-r-2xl border-l-0"}`}>
+          {/* For search results or empty results the sidebar is gone → full rounding; otherwise right-rounded only */}
+          <div className={`hidden xl:flex flex-col bg-white shadow-sm border border-gray-200 overflow-hidden ${hideFilters || (!loading && products.length === 0) ? "md:rounded-2xl" : "md:rounded-r-2xl border-l-0"}`}>
             {/* Desktop header */}
             {(loading || products.length > 0) && (
               <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center gap-4 min-h-[60px]">

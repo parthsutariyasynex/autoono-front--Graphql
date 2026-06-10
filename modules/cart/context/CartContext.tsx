@@ -286,7 +286,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
                     "x-locale": pathLocale,
                     ...(lastSyncedStoreCode && { "x-store-code": lastSyncedStoreCode }),
                   },
-                }).catch(() => {})
+                }).catch(() => { })
               ));
             }
           } catch { /* non-critical — continue with switch */ }

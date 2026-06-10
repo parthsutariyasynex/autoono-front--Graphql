@@ -135,6 +135,9 @@ export default function Navbar() {
 
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  // Which mobile-drawer nav accordion is expanded (e.g. "ALL LUBRICANTS").
+  // null = all collapsed. Single-open accordion keyed by item.href.
+  const [mobileOpenMenu, setMobileOpenMenu] = useState<string | null>(null);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -759,7 +762,7 @@ export default function Navbar() {
               {isAuthenticated && pathname !== "/login" && (
                 <button
                   onClick={() => { setSearchMounted(true); setIsSearchOpen(true); }}
-                  className="hidden md:flex relative cursor-pointer hover:opacity-70 transition-opacity items-center justify-center -mb-1 focus:outline-none"
+                  className="flex relative cursor-pointer hover:opacity-70 transition-opacity items-center justify-center -mb-1 focus:outline-none"
                   aria-label="Search"
                 >
                   <Search size={22} stroke="black" strokeWidth={1.5} />
@@ -773,7 +776,7 @@ export default function Navbar() {
               {isAuthenticated && pathname !== "/login" && (
 
                 <button
-                  className="hidden md:flex relative cursor-pointer items-center justify-center"
+                  className="flex relative cursor-pointer items-center justify-center"
                   onClick={() => { setNotifMounted(true); setIsNotificationOpen(true); }}
                   aria-label="Notifications"
                 >
@@ -802,12 +805,21 @@ export default function Navbar() {
                 </button>
               )}
 
-
+              {/* My Account — mobile-only icon (desktop uses the account dropdown above) */}
+              {isAuthenticated && pathname !== "/login" && (
+                <Link
+                  href={lp("/customer/account")}
+                  className="md:hidden flex text-black cursor-pointer items-center justify-center hover:opacity-70 transition-opacity"
+                  aria-label="My Account"
+                >
+                  <UserCircle size={24} strokeWidth={1.5} />
+                </Link>
+              )}
 
               {/* Mobile hamburger — only on phones below md, since yellow nav
                   bar and desktop dropdowns (account, search, etc.) take over at md+. */}
               <button
-                onClick={() => setIsMenuOpen(!isMenuOpen)}
+                onClick={() => { setIsMenuOpen(!isMenuOpen); if (isMenuOpen) setMobileOpenMenu(null); }}
                 className="md:hidden text-black hover:opacity-70 transition-opacity cursor-pointer"
                 aria-label="Toggle Menu"
               >
@@ -949,7 +961,7 @@ export default function Navbar() {
           <>
             <div
               className="md:hidden fixed inset-0 top-[56px] sm:top-[64px] bg-black/40 z-30 animate-in fade-in duration-200"
-              onClick={() => setIsMenuOpen(false)}
+              onClick={() => { setIsMenuOpen(false); setMobileOpenMenu(null); }}
               aria-hidden="true"
             />
             <div className="md:hidden fixed top-[56px] sm:top-[64px] left-0 right-0 bottom-0 bg-white shadow-2xl z-40 border-t border-gray-100 animate-in slide-in-from-top duration-200 overflow-y-auto overscroll-contain">
@@ -991,12 +1003,19 @@ export default function Navbar() {
                     return (
                       <div key={item.href}>
                         {hasChildren ? (
-                          <div
-                            className={`py-2.5 text-body font-semibold uppercase tracking-wide flex items-center justify-between ${isActive ? "text-primary" : "text-black"
+                          <button
+                            type="button"
+                            onClick={() => setMobileOpenMenu(mobileOpenMenu === item.href ? null : item.href)}
+                            aria-expanded={mobileOpenMenu === item.href}
+                            className={`w-full py-2.5 text-body font-semibold uppercase tracking-wide flex items-center justify-between cursor-pointer ${isActive ? "text-primary" : "text-black"
                               }`}
                           >
                             {resolveLabel(item)}
-                          </div>
+                            <ChevronDown
+                              size={18}
+                              className={`text-black/50 transition-transform duration-200 ${mobileOpenMenu === item.href ? "rotate-180" : ""}`}
+                            />
+                          </button>
                         ) : (
                           <Link
                             href={href}
@@ -1008,7 +1027,7 @@ export default function Navbar() {
                             <span className="text-black/40 group-hover:text-primary transition-colors text-caption">→</span>
                           </Link>
                         )}
-                        {isWarehouse && warehouseItems.length > 0 && (
+                        {isWarehouse && warehouseItems.length > 0 && mobileOpenMenu === item.href && (
                           <div className="pl-3 border-l-2 border-gray-100 ml-1 mb-1">
                             {[...warehouseItems]
                               .sort((a, b) => {
@@ -1076,27 +1095,8 @@ export default function Navbar() {
                     {locale === "en" ? "Arabic" : "English"}
                   </Link>
 
-                  {isAuthenticated && pathname !== "/login" && (
-                    <>
-                      <button
-                        onClick={() => { setSearchMounted(true); setIsSearchOpen(true); setIsMenuOpen(false); }}
-                        className="py-2.5 text-body font-semibold text-black/80 flex items-center gap-3 w-full text-start"
-                      >
-                        <Search size={16} /> {t("nav.searchProducts") || "Search Products"}
-                      </button>
-
-                      <button
-                        onClick={() => { setNotifMounted(true); setIsNotificationOpen(true); setIsMenuOpen(false); }}
-                        className="py-2.5 text-body font-semibold text-black/80 flex items-center gap-3 w-full"
-                      >
-                        <Bell size={16} /> {t("nav.notifications")} ({unreadCount})
-                      </button>
-                      <Link href={lp("/customer/account")} className="py-2.5 text-body font-semibold text-black/80 flex items-center gap-3" onClick={() => setIsMenuOpen(false)}>
-
-                        <UserCircle size={16} /> {t("nav.myAccount")}
-                      </Link>
-                    </>
-                  )}
+                  {/* Search / Notifications / My Account moved to the mobile header
+                      (icon buttons next to the cart) — no longer duplicated here. */}
 
 
                   {isAuthenticated && pathname !== "/login" && (

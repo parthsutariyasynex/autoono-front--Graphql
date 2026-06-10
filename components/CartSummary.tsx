@@ -139,7 +139,7 @@ const CartSummary: React.FC<CartSummaryProps> = ({ subtotal, taxAmount, taxLabel
                     {/* VAT */}
                     <div className="flex justify-between items-center">
                         <span className="text-[13px] font-[900] text-black uppercase tracking-tight">
-                            {isRtl ? t("m.tax") : (taxLabel?.toUpperCase().includes("VAT") ? taxLabel : "SAUDI VAT 15%")}
+                            {isRtl ? t("m.tax") : (taxLabel && !taxLabel.toUpperCase().includes("SAUDI") ? taxLabel : "VAT (15%)")}
                         </span>
                         <span className="text-[13px] font-[900] text-black">
                             <Price amount={taxAmount} />

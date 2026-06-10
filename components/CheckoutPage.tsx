@@ -1651,7 +1651,7 @@ const CheckoutPageUI: React.FC = () => {
 
                                     <div className="flex justify-between items-center">
                                         <span className="text-[13px] font-[900] text-black uppercase tracking-tight">
-                                            {isRtl ? t("m.tax") : (cart?.tax_label?.toUpperCase().includes("VAT") ? cart.tax_label : "SAUDI VAT 15%")}
+                                            {isRtl ? t("m.tax") : (cart?.tax_label && !cart.tax_label.toUpperCase().includes("SAUDI") ? cart.tax_label : "VAT (15%)")}
                                         </span>
                                         <span className="text-[13px] font-[900] text-black">
                                             <Price amount={displayTotals.tax_amount} />

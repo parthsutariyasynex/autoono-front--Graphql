@@ -186,18 +186,18 @@ const CartPage: React.FC = () => {
                     );
                 })()}
 
-                {/* Items + Summary side-by-side from md+ (tablet portrait) so the
-                    summary doesn't stretch full-width below the items list at
-                    800px and similar tablet sizes. */}
-                <div className="grid grid-cols-1 md:grid-cols-12 gap-6 md:gap-8 xl:gap-16 items-start">
+                {/* Items + Summary side-by-side from lg+ only. Below lg (mobile +
+                    tablet) they stack so the item rows get full width and use the
+                    roomy card layout instead of a cramped desktop table row. */}
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 md:gap-8 xl:gap-16 items-start">
 
                     {/* Left Column (Items & Actions) */}
-                    <div className="md:col-span-8 xl:col-span-9 flex flex-col min-w-0">
+                    <div className="lg:col-span-8 xl:col-span-9 flex flex-col min-w-0">
 
                         <div className="flex flex-col h-full">
-                            {/* Table Header (Sticky Top) — md+ so tablet-portrait users
-                                also see the column labels. */}
-                            <div className="hidden md:flex sticky top-0 z-20 bg-white border border-gray-100 rounded-xl items-center py-4 px-10 mb-4 shadow-sm">
+                            {/* Table Header (Sticky Top) — lg+ only; it aligns with the
+                                desktop row layout, which also kicks in at lg+. */}
+                            <div className="hidden lg:flex sticky top-0 z-20 bg-white border border-gray-100 rounded-xl items-center py-4 px-10 mb-4 shadow-sm">
                                 <div className="w-[45%] text-caption font-bold text-black uppercase tracking-widest">{t("cart.itemDescription")}</div>
                                 <div className="w-[15%] text-caption font-bold text-black uppercase tracking-widest text-center">{t("cart.price")}</div>
                                 <div className="w-[20%] text-caption font-bold text-black uppercase tracking-widest text-center">{t("cart.qty")}</div>
@@ -233,7 +233,7 @@ const CartPage: React.FC = () => {
                     </div>
 
                     {/* Right Column (Summary): col-span-4 from md+, narrower at xl */}
-                    <div className="md:col-span-4 xl:col-span-3 z-10 w-full">
+                    <div className="lg:col-span-4 xl:col-span-3 z-10 w-full">
                         <CartSummary
                             subtotal={cart.subtotal}
                             taxAmount={cart.tax_amount}
