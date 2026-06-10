@@ -976,9 +976,9 @@ export default function Navbar() {
                         <span className="text-body text-black font-semibold uppercase truncate tracking-tight">
                           {isSubAccount && subAccountName ? subAccountName : displayUser}
                         </span>
-                        {storeName && storeName !== currentStore && (
-                          <span className="text-[10px] text-primary font-bold uppercase mt-1 leading-none">{storeName}</span>
-                        )}
+                        {/* {currentStore && (storeName || currentStore) && ( */}
+                        {/* <span className="text-[10px] text-black/60 font-bold uppercase mt-0.5 leading-none truncate">{storeName || currentStore}</span> */}
+                        {/* )} */}
                       </div>
                     </div>
                   </div>
@@ -1086,13 +1086,12 @@ export default function Navbar() {
                     }}
                     className="py-2.5 text-body font-semibold text-black/80 flex items-center gap-3 w-full"
                   >
-                    <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-[10px] font-bold text-primary">
+                    {/* <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-[10px] font-bold text-primary">
                       {locale === "en" ? "AR" : "EN"}
-                    </div>
-                    {/* Use English word "Arabic" instead of "العربية" — avoids
-                      bidi-flip glyphs on mobile where the Arabic script can
-                      render reversed inside the LTR drawer. */}
-                    {locale === "en" ? "Arabic" : "English"}
+                    </div> */}
+                    {/* Show selected store/warehouse name; fall back to language
+                      name if no store is active. Click still toggles locale. */}
+                    {(currentStore && (storeName || currentStore)) || (locale === "en" ? "Arabic" : "English")}
                   </Link>
 
                   {/* Search / Notifications / My Account moved to the mobile header

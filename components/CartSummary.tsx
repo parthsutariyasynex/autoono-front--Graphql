@@ -14,13 +14,14 @@ interface CartSummaryProps {
     subtotal: number;
     taxAmount: number;
     taxLabel: string;
+    shippingAmount?: number;
     grandTotal: number;
     currencyCode: string;
     discountAmount?: number;
     appliedCoupons?: Array<{ code: string }>;
 }
 
-const CartSummary: React.FC<CartSummaryProps> = ({ subtotal, taxAmount, taxLabel, grandTotal, currencyCode, discountAmount, appliedCoupons }) => {
+const CartSummary: React.FC<CartSummaryProps> = ({ subtotal, taxAmount, taxLabel, shippingAmount = 0, grandTotal, currencyCode, discountAmount, appliedCoupons }) => {
     const router = useRouter();
     const lp = useLocalePath();
     const { t, isRtl } = useTranslation();
@@ -100,10 +101,10 @@ const CartSummary: React.FC<CartSummaryProps> = ({ subtotal, taxAmount, taxLabel
             <div className="px-6 py-5 space-y-0">
                 {/* Price Breakdown */}
                 <div className="space-y-3 pb-4 border-b border-gray-100">
-                    {/* Items Total */}
+                    {/* Subtotal */}
                     <div className="flex justify-between items-center">
                         <span className="text-[13px] font-[900] text-black uppercase tracking-tight">
-                            {t("multi.itemsTotal") || "ITEM(S) TOTAL:"}
+                            {t("cart.subtotal") || "SUBTOTAL"}
                         </span>
                         <span className="text-[13px] font-[900] text-black">
                             <Price amount={subtotal} />
@@ -122,27 +123,23 @@ const CartSummary: React.FC<CartSummaryProps> = ({ subtotal, taxAmount, taxLabel
                         </div>
                     )}
 
-                    {/* {!hasGifts && availableGifts.length > 0 && (
-                        // <div
-                        //     onClick={openGiftModal}
-                        //     className="flex justify-between items-center p-3 bg-[#008a00]/5 border border-dashed border-[#008a00] rounded-lg cursor-pointer hover:bg-[#008a00]/10 transition-all group animate-pulse hover:animate-none"
-                        // >
-                        //     <span className="text-[#008a00] font-[900] text-caption uppercase tracking-tight">
-                        //         {t("m.free-gift-available") || "FREE GIFT AVAILABLE"}
-                        //     </span>
-                        //     <span className="font-[900] text-[#008a00] text-xs underline uppercase group-hover:no-underline">
-                        //         {t("m.select-now") || "SELECT NOW"}
-                        //     </span>
-                        // </div>
-                    )} */}
-
-                    {/* VAT */}
+                    {/* VAT (15%) */}
                     <div className="flex justify-between items-center">
                         <span className="text-[13px] font-[900] text-black uppercase tracking-tight">
-                            {isRtl ? t("m.tax") : (taxLabel && !taxLabel.toUpperCase().includes("SAUDI") ? taxLabel : "VAT (15%)")}
+                            {isRtl ? t("m.tax") : "VAT (15%)"}
                         </span>
                         <span className="text-[13px] font-[900] text-black">
                             <Price amount={taxAmount} />
+                        </span>
+                    </div>
+
+                    {/* Shipping */}
+                    <div className="flex justify-between items-center">
+                        <span className="text-[13px] font-[900] text-black uppercase tracking-tight">
+                            {t("m.shipping") || "SHIPPING"}
+                        </span>
+                        <span className="text-[13px] font-[900] text-black">
+                            <Price amount={shippingAmount} />
                         </span>
                     </div>
                 </div>

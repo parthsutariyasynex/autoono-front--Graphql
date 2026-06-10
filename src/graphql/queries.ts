@@ -529,6 +529,11 @@ export const CUSTOMER_CART_QUERY = /* GraphQL */ `
           label
         }
       }
+      shipping_addresses {
+        selected_shipping_method {
+          amount { value currency }
+        }
+      }
       applied_coupons {
         code
       }

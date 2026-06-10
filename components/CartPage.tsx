@@ -20,7 +20,7 @@ const CartPage: React.FC = () => {
     const router = useRouter();
     const { t } = useTranslation();
     const lp = useLocalePath();
-    const { openGiftModal, availableGifts, hasGifts, isAllGiftsSelected } = useGift();
+    const { openGiftModal, availableGifts, hasGifts, isAllGiftsSelected, fetchDiscountPopup } = useGift();
     const { cart, isLoading, error, removeFromCart, updateCartItem, clearCart, refetchCart } = useCart();
     const [pendingQtys, setPendingQtys] = React.useState<Record<number, number>>({});
     const [isClearingCart, setIsClearingCart] = React.useState(false);
@@ -44,6 +44,8 @@ const CartPage: React.FC = () => {
                 delete newPending[id];
                 setPendingQtys(newPending);
             }
+            // Re-evaluate gift eligibility after removal — qty may have dropped below threshold
+            fetchDiscountPopup();
             toast.success(t("cart.itemRemoved"));
         } catch (err) {
             toast.error(t("cart.itemRemovalFailed"));
@@ -54,6 +56,8 @@ const CartPage: React.FC = () => {
         const updateIds = Object.keys(pendingQtys);
         if (updateIds.length === 0) {
             await refetchCart();
+            // Re-evaluate gifts even when no qty changes — ensures fresh popup state
+            fetchDiscountPopup();
             toast.success(t("cart.updated") || "Cart updated");
             return;
         }
@@ -65,8 +69,11 @@ const CartPage: React.FC = () => {
                 await updateCartItem(Number(id), pendingQtys[Number(id)]);
             }
             setPendingQtys({});
-            // Single refetch at the end to get accurate totals from server
+            // Single refetch at the end to get accurate totals from server, then
+            // re-evaluate gift eligibility (items_count may be unchanged even though
+            // an individual SKU's qty crossed the gift threshold).
             await refetchCart();
+            await fetchDiscountPopup();
             toast.success(t("cart.updated") || "Cart updated", { id: toastId });
         } catch (err: any) {
             const msg = err instanceof Error ? err.message : t("cart.updateFailed");
@@ -238,6 +245,7 @@ const CartPage: React.FC = () => {
                             subtotal={cart.subtotal}
                             taxAmount={cart.tax_amount}
                             taxLabel={cart.tax_label}
+                            shippingAmount={cart.shipping_amount ?? 0}
                             grandTotal={cart.grand_total}
                             currencyCode={cart.currency_code}
                             discountAmount={cart.discount_amount}

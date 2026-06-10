@@ -784,6 +784,24 @@ export function GiftProvider({
         }
     }, [cart?.items_count, pathname, fetchDiscountPopup]);
 
+    // Listen to the `cart-updated` event which CartContext dispatches AFTER every
+    // mutation API call completes (add/update/remove/sync). This is more reliable
+    // than watching `cart.items_count` alone because:
+    //   1) The event fires after Magento has already processed the change, so the
+    //      discount-popup query sees the correct cart state.
+    //   2) It fires even when the total items_count stays the same (e.g., user
+    //      increased one SKU's qty and decreased another by the same amount), which
+    //      would otherwise miss the gift-eligibility re-check.
+    useEffect(() => {
+        const onCartUpdated = () => {
+            if ((cart?.items_count ?? 0) > 0) {
+                fetchDiscountPopup();
+            }
+        };
+        window.addEventListener("cart-updated", onCartUpdated);
+        return () => window.removeEventListener("cart-updated", onCartUpdated);
+    }, [cart?.items_count, fetchDiscountPopup]);
+
     // ADD THIS
     useEffect(() => {
         if (!cart?.items_count || cart.items_count <= 0) {

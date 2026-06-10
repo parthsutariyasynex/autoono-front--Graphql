@@ -44,6 +44,7 @@ export interface Cart {
   subtotal: number;
   tax_amount: number;
   tax_label: string;
+  shipping_amount: number;
   grand_total: number;
   currency_code: string;
   items_count: number;
@@ -81,9 +82,11 @@ function handleAuthError() {
 
 export function getWarehouseKey(storeCode: string): string {
   if (!storeCode) return "cart_allwarehouse";
-  // Use the full store code as the key so every warehouse has its own isolated cart.
-  // Sanitise to a safe localStorage key (lowercase, non-alphanumeric → underscore).
-  return `cart_${storeCode.toLowerCase().replace(/[^a-z0-9]/g, "_")}`;
+  // Strip _en/_ar suffix so EN and AR views of the same warehouse share one isolated
+  // cart key. V202_en and V202_ar both become cart_v202, preventing the sync logic
+  // from treating a locale switch as a warehouse change and clearing the cart.
+  const base = storeCode.replace(/_(en|ar)$/i, "");
+  return `cart_${base.toLowerCase().replace(/[^a-z0-9]/g, "_")}`;
 }
 
 export function CartProvider({ children }: { children: ReactNode }) {
@@ -120,6 +123,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       // Read locale from URL (most up-to-date during language switch)
       const pathLocale = window.location.pathname.startsWith("/ar") ? "ar" : "en";
       const storeCode = getCartStoreCode();
+      console.log(`[CartFetch] locale=${pathLocale} storeCode="${storeCode}" warehouseKey="${getWarehouseKey(storeCode)}"`);
       const res = await fetch("/api/kleverapi/cart", {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -167,10 +171,12 @@ export function CartProvider({ children }: { children: ReactNode }) {
         row_total: Number(item.row_total || 0),
         discount_amount: item.discount_amount ? Number(item.discount_amount) : undefined,
       }));
+      console.log(`[CartFetch] rawItems=${rawItems.length} mappedItems=${items.length} skus=${JSON.stringify(items.map(i => i.sku))}`);
 
       const subtotal = Number(data.subtotal ?? data.cart?.subtotal ?? 0);
       const tax_amount = Number(data.tax_amount ?? data.cart?.tax_amount ?? 0);
       const tax_label = data.tax_label ?? data.cart?.tax_label ?? "Tax";
+      const shipping_amount = Number(data.shipping_amount ?? data.cart?.shipping_amount ?? 0);
       const grand_total = Number(data.grand_total ?? data.cart?.grand_total ?? subtotal);
       const currency_code = data.currency_code ?? data.cart?.currency_code ?? "SAR";
       // Magento's kleverapi/cart does not return a discount field directly.
@@ -181,11 +187,12 @@ export function CartProvider({ children }: { children: ReactNode }) {
       // Calculate total units instead of unique SKUs for navbar count
       const items_count = items.reduce((sum: number, i: CartItem) => sum + i.qty, 0);
       const cart_id = data.cart_id ?? data.cart?.cart_id ?? null;
+      console.log(`[CartFetch] cartId=${cart_id} subtotal=${subtotal} grandTotal=${grand_total} items=${items.length}`);
       const applied_coupons = Array.isArray(data.applied_coupons)
         ? data.applied_coupons.filter((c: { code?: unknown }) => c && typeof c.code === "string")
         : [];
 
-      setCart({ items, subtotal, tax_amount, tax_label, grand_total, currency_code, items_count, cart_id, discount_amount, applied_coupons });
+      setCart({ items, subtotal, tax_amount, tax_label, shipping_amount, grand_total, currency_code, items_count, cart_id, discount_amount, applied_coupons });
     } catch {
       // Network error or backend unreachable — fail silently
       setCart(null);
@@ -220,9 +227,11 @@ export function CartProvider({ children }: { children: ReactNode }) {
       // using the correct warehouse URL, not just the locale fallback.
       const lastSyncedStoreCode = localStorage.getItem("current_synced_cart_storecode") || "";
 
-      // MIGRATION: old key format was cart_FIRSTWORD (e.g. cart_anwar), new format is
-      // cart_FULLSTORECODE (e.g. cart_anwar_khaled_en). If lastSynced is a prefix of
-      // activeKey they represent the same warehouse — rename without doing a full sync.
+      console.log(`[CartSync] pathname=${pathname} storeCode="${storeCode}" activeKey="${activeKey}" lastSynced="${lastSynced}" lastSyncedStoreCode="${lastSyncedStoreCode}"`);
+
+      // MIGRATION A: old key format was cart_FIRSTWORD (e.g. cart_anwar), current format is
+      // cart_BASESTORECODE (e.g. cart_anwar_khaled, no locale suffix). If lastSynced is a
+      // prefix of activeKey they represent the same warehouse — rename without doing a full sync.
       if (lastSynced && lastSynced !== activeKey && activeKey.startsWith(lastSynced + "_")) {
         const oldData = localStorage.getItem(lastSynced);
         if (oldData) {
@@ -233,8 +242,24 @@ export function CartProvider({ children }: { children: ReactNode }) {
         lastSynced = activeKey;
       }
 
+      // MIGRATION B: locale-suffixed keys (e.g. cart_v202_en) → normalized base keys
+      // (e.g. cart_v202). Runs once after deploy for existing users who had locale-specific keys.
+      if (lastSynced && lastSynced !== activeKey) {
+        const migratedKey = lastSynced.replace(/_(en|ar)$/, "");
+        if (migratedKey === activeKey) {
+          console.log(`[CartSync] Locale-key migration: ${lastSynced} → ${activeKey}`);
+          if (!localStorage.getItem(activeKey)) {
+            const oldData = localStorage.getItem(lastSynced);
+            if (oldData) localStorage.setItem(activeKey, oldData);
+          }
+          localStorage.setItem("current_synced_cart_warehouse", activeKey);
+          lastSynced = activeKey;
+        }
+      }
+
       if (lastSynced === activeKey) {
-        // Same warehouse as last sync — refetch in background without blocking the UI
+        // Same warehouse (possibly different locale) — keep storecode current and refetch.
+        if (storeCode) localStorage.setItem("current_synced_cart_storecode", storeCode);
         isSyncing.current = false;
         fetchCart(false);
         return;
@@ -477,13 +502,19 @@ export function CartProvider({ children }: { children: ReactNode }) {
   };
 
   const removeFromCart = async (itemId: number) => {
+    console.log(`[Cart Remove] ── START itemId=${itemId}`);
+    console.log(`[Cart Remove] Current cart items:`, cart?.items?.map(i => ({ item_id: i.item_id, sku: i.sku, name: i.name?.slice(0, 30) })));
+
     try {
-      setError(null);
       const token = await getAuthToken();
       if (!token) throw new Error("Not authenticated");
 
+      // Snapshot the item before any mutation.
+      // Use Object.is so NaN===NaN resolves correctly if Magento ever returns UID-based IDs.
+      const itemToRemove = cart?.items?.find(i => Object.is(i.item_id, itemId));
+      console.log(`[Cart Remove] itemToRemove:`, itemToRemove ?? "NOT FOUND in local state");
+
       // Update warehouse storage first
-      const itemToRemove = cart?.items?.find(i => i.item_id === itemId);
       if (itemToRemove) {
         const storeCode = getCartStoreCode();
         const activeKey = getWarehouseKey(storeCode);
@@ -494,34 +525,136 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
       const pathLocale = window.location.pathname.startsWith("/ar") ? "ar" : "en";
       const storeCode = getCartStoreCode();
-      const res = await fetch(`/api/kleverapi/cart/remove/${itemId}`, {
-        method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "x-locale": pathLocale,
-          ...(storeCode && { "x-store-code": storeCode }),
-        },
-      });
 
-      if (!res.ok) {
-        if (isAuthError(res.status)) { handleAuthError(); return; }
-        const data = await res.json();
-        throw new Error(data.message || "Failed to remove item");
+      const callRemoveAPI = async (id: number) => {
+        console.log(`[Cart Remove] DELETE /api/kleverapi/cart/remove/${id}`);
+        const r = await fetch(`/api/kleverapi/cart/remove/${id}`, {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "x-locale": pathLocale,
+            ...(storeCode && { "x-store-code": storeCode }),
+          },
+        });
+        console.log(`[Cart Remove] Response status: ${r.status}`);
+        if (!r.ok) {
+          if (isAuthError(r.status)) { handleAuthError(); return null; }
+          const d = await r.json();
+          console.error(`[Cart Remove] API error:`, d);
+          throw new Error(d.message || "Failed to remove item");
+        }
+        const data = await r.json();
+        console.log(`[Cart Remove] Response items:`, (data?.items as any[] | undefined)?.map((i: any) => ({ item_id: i.item_id, sku: i.sku })) ?? "(no items in response)");
+        return data;
+      };
+
+      // Helper: check whether the target item is still present in a response payload.
+      // Prefers SKU match (stable across cart rebuilds) and falls back to item_id.
+      const targetSku = itemToRemove?.sku;
+      const findInResponse = (data: any): { sku: string; item_id: number } | null => {
+        if (!Array.isArray(data?.items)) return null;
+        const items = data.items as Array<{ sku: string; item_id: number }>;
+        if (targetSku) return items.find(i => i.sku === targetSku) ?? null;
+        // No SKU available (rare — itemToRemove was not in local state): fall back to item_id
+        return items.find(i => Number(i.item_id) === itemId) ?? null;
+      };
+
+      // ── First attempt ───────────────────────────────────────────────
+      let responseData = await callRemoveAPI(itemId);
+
+      // ── Stale-ID retry ──────────────────────────────────────────────
+      // The route stamps __guard_fired:true when it short-circuits WITHOUT calling
+      // the mutation (stale item_id — Magento rebuilt the cart after a gift selection).
+      // In that case find the current item_id from the response and retry.
+      //
+      // IMPORTANT: do NOT retry when __guard_fired is absent (false/undefined).
+      // That means the mutation ran successfully — if the same SKU appears again in
+      // the response it was put back by a promo rule, which is correct server behaviour.
+      if (responseData?.__guard_fired === true) {
+        const freshItem = findInResponse(responseData);
+        if (freshItem) {
+          console.warn(`[Cart Remove] Guard fired — mutation never ran. Retrying with fresh item_id=${freshItem.item_id} (sku=${freshItem.sku})`);
+          responseData = await callRemoveAPI(freshItem.item_id);
+        }
       }
 
-      // Immediately remove from local state so the row disappears without waiting for re-fetch
+      // ── Verify removal (guard-fire path only) ──────────────────────
+      // If the retry also fired the guard, the item genuinely cannot be found;
+      // throw so the upstream caller shows an error toast instead of success.
+      if (responseData?.__guard_fired === true) {
+        const stillAfterRetry = findInResponse(responseData);
+        if (stillAfterRetry) {
+          console.error(`[Cart Remove] Item STILL present after retry (guard fired twice) — sku=${targetSku ?? "unknown"}. Throwing error.`);
+          throw new Error("Item could not be removed from cart. Please refresh and try again.");
+        }
+      }
+
+      console.log(`[Cart Remove] Server confirmed removal. Updating local state.`);
+
+      // ── State update ────────────────────────────────────────────────
+      // Use the server response items as the authoritative list so both the removed
+      // item and any auto-removed gift items are reflected immediately.
+      // Merge size_display / pattern_display from the previous state since the remove
+      // route (reshapeCustomerCart) does not return those display-only attributes.
       setCart(prev => {
         if (!prev) return null;
-        const updatedItems = prev.items.filter(i => i.item_id !== itemId);
+
+        let updatedItems: CartItem[];
+
+        if (Array.isArray(responseData?.items)) {
+          const prevBySku: Record<string, CartItem> = {};
+          for (const p of prev.items) {
+            if (p.sku) prevBySku[p.sku] = p;
+          }
+          updatedItems = (responseData.items as Array<any>).map((ri): CartItem => {
+            const existing = prevBySku[ri.sku];
+            return {
+              item_id: Number(ri.item_id),
+              sku: ri.sku,
+              name: ri.name ?? existing?.name ?? "",
+              price: Number(ri.price ?? 0),
+              qty: Number(ri.qty ?? 0),
+              image_url: ri.image_url || existing?.image_url || "/images/tyre-sample.png",
+              product_url: ri.product_url ?? existing?.product_url,
+              size_display: existing?.size_display,
+              pattern_display: existing?.pattern_display,
+              row_total: Number(ri.row_total ?? 0),
+              discount_amount: ri.discount_amount ? Number(ri.discount_amount) : existing?.discount_amount,
+            };
+          });
+        } else {
+          // Fallback: optimistic filter when response has no items list
+          updatedItems = prev.items.filter(i =>
+            targetSku ? i.sku !== targetSku : !Object.is(i.item_id, itemId)
+          );
+        }
+
         const items_count = updatedItems.reduce((s, i) => s + i.qty, 0);
-        return { ...prev, items: updatedItems, items_count };
+        const subtotal = responseData?.subtotal ?? prev.subtotal;
+        const tax_amount = responseData?.tax_amount ?? prev.tax_amount;
+        const tax_label = responseData?.tax_label ?? prev.tax_label;
+        const shipping_amount = responseData?.shipping_amount ?? prev.shipping_amount ?? 0;
+        const grand_total = responseData?.grand_total ?? prev.grand_total;
+        const derived = subtotal + tax_amount - grand_total;
+        const discount_amount = derived > 0.005
+          ? Math.round(derived * 100) / 100
+          : (prev.discount_amount ?? 0);
+        const applied_coupons = responseData?.applied_coupons ?? prev.applied_coupons;
+
+        console.log(`[Cart Remove] State updated → items_count=${items_count} subtotal=${subtotal} grand_total=${grand_total}`);
+        return { ...prev, items: updatedItems, items_count, subtotal, tax_amount, tax_label, shipping_amount, grand_total, discount_amount, applied_coupons };
       });
+
       window.dispatchEvent(new Event("cart-updated"));
 
-      // Background re-fetch to get updated totals from server
+      // Background re-fetch syncs any additional Magento side-effects (promo rule
+      // recalculation, auto-removed gift items, updated shipping).
+      // This runs AFTER the state is already correct so it only refines totals.
       fetchCart(false);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to remove item");
+      console.error(`[Cart Remove] ── ERROR:`, err);
+      // Do NOT set global cart error — remove failures are handled locally
+      // by the caller (handleRemove in CartPage shows a toast instead).
       throw err;
     }
   };
@@ -570,7 +703,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
       // Immediately clear local state so the UI empties without waiting for the re-fetch
       setCart(prev => prev
-        ? { ...prev, items: [], items_count: 0, subtotal: 0, tax_amount: 0, grand_total: 0, discount_amount: 0 }
+        ? { ...prev, items: [], items_count: 0, subtotal: 0, tax_amount: 0, shipping_amount: 0, grand_total: 0, discount_amount: 0 }
         : null
       );
       window.dispatchEvent(new Event("cart-updated"));

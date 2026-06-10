@@ -135,7 +135,9 @@ export default function ForgotPasswordPage() {
         ) {
           toast.error(t("login.emailNotFound"));
         } else {
-          toast.error(msg || t("forgotPassword.resetLinkFailed"));
+          // Always use translated message — never show raw Magento error strings
+          // (e.g. "Cannot reset the customer's password" which is English-only)
+          toast.error(t("forgotPassword.resetLinkFailed"));
         }
       }
 
@@ -244,14 +246,16 @@ export default function ForgotPasswordPage() {
     setLoading(true);
     setErrors({});
 
-    // 1. Prepare only the required fields as per specifications
-    const payload = {
+    // Include email when available (email-flow) so the reset route can call
+    // the Magento resetPassword mutation which requires it.
+    const payload: Record<string, string> = {
       resetToken: resetToken,
       newPassword: newPassword,
       confirmPassword: confirmPassword,
     };
+    if (email) payload.email = email;
 
-    console.log(">>> RESET PASSWORD: Submitting request...", payload);
+    console.log(">>> RESET PASSWORD: Submitting request...", { ...payload, newPassword: "***" });
 
     try {
       // 2. Send POST request to the reset API

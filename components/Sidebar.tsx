@@ -23,7 +23,7 @@ interface SidebarResponse {
 
 // Cache key for the last-successful sidebar fetch. Bumped if response shape
 // changes so stale caches are invalidated on deploy.
-const SIDEBAR_CACHE_KEY = "sidebar_cache_v1";
+const SIDEBAR_CACHE_KEY = "sidebar_cache_v2";
 
 // Module-level in-flight dedup + 10-minute TTL. Stops two concurrent Sidebar
 // mounts (e.g. React StrictMode in dev, navigation race) from both firing a
@@ -150,7 +150,7 @@ const Sidebar = () => {
         const code = (item.code || "").toLowerCase();
         const label = (item.label || "").toLowerCase();
 
-        if (code === "my_account" || code === "account" || label.includes("account")) {
+        if (code === "my_account" || code === "account" || label === "my account" || label.startsWith("my account")) {
             return t("sidebar.myAccount") || item.label;
         }
         if (code === "my_statement" || code === "statement" || code === "mystatement" || label.includes("statement")) {
@@ -194,12 +194,18 @@ const Sidebar = () => {
     const visibleItems = useMemo(() => {
         if (!sidebarData?.items) return [];
 
+        const seenCodes = new Set<string>();
+
         return sidebarData.items
             .filter((item) => {
                 // 1. Check Magento's visibility flag
                 if (!item.is_visible) return false;
 
-                // 2. Custom permission checks based on session or user type
+                // 2. Deduplicate by code — API occasionally returns the same item twice
+                if (seenCodes.has(item.code)) return false;
+                seenCodes.add(item.code);
+
+                // 3. Custom permission checks based on session or user type
                 const itemCode = item.code.toLowerCase();
 
                 // If logged in AS a sub-account, hide Management tools

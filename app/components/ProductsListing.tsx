@@ -643,11 +643,6 @@ export default function ProductsPage({ categoryId: propCategoryId, storeCode: pr
 
           {/* ── MOBILE CONTROLS ── */}
           <div className="xl:hidden flex flex-col gap-2 mb-3">
-            {storeName && (loading || products.length > 0) && (
-              <div className="px-1 mb-1">
-                <h1 className="text-body-lg font-bold text-black uppercase tracking-tight">{storeName}</h1>
-              </div>
-            )}
             {/* Controls: 2 cols for SKU lookup (no filters), 3 cols otherwise.
                 At lg+ the Filter button is hidden (sidebar replaces it), so the
                 grid drops to 2 cols to fill the row evenly with Favorites + Sort. */}

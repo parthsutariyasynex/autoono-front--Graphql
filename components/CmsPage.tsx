@@ -51,6 +51,40 @@ function decodeHtmlEntities(html: string): string {
         .replace(/&amp;/g, "&");
 }
 
+/**
+ * Remove a leading heading element from HTML content when its text matches the
+ * page title. The CmsPage template already renders the title as <h1>, so any
+ * <h1-6> or <p><strong> block at the top of the CMS HTML that duplicates it
+ * should be stripped before rendering via dangerouslySetInnerHTML.
+ */
+function stripLeadingTitleFromHtml(html: string, title: string | undefined): string {
+    if (!title || !html) return html;
+    const normalTitle = title.toUpperCase().trim();
+    const trimmed = html.trim();
+
+    // Match: <h1-6 ...>  optional inner tags  TITLE TEXT  </h1-6>
+    const headingRe = /^(<h[1-6][^>]*>)([\s\S]*?)(<\/h[1-6]>)/i;
+    const hMatch = trimmed.match(headingRe);
+    if (hMatch) {
+        const headingText = hMatch[2].replace(/<[^>]+>/g, "").trim().toUpperCase();
+        if (headingText === normalTitle) {
+            return trimmed.slice(hMatch[0].length).trim();
+        }
+    }
+
+    // Match: <p ...><strong ...>TITLE TEXT</strong></p>  (some CMS editors use this)
+    const boldRe = /^(<p[^>]*>)\s*(<strong[^>]*>)([\s\S]*?)(<\/strong>)\s*(<\/p>)/i;
+    const bMatch = trimmed.match(boldRe);
+    if (bMatch) {
+        const boldText = bMatch[3].replace(/<[^>]+>/g, "").trim().toUpperCase();
+        if (boldText === normalTitle) {
+            return trimmed.slice(bMatch[0].length).trim();
+        }
+    }
+
+    return html;
+}
+
 /** Split a paragraph into sentences by ". " followed by a capital letter or opening quote. */
 function splitSentences(text: string): string[] {
     return text
@@ -321,6 +355,14 @@ export default function CmsPage({ identifier, fallbackTitleKey, arabicHeadings }
         return parseCmsContent(content, title);
     }, [isHtml, content, title, locale, arabicHeadings]);
 
+    // For HTML content: decode entities then strip any leading heading that
+    // duplicates the page title (the template already renders <h1>{title}</h1>).
+    const processedHtml = useMemo(() => {
+        if (!isHtml || !content) return "";
+        const decoded = decodeHtmlEntities(content);
+        return stripLeadingTitleFromHtml(decoded, title);
+    }, [isHtml, content, title]);
+
     // Show the shared skeleton as a complete page replacement while loading.
     // This guarantees the placeholder fills the same area as the real content
     // and there's no inline-skeleton flicker.
@@ -335,9 +377,9 @@ export default function CmsPage({ identifier, fallbackTitleKey, arabicHeadings }
                 dir={isRtl ? "rtl" : "ltr"}
             >
                 {/* Title */}
-                <h1 className="text-h3 sm:text-h2 md:text-h1-sm lg:text-h1 font-bold text-black uppercase tracking-tight mb-8 sm:mb-10 md:mb-12 text-center">
+                {/* <h1 className="text-h3 sm:text-h2 md:text-h1-sm lg:text-h1 font-bold text-black uppercase tracking-tight mb-8 sm:mb-10 md:mb-12 text-center">
                     {title}
-                </h1>
+                </h1> */}
 
                 {/* Body */}
                 {hasError ? (
@@ -347,7 +389,7 @@ export default function CmsPage({ identifier, fallbackTitleKey, arabicHeadings }
                 ) : isHtml ? (
                     <div
                         className={`text-body sm:text-body-lg md:text-[15px] leading-[1.8] sm:leading-[1.9] text-black/80 font-medium ${isRtl ? "text-right" : "text-left"} prose prose-sm sm:prose max-w-none`}
-                        dangerouslySetInnerHTML={{ __html: decodeHtmlEntities(content) }}
+                        dangerouslySetInnerHTML={{ __html: processedHtml }}
                     />
                 ) : (
                     <div

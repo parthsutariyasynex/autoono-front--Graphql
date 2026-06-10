@@ -418,6 +418,9 @@ export interface CustomerCart {
     applied_taxes: Array<{ amount: MoneyValue; label: string }> | null;
     discounts: Array<{ amount: MoneyValue; label: string }> | null;
   } | null;
+  shipping_addresses?: Array<{
+    selected_shipping_method: { amount: MoneyValue } | null;
+  }> | null;
   applied_coupons: Array<{ code: string }> | null;
 }
 

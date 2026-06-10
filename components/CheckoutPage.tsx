@@ -1622,7 +1622,7 @@ const CheckoutPageUI: React.FC = () => {
                                 {/* Totals Section */}
                                 <div className="p-4 sm:p-5 space-y-2.5 sm:space-y-3">
                                     <div className="flex justify-between items-center text-body-lg">
-                                        <span className="text-black font-[900] uppercase tracking-tight">{t("multi.itemsTotal") || "ITEM(S) TOTAL:"}</span>
+                                        <span className="text-black font-[900] uppercase tracking-tight">{t("cart.subtotal") || "SUBTOTAL"}</span>
                                         <span className="font-[900] text-black price currency-riyal">
                                             <Price amount={displayTotals.subtotal} />
                                         </span>
@@ -1637,24 +1637,21 @@ const CheckoutPageUI: React.FC = () => {
                                         </div>
                                     )}
 
-                                    {/* {!hasGifts && availableGifts.length > 0 && (
-                                        <div
-                                            onClick={openGiftModal}
-                                            className="flex justify-between items-center p-3 bg-[#008a00]/5 border border-dashed border-[#008a00] rounded-lg cursor-pointer hover:bg-[#008a00]/10 transition-all group animate-pulse hover:animate-none"
-                                        >
-                                            
-                                            <span className="font-[900] text-[#008a00] text-xs underline uppercase group-hover:no-underline">
-                                                {t("m.select-now") || "SELECT NOW"}
-                                            </span>
-                                        </div>
-                                    )} */}
-
                                     <div className="flex justify-between items-center">
                                         <span className="text-[13px] font-[900] text-black uppercase tracking-tight">
-                                            {isRtl ? t("m.tax") : (cart?.tax_label && !cart.tax_label.toUpperCase().includes("SAUDI") ? cart.tax_label : "VAT (15%)")}
+                                            {isRtl ? t("m.tax") : "VAT (15%)"}
                                         </span>
                                         <span className="text-[13px] font-[900] text-black">
                                             <Price amount={displayTotals.tax_amount} />
+                                        </span>
+                                    </div>
+
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-[13px] font-[900] text-black uppercase tracking-tight">
+                                            {t("m.shipping") || "SHIPPING"}
+                                        </span>
+                                        <span className="text-[13px] font-[900] text-black">
+                                            <Price amount={displayTotals.shipping_amount} />
                                         </span>
                                     </div>
 

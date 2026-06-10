@@ -20,6 +20,7 @@ export interface KleverCartShape {
   subtotal: number;
   tax_amount: number;
   tax_label: string;
+  shipping_amount: number;
   grand_total: number;
   currency_code: string;
   applied_coupons: Array<{ code: string }>;
@@ -60,6 +61,7 @@ export function reshapeCustomerCart(cart: CustomerCart): KleverCartShape {
     items.reduce((sum, i) => sum + i.row_total, 0);
   const grandTotal = cart.prices?.grand_total.value ?? subtotal;
   const currency = cart.prices?.grand_total.currency ?? "SAR";
+  const shippingAmount = cart.shipping_addresses?.[0]?.selected_shipping_method?.amount.value ?? 0;
 
   return {
     cart_id: cart.id,
@@ -68,6 +70,7 @@ export function reshapeCustomerCart(cart: CustomerCart): KleverCartShape {
     subtotal,
     tax_amount: taxAmount,
     tax_label: taxLabel,
+    shipping_amount: shippingAmount,
     grand_total: grandTotal,
     currency_code: currency,
     applied_coupons: cart.applied_coupons ?? [],

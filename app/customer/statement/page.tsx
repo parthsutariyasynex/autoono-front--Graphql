@@ -229,7 +229,7 @@ export default function MyStatementPage() {
                             </div>
 
                             {/* Statement Type */}
-                            <div className="mb-6 md:mb-10">
+                            {/* <div className="mb-6 md:mb-10">
                                 <label className="block text-body font-bold text-black mb-2">
                                     {t("m.type")}
                                 </label>
@@ -240,7 +240,7 @@ export default function MyStatementPage() {
                                     placeholder={statementTypes.length > 0 ? t("m.select") : t("common.loading")}
                                     buttonClassName="w-full h-[45px] px-4 border border-gray-200 text-body-lg text-black/80 focus:outline-none focus:border-primary transition-colors bg-white font-medium shadow-sm flex items-center justify-between cursor-pointer"
                                 />
-                            </div>
+                            </div> */}
 
                             {/* Download Button */}
                             <div className="flex flex-col gap-4">
@@ -251,7 +251,7 @@ export default function MyStatementPage() {
                                 >
                                     {isDownloading ? (
                                         <>
-                                            
+
                                             {t("common.loading")}
                                         </>
                                     ) : (
