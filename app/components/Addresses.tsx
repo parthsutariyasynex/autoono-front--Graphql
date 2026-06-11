@@ -85,7 +85,7 @@ function AddressFormContent({ mode = "new", addressId, title }: AddressFormProps
       setFormData(prev => ({
         ...prev,
         firstname: prev.firstname || customer.firstname || "",
-        lastname:  prev.lastname  || customer.lastname  || "",
+        lastname: prev.lastname || customer.lastname || "",
       }));
     }
   }, [customer, isEditMode]);
@@ -127,16 +127,16 @@ function AddressFormContent({ mode = "new", addressId, title }: AddressFormProps
 
         setAddressData(data);
         setFormData({
-          firstname:  data.firstname || "",
-          lastname:   data.lastname  || "",
-          company:    data.company   || "",
-          telephone:  data.telephone || "",
-          fax:        data.fax       || "",
-          street:     Array.isArray(data.street) ? data.street[0] || "" : data.street || "",
-          city:       data.city      || "",
-          postcode:   data.postcode  || "",
+          firstname: data.firstname || "",
+          lastname: data.lastname || "",
+          company: data.company || "",
+          telephone: data.telephone || "",
+          fax: data.fax || "",
+          street: Array.isArray(data.street) ? data.street[0] || "" : data.street || "",
+          city: data.city || "",
+          postcode: data.postcode || "",
           country_id: data.country_id || "SA",
-          region:     data.region    || "",
+          region: typeof data.region === "string" ? data.region : (data.region?.region || data.region?.region_code || ""),
         });
       } catch (err: any) {
         toast.error(err?.message || t("addressBook.addressFetchFailed"));
@@ -162,10 +162,10 @@ function AddressFormContent({ mode = "new", addressId, title }: AddressFormProps
   const validate = (): boolean => {
     const next = {
       firstname: !formData.firstname.trim() ? t("addressBook.firstNameRequired") : "",
-      lastname:  !formData.lastname.trim()  ? t("addressBook.lastNameRequired")  : "",
-      telephone: !formData.telephone.trim() ? t("addressBook.phoneRequired")     : "",
-      street:    !formData.street.trim()    ? t("addressBook.streetRequired")    : "",
-      city:      !formData.city.trim()      ? t("addressBook.cityRequired")      : "",
+      lastname: !formData.lastname.trim() ? t("addressBook.lastNameRequired") : "",
+      telephone: !formData.telephone.trim() ? t("addressBook.phoneRequired") : "",
+      street: !formData.street.trim() ? t("addressBook.streetRequired") : "",
+      city: !formData.city.trim() ? t("addressBook.cityRequired") : "",
     };
     setErrors(next);
     return Object.values(next).every(v => !v);
@@ -181,34 +181,34 @@ function AddressFormContent({ mode = "new", addressId, title }: AddressFormProps
         await api.put(`/kleverapi/addresses/${addressId}`, {
           address: {
             ...addressData,
-            firstname:  formData.firstname.trim(),
-            lastname:   formData.lastname.trim(),
-            company:    formData.company.trim(),
-            telephone:  formData.telephone.trim(),
-            fax:        formData.fax.trim(),
-            street:     [formData.street.trim()],
-            city:       formData.city.trim(),
-            postcode:   formData.postcode.trim() || addressData?.postcode || "00000",
+            firstname: formData.firstname.trim(),
+            lastname: formData.lastname.trim(),
+            company: formData.company.trim(),
+            telephone: formData.telephone.trim(),
+            fax: formData.fax.trim(),
+            street: [formData.street.trim()],
+            city: formData.city.trim(),
+            postcode: formData.postcode.trim() || addressData?.postcode || "00000",
             country_id: formData.country_id || "SA",
-            region:     formData.region.trim() || undefined,
+            region: formData.region.trim() || undefined,
           },
         });
         toast.success(t("addressBook.addressUpdated"));
       } else {
         await api.post("/kleverapi/addresses", {
           address: {
-            firstname:        formData.firstname.trim(),
-            lastname:         formData.lastname.trim(),
-            company:          formData.company.trim(),
-            telephone:        formData.telephone.trim(),
-            fax:              formData.fax.trim(),
-            street:           [formData.street.trim()],
-            city:             formData.city.trim(),
-            postcode:         formData.postcode.trim() || "00000",
-            country_id:       formData.country_id || "SA",
-            region:           formData.region.trim() || undefined,
+            firstname: formData.firstname.trim(),
+            lastname: formData.lastname.trim(),
+            company: formData.company.trim(),
+            telephone: formData.telephone.trim(),
+            fax: formData.fax.trim(),
+            street: [formData.street.trim()],
+            city: formData.city.trim(),
+            postcode: formData.postcode.trim() || "00000",
+            country_id: formData.country_id || "SA",
+            region: formData.region.trim() || undefined,
             default_shipping: true,
-            default_billing:  true,
+            default_billing: true,
           },
         });
         toast.success(t("addressBook.addressAdded"));
@@ -221,9 +221,9 @@ function AddressFormContent({ mode = "new", addressId, title }: AddressFormProps
       console.error("[Addresses] Save error:", err);
       toast.error(
         err?.message ||
-          (isEditMode
-            ? t("addressBook.addressUpdateFailed")
-            : t("addressBook.addressAddFailed"))
+        (isEditMode
+          ? t("addressBook.addressUpdateFailed")
+          : t("addressBook.addressAddFailed"))
       );
     } finally {
       setSaving(false);
@@ -312,11 +312,11 @@ function AddressFormContent({ mode = "new", addressId, title }: AddressFormProps
               </h2>
             </div>
             <div className="px-5 py-5 space-y-4">
-              {field("firstname", "addressBook.firstName",   true)}
-              {field("lastname",  "addressBook.lastName",    true)}
-              {field("company",   "addressBook.company")}
+              {field("firstname", "addressBook.firstName", true)}
+              {field("lastname", "addressBook.lastName", true)}
+              {field("company", "addressBook.company")}
               {field("telephone", "addressBook.phoneNumber", true, "966 xxxxxxxxx", "tel")}
-              {field("fax",       "addressBook.fax")}
+              {field("fax", "addressBook.fax")}
             </div>
 
             {/* ── Section 2: ADDRESS ── */}
@@ -326,11 +326,11 @@ function AddressFormContent({ mode = "new", addressId, title }: AddressFormProps
               </h2>
             </div>
             <div className="px-5 py-5 space-y-4">
-              {field("street",     "addressBook.streetAddress", true)}
-              {field("city",       "addressBook.city",          true)}
-              {field("postcode",   "addressBook.zipCode")}
-              {field("country_id", "addressBook.country",       true, "", "select")}
-              {field("region",     "addressBook.region")}
+              {field("street", "addressBook.streetAddress", true)}
+              {field("city", "addressBook.city", true)}
+              {field("postcode", "addressBook.zipCode")}
+              {field("country_id", "addressBook.country", true, "", "select")}
+              {field("region", "addressBook.region")}
 
               {/* Save Button */}
               <div className="pt-3">

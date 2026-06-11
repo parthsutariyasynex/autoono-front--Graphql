@@ -337,6 +337,7 @@
   "checkout.fetchSlotsFailed": "تعذر جلب المواعيد المتاحة",
   "checkout.updateAddressFailed": "فشل تحديث عنوان الشحن",
   "checkout.selectShippingAddress": "يرجى اختيار عنوان شحن أو إضافة عنوان جديد.",
+  "checkout.addShippingAddressFirst": "يرجى إضافة عنوان شحن أولاً.",
   "checkout.selectWarehouse": "يرجى اختيار المستودع للاستلام",
   "checkout.fillPickupDetails": "يرجى تعبئة جميع تفاصيل الاستلام",
   "checkout.poNumberRequired": "يرجى إدخال رقم أمر الشراء حيث أنك قمت برفع ملف.",

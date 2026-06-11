@@ -285,6 +285,24 @@ const CheckoutPageUI: React.FC = () => {
         }
     }, [addresses, selectedAddressId, setShippingAddress]);
 
+    // ── No-address guard: single source of truth for all checkout entry points ──
+    // If the customer has no saved shipping address, send them to the address book
+    // (which returns here via ?redirect=/checkout after they add one). Gated on a
+    // ref so it only fires AFTER the address fetch has actually run: isCheckoutLoading
+    // starts false, so an unguarded check would redirect on the very first render —
+    // before addresses are ever fetched — and bounce customers who DO have addresses.
+    const addressFetchRanRef = useRef(false);
+    useEffect(() => {
+        if (isCheckoutLoading) {
+            addressFetchRanRef.current = true;
+            return;
+        }
+        if (!addressFetchRanRef.current) return; // fetch hasn't completed a cycle yet
+        if (addresses.length === 0) {
+            router.replace(`${lp("/customer/address-book")}?redirect=/checkout`);
+        }
+    }, [isCheckoutLoading, addresses, router, lp]);
+
     // Auto-select a payment method when the list loads.
     // Match the live site which defaults to Credit Account for single-shipping checkout.
     useEffect(() => {
@@ -425,6 +443,15 @@ const CheckoutPageUI: React.FC = () => {
         if (!cart || cart.items.length === 0) {
             toast.error(t("checkout.yourOrderIsEmpty"));
             router.push(lp("/cart"));
+            return;
+        }
+
+        // 0b. Shipping address required — bounce to the address book if none exists.
+        // Defensive: the page-load guard already redirects address-less customers,
+        // but this prevents placing an order with no address in any edge case.
+        if (addresses.length === 0) {
+            toast.error(t("checkout.addShippingAddressFirst"));
+            router.push(`${lp("/customer/address-book")}?redirect=/checkout`);
             return;
         }
 

@@ -331,6 +331,7 @@
   "checkout.fetchSlotsFailed": "Failed to fetch available time slots",
   "checkout.updateAddressFailed": "Failed to update shipping address",
   "checkout.selectShippingAddress": "Please select a shipping address or add a new one.",
+  "checkout.addShippingAddressFirst": "Please add a shipping address first.",
   "checkout.selectWarehouse": "Please select a warehouse for pickup",
   "checkout.fillPickupDetails": "Please fill all pickup details",
   "checkout.poNumberRequired": "Please enter a PO Number as you have uploaded a file.",
