@@ -124,6 +124,7 @@ export function useCheckout(options: UseCheckoutOptions = {}) {
                 cache: "no-store",
             });
             const data = await res.json();
+            console.log("[fetchTotals] status:", res.status, "data:", JSON.stringify(data));
 
             if (res.ok) {
                 // Map discount_amount if present
@@ -136,7 +137,16 @@ export function useCheckout(options: UseCheckoutOptions = {}) {
                     grand_total: Number(data.grand_total || 0),
                     currency_code: data.currency_code || "SAR"
                 };
-                setTotals(mappedTotals);
+                console.log("[fetchTotals] mappedTotals:", JSON.stringify(mappedTotals));
+                // Only apply totals when Magento returned meaningful data.
+                // If kleverCheckoutTotals was null (no active quote / no shipping address),
+                // the route returns {} which maps to all-zeros — leave totals as null so
+                // the UI falls back to cart values instead of showing 0.00 everywhere.
+                if (data.cart_id || mappedTotals.subtotal > 0 || mappedTotals.grand_total > 0) {
+                    setTotals(mappedTotals);
+                } else {
+                    console.log("[fetchTotals] Magento returned empty/null totals — keeping previous totals to avoid showing 0");
+                }
             }
         } catch (err) {
             console.error("Fetch Totals Error:", err);
@@ -266,7 +276,7 @@ export function useCheckout(options: UseCheckoutOptions = {}) {
                 const data = await res.json();
                 const methods = Array.isArray(data) ? data : (data.methods || data.payment_methods || []);
                 const mapped: PaymentMethod[] = methods
-                    .filter((m: any) => m.is_available !== false) // Only show available methods
+                    .filter((m: any) => m.is_available !== false && m.code !== "free") // Hide "Free" — shown by Magento when grand_total=0 but not relevant for this checkout
                     .map((m: any) => ({
                         code: m.code || m.method_code || "",
                         title: m.title || m.method_title || "",

@@ -1116,7 +1116,7 @@ export interface KleverCheckoutSetOrderCommentData {
 }
 
 export interface KleverCheckoutPoUploadData {
-  kleverCheckoutPoUpload: boolean | string | null;
+  kleverCheckoutPoUpload: boolean | string | string[] | null;
 }
 
 export interface KleverCheckoutPoRemoveFileData {

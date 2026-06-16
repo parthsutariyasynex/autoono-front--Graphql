@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getRequestToken } from "@/lib/api/auth-helper";
+import { getLocaleFromRequest } from "@/lib/api/magento-url";
 import {
   CART_PAYMENT_METHODS_QUERY,
   CUSTOMER_CART_ID_QUERY,
@@ -17,12 +18,15 @@ export async function GET(req: Request) {
       return NextResponse.json({ message: "Unauthorized: Invalid token format" }, { status: 401 });
     }
 
+    const store = getLocaleFromRequest(req);
+
     const { searchParams } = new URL(req.url);
     let cartId: string | null = searchParams.get("cart_id");
     if (!cartId) {
       const idData = await graphqlFetch<CustomerCartIdData>({
         query: CUSTOMER_CART_ID_QUERY,
         token,
+        store,
         cache: "no-store",
       });
       cartId = idData.customerCart?.id ?? null;
@@ -35,10 +39,14 @@ export async function GET(req: Request) {
       query: CART_PAYMENT_METHODS_QUERY,
       variables: { cartId },
       token,
+      store,
       cache: "no-store",
     });
 
-    const methods = (data.cart?.available_payment_methods ?? []).map((m) => ({
+    const raw = data.cart?.available_payment_methods ?? [];
+    console.log("[payment-methods] store:", store, "cartId:", cartId, "raw methods:", JSON.stringify(raw));
+
+    const methods = raw.map((m) => ({
       ...m,
       is_available: true,
     }));

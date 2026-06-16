@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getRequestToken } from "@/lib/api/auth-helper";
+import { getLocaleFromRequest } from "@/lib/api/magento-url";
 import { KLEVER_CHECKOUT_TOTALS_QUERY } from "@/src/graphql/queries";
 import type { KleverCheckoutTotalsData } from "@/src/graphql/types";
 import { graphqlFetch, isGraphQLRequestError } from "@/src/lib/graphqlFetch";
@@ -11,13 +12,19 @@ export async function GET(req: Request) {
       return NextResponse.json({ message: "Unauthorized: Missing customer token" }, { status: 401 });
     }
 
+    const store = getLocaleFromRequest(req);
+
     const data = await graphqlFetch<KleverCheckoutTotalsData>({
       query: KLEVER_CHECKOUT_TOTALS_QUERY,
       token,
+      store,
       cache: "no-store",
     });
 
-    return NextResponse.json(data.kleverCheckoutTotals ?? {}, { status: 200 });
+    const totals = data.kleverCheckoutTotals;
+    console.log("[checkout/totals] store:", store, "raw kleverCheckoutTotals:", JSON.stringify(totals));
+
+    return NextResponse.json(totals ?? {}, { status: 200 });
   } catch (error) {
     if (isGraphQLRequestError(error)) {
       return NextResponse.json(

@@ -84,9 +84,13 @@ export async function POST(req: Request) {
     console.log("[po-upload] Magento kleverCheckoutPoUpload:", data.kleverCheckoutPoUpload);
 
     // Treat only an explicit truthy response as success.
-    // null, false, 0, "" are all treated as failure.
+    // null, false, 0, "" and empty arrays are all treated as failure.
     const uploadResult = data.kleverCheckoutPoUpload;
-    const success = uploadResult !== false && uploadResult !== null && uploadResult !== "";
+    const success =
+      uploadResult !== false &&
+      uploadResult !== null &&
+      uploadResult !== "" &&
+      !(Array.isArray(uploadResult) && uploadResult.length === 0);
 
     if (!success) {
       console.warn("[po-upload] Magento returned falsy result for kleverCheckoutPoUpload:", uploadResult);
@@ -96,13 +100,23 @@ export async function POST(req: Request) {
       );
     }
 
-    // If Magento returned a non-trivial string (not "true"/"1"/empty), it is the backend
-    // file reference (stored path or name) that must be used when calling the remove mutation.
-    // The caller must store this and pass it back for deletion instead of the display name.
-    const backendRef =
-      typeof uploadResult === "string" && uploadResult !== "true" && uploadResult !== "1"
-        ? uploadResult
-        : fileName;
+    // Extract the canonical backend file reference from the mutation response.
+    // Magento's Klever module renames files on upload (e.g. spaces → underscores,
+    // adds a timestamp suffix) and may return:
+    //   - ["old.png", "newly_uploaded.png"]  ← array of ALL files; newly uploaded is LAST
+    //   - "Screenshot_from_..._timestamp.png"  ← plain string
+    //   - true / "1" / "true"                  ← no reference, fall back to original fileName
+    // IMPORTANT: when Magento returns an array it contains every file on the cart, not just
+    // the one just uploaded. The newly uploaded file is always appended at the end, so we
+    // must take the LAST element — taking [0] would give a pre-existing file's backend name.
+    let backendRef: string;
+    if (Array.isArray(uploadResult) && uploadResult.length > 0 && typeof uploadResult[uploadResult.length - 1] === "string") {
+      backendRef = uploadResult[uploadResult.length - 1];
+    } else if (typeof uploadResult === "string" && uploadResult !== "true" && uploadResult !== "1") {
+      backendRef = uploadResult;
+    } else {
+      backendRef = fileName;
+    }
 
     console.log("[po-upload] success — fileName:", fileName, "backendRef:", backendRef);
 
