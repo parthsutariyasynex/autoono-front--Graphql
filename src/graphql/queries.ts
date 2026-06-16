@@ -545,6 +545,7 @@ export const CUSTOMER_CART_ID_QUERY = /* GraphQL */ `
   query CustomerCartId {
     customerCart {
       id
+      total_quantity
       items {
         id
       }
@@ -1114,6 +1115,28 @@ export const KLEVER_CHECKOUT_PICKUP_TIME_SLOTS_QUERY = /* GraphQL */ `
       time
       label
       enabled
+    }
+  }
+`;
+
+export const KLEVER_CHECKOUT_PICKUP_STORES_QUERY = /* GraphQL */ `
+  query KleverCheckoutPickupStores {
+    kleverCheckoutPickupStores {
+      store_id
+      name
+      address
+      postcode
+      region
+      region_id
+      country_id
+      country
+      phone
+      email
+      latitude
+      longitude
+      image_url
+      opening_hours
+      special_opening_hours
     }
   }
 `;

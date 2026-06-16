@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getRequestToken } from "@/lib/api/auth-helper";
+import { getLocaleFromRequest } from "@/lib/api/magento-url";
 import { CUSTOMER_CART_ID_QUERY } from "@/src/graphql/queries";
 import { SET_SHIPPING_METHODS_ON_CART_MUTATION } from "@/src/graphql/mutations";
 import type {
@@ -25,32 +26,52 @@ export async function POST(req: Request) {
       );
     }
 
+    const store = getLocaleFromRequest(req);
+
+    console.log("[shipping-method] POST store:", store, "carrier:", carrierCode, "method:", methodCode);
+
     let cartId: string | null = body.cart_id ?? null;
     if (!cartId) {
       const idData = await graphqlFetch<CustomerCartIdData>({
         query: CUSTOMER_CART_ID_QUERY,
         token,
+        store,
         cache: "no-store",
       });
-      cartId = idData.customerCart?.id ?? null;
+      const cartData = idData.customerCart;
+      cartId = cartData?.id ?? null;
+      if (cartId && cartData && cartData.items.length === 0) {
+        console.warn("[shipping-method] Cart is empty — refusing to set shipping method");
+        return NextResponse.json(
+          { message: "Your cart is empty. Please add items before checkout." },
+          { status: 400 },
+        );
+      }
     }
     if (!cartId) {
       return NextResponse.json({ message: "No active cart found" }, { status: 404 });
     }
 
+    console.log("[shipping-method] cartId:", cartId);
+
     const data = await graphqlFetch<SetShippingMethodsOnCartData>({
       query: SET_SHIPPING_METHODS_ON_CART_MUTATION,
       variables: { cartId, carrierCode, methodCode },
       token,
+      store,
       cache: "no-store",
     });
 
+    console.log("[shipping-method] Magento response OK, selected method:", carrierCode, methodCode);
+
     return NextResponse.json(data.setShippingMethodsOnCart.cart, { status: 200 });
   } catch (error) {
+    console.error("[shipping-method] POST error:", error);
     if (isGraphQLRequestError(error)) {
       return NextResponse.json(
-        { message: error.message, errors: error.errors },
-        { status: error.status >= 400 ? error.status : 500 },
+        { message: error.message },
+        // Magento GraphQL errors arrive at HTTP 200 with errors[]; map them to 422.
+        { status: error.status >= 400 ? error.status : 422 },
       );
     }
     return NextResponse.json({ message: "Internal server error" }, { status: 500 });

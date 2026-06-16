@@ -78,10 +78,14 @@ function formatMagentoError(data: any): string {
         }
     }
 
-    // Append child errors
+    // Append child errors only when they add information beyond the main message.
+    // Magento GraphQL often surfaces the same text in both data.message and
+    // data.errors[0].message — skip details that are identical to avoid
+    // "Internal server error. Details: Internal server error".
     if (data.errors && Array.isArray(data.errors)) {
         const details = data.errors
             .map((e: any) => e.message || JSON.stringify(e))
+            .filter((detail: string) => detail && detail !== message)
             .join(". ");
         if (details) message = `${message}. Details: ${details}`;
     }
@@ -220,16 +224,14 @@ export function useCheckout(options: UseCheckoutOptions = {}) {
                     return;
                 }
                 console.warn("DEBUG: No shipping methods found in API response");
+                // Leave shippingMethods empty — do not auto-select until Magento returns
+                // real methods. Hardcoded fallbacks caused setShippingMethod to fire on
+                // empty/syncing carts, triggering the "empty cart" Magento error.
             } else {
                 const data = await res.json();
                 const errorMsg = formatMagentoError(data);
                 throw new Error(errorMsg);
             }
-            // Fallback if API returns nothing or fails
-            setShippingMethods([
-                { code: "flatrate_flatrate", carrierCode: "flatrate", methodCode: "flatrate", title: "Flat Rate", description: "Standard Delivery", price: 15.00, currency: "SAR" },
-                { code: "free_free", carrierCode: "free", methodCode: "free", title: "Free Shipping", description: "Orders over 500 SAR", price: 0, currency: "SAR" },
-            ]);
         } catch (err) {
             // Silently handle "empty cart" or generic retrieval errors during background fetch
             const msg = err instanceof Error ? err.message.toLowerCase() : "";
@@ -238,11 +240,8 @@ export function useCheckout(options: UseCheckoutOptions = {}) {
             } else {
                 console.error("Fetch Shipping Methods Error:", err);
             }
-            // Fallback if API returns nothing or fails
-            setShippingMethods([
-                { code: "flatrate_flatrate", carrierCode: "flatrate", methodCode: "flatrate", title: "Flat Rate", description: "Standard Delivery", price: 15.00, currency: "SAR" },
-                { code: "free_free", carrierCode: "free", methodCode: "free", title: "Free Shipping", description: "Orders over 500 SAR", price: 0, currency: "SAR" },
-            ]);
+            // Leave shippingMethods empty on error — auto-select must not fire until
+            // Magento returns valid methods for a cart that actually has items.
         }
     }, []);
 

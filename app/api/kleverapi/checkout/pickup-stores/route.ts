@@ -1,10 +1,9 @@
 import { NextResponse } from "next/server";
 import { getRequestToken } from "@/lib/api/auth-helper";
-import { PICKUP_LOCATIONS_QUERY } from "@/src/graphql/queries";
-import type { PickupLocationsData } from "@/src/graphql/types";
+import { getLocaleFromRequest } from "@/lib/api/magento-url";
+import { KLEVER_CHECKOUT_PICKUP_STORES_QUERY } from "@/src/graphql/queries";
+import type { KleverCheckoutPickupStoresData } from "@/src/graphql/types";
 import { graphqlFetch, isGraphQLRequestError } from "@/src/lib/graphqlFetch";
-
-const DEFAULT_COUNTRY = process.env.MAGENTO_DEFAULT_COUNTRY || "AE";
 
 export async function GET(req: Request) {
   try {
@@ -13,33 +12,20 @@ export async function GET(req: Request) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
 
-    const { searchParams } = new URL(req.url);
-    const countryCode = searchParams.get("country") || DEFAULT_COUNTRY;
-    const pageSize = Number(searchParams.get("pageSize") || "50");
-    const currentPage = Number(searchParams.get("currentPage") || "1");
+    const store = getLocaleFromRequest(req);
 
-    const data = await graphqlFetch<PickupLocationsData>({
-      query: PICKUP_LOCATIONS_QUERY,
-      variables: { countryCode, pageSize, currentPage },
+    const data = await graphqlFetch<KleverCheckoutPickupStoresData>({
+      query: KLEVER_CHECKOUT_PICKUP_STORES_QUERY,
       token,
+      store,
       cache: "no-store",
     });
 
-    const stores = data.pickupLocations.items.map((loc) => ({
-      store_id: loc.pickup_location_code,
-      name: loc.name,
-      address: loc.street,
-      city: loc.city,
-      country: loc.country_id,
-      postcode: loc.postcode,
-      latitude: loc.latitude,
-      longitude: loc.longitude,
-    }));
-    return NextResponse.json(stores, { status: 200 });
+    return NextResponse.json(data.kleverCheckoutPickupStores ?? [], { status: 200 });
   } catch (error) {
     if (isGraphQLRequestError(error)) {
       return NextResponse.json(
-        { message: error.message, errors: error.errors },
+        { message: error.message },
         { status: error.status >= 400 ? error.status : 500 },
       );
     }

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getRequestToken } from "@/lib/api/auth-helper";
+import { getLocaleFromRequest } from "@/lib/api/magento-url";
 import {
   CART_SHIPPING_METHODS_QUERY,
   CUSTOMER_CART_ID_QUERY,
@@ -12,11 +13,16 @@ import type {
 } from "@/src/graphql/types";
 import { graphqlFetch, isGraphQLRequestError } from "@/src/lib/graphqlFetch";
 
-async function resolveCartId(token: string, fallback: string | null): Promise<string | null> {
+async function resolveCartId(
+  token: string,
+  store: string | null,
+  fallback: string | null,
+): Promise<string | null> {
   if (fallback) return fallback;
   const idData = await graphqlFetch<CustomerCartIdData>({
     query: CUSTOMER_CART_ID_QUERY,
     token,
+    store,
     cache: "no-store",
   });
   return idData.customerCart?.id ?? null;
@@ -28,8 +34,9 @@ export async function GET(req: Request) {
     if (!token) {
       return NextResponse.json({ message: "Unauthorized: Invalid token format" }, { status: 401 });
     }
+    const store = getLocaleFromRequest(req);
     const { searchParams } = new URL(req.url);
-    const cartId = await resolveCartId(token, searchParams.get("cart_id"));
+    const cartId = await resolveCartId(token, store, searchParams.get("cart_id"));
     if (!cartId) {
       return NextResponse.json({ message: "No active cart found" }, { status: 404 });
     }
@@ -38,6 +45,7 @@ export async function GET(req: Request) {
       query: CART_SHIPPING_METHODS_QUERY,
       variables: { cartId },
       token,
+      store,
       cache: "no-store",
     });
 
@@ -47,8 +55,8 @@ export async function GET(req: Request) {
   } catch (error) {
     if (isGraphQLRequestError(error)) {
       return NextResponse.json(
-        { message: error.message, errors: error.errors },
-        { status: error.status >= 400 ? error.status : 500 },
+        { message: error.message },
+        { status: error.status >= 400 ? error.status : 422 },
       );
     }
     return NextResponse.json({ message: "Internal server error" }, { status: 500 });
@@ -72,7 +80,28 @@ export async function POST(req: Request) {
       );
     }
 
-    const cartId = await resolveCartId(token, body.cart_id ?? null);
+    const store = getLocaleFromRequest(req);
+
+    // Resolve cartId and validate cart is not empty before calling the mutation.
+    // Magento rejects setShippingMethodsOnCart with a 422 if total_quantity === 0.
+    let cartId: string | null = body.cart_id ?? null;
+    if (!cartId) {
+      const idData = await graphqlFetch<CustomerCartIdData>({
+        query: CUSTOMER_CART_ID_QUERY,
+        token,
+        store,
+        cache: "no-store",
+      });
+      const cartData = idData.customerCart;
+      cartId = cartData?.id ?? null;
+      if (cartId && cartData && (cartData.total_quantity === 0 || cartData.items.length === 0)) {
+        console.warn("[shipping-methods/POST] Cart is empty — refusing to set shipping method");
+        return NextResponse.json(
+          { message: "Your cart is empty. Please add items before checkout." },
+          { status: 400 },
+        );
+      }
+    }
     if (!cartId) {
       return NextResponse.json({ message: "No active cart found" }, { status: 404 });
     }
@@ -81,6 +110,7 @@ export async function POST(req: Request) {
       query: SET_SHIPPING_METHODS_ON_CART_MUTATION,
       variables: { cartId, carrierCode, methodCode },
       token,
+      store,
       cache: "no-store",
     });
 
@@ -88,8 +118,8 @@ export async function POST(req: Request) {
   } catch (error) {
     if (isGraphQLRequestError(error)) {
       return NextResponse.json(
-        { message: error.message, errors: error.errors },
-        { status: error.status >= 400 ? error.status : 500 },
+        { message: error.message },
+        { status: error.status >= 400 ? error.status : 422 },
       );
     }
     return NextResponse.json({ message: "Internal server error" }, { status: 500 });

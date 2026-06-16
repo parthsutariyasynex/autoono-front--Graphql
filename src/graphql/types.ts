@@ -431,6 +431,7 @@ export interface CustomerCartData {
 export interface CustomerCartIdData {
   customerCart: {
     id: string;
+    total_quantity: number;
     items: Array<{ id: string | number }>;
   } | null;
 }
@@ -1124,6 +1125,28 @@ export interface KleverCheckoutPoRemoveFileData {
 
 export interface KleverCheckoutSetShippingExtrasData {
   kleverCheckoutSetShippingExtras: boolean | string | null;
+}
+
+export interface KleverCheckoutPickupStore {
+  store_id: number | string;
+  name: string | null;
+  address: string | null;
+  postcode: string | null;
+  region: string | null;
+  region_id: number | null;
+  country_id: string | null;
+  country: string | null;
+  phone: string | null;
+  email: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  image_url: string | null;
+  opening_hours: string | null;
+  special_opening_hours: string | null;
+}
+
+export interface KleverCheckoutPickupStoresData {
+  kleverCheckoutPickupStores: KleverCheckoutPickupStore[];
 }
 
 export interface KleverCheckoutPickupTimeSlotsData {

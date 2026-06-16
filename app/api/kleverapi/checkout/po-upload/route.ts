@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getRequestToken } from "@/lib/api/auth-helper";
+import { getLocaleFromRequest } from "@/lib/api/magento-url";
 import { KLEVER_CHECKOUT_PO_FILES_QUERY } from "@/src/graphql/queries";
 import { KLEVER_CHECKOUT_PO_UPLOAD_MUTATION } from "@/src/graphql/mutations";
 import type {
@@ -14,12 +15,15 @@ export async function GET(req: Request) {
     if (!token) {
       return NextResponse.json({ message: "Unauthorized: Invalid token format" }, { status: 401 });
     }
+    const store = getLocaleFromRequest(req);
     const data = await graphqlFetch<KleverCheckoutPoFilesData>({
       query: KLEVER_CHECKOUT_PO_FILES_QUERY,
       token,
+      store,
       cache: "no-store",
     });
     const raw = data.kleverCheckoutPoFiles;
+    console.log("[po-upload/GET] raw kleverCheckoutPoFiles:", JSON.stringify(raw));
     let files: unknown = raw;
     if (typeof raw === "string") {
       try {
@@ -28,12 +32,13 @@ export async function GET(req: Request) {
         files = raw ? [{ name: raw }] : [];
       }
     }
+    console.log("[po-upload/GET] parsed files:", JSON.stringify(files));
     return NextResponse.json(files ?? [], { status: 200 });
   } catch (error) {
     if (isGraphQLRequestError(error)) {
       return NextResponse.json(
-        { message: error.message, errors: error.errors },
-        { status: error.status >= 400 ? error.status : 500 },
+        { message: error.message },
+        { status: error.status >= 400 ? error.status : 422 },
       );
     }
     return NextResponse.json({ message: "Internal server error" }, { status: 500 });
@@ -49,27 +54,66 @@ export async function POST(req: Request) {
     const body = await req.json();
     const fileName = body.fileName ?? body.file_name ?? body.name;
     const fileContent = body.fileContent ?? body.file_content ?? body.content ?? body.base64;
-    const type = body.type ?? body.fileType ?? null;
+    // Only include type when the client explicitly sends a non-null value.
+    // Sending type: null as a GraphQL variable can cause Magento to reject the mutation
+    // depending on how the Klever module validates its inputs server-side.
+    const type: string | undefined = body.type ?? body.fileType ?? undefined;
+
     if (!fileName || !fileContent) {
       return NextResponse.json(
         { message: "fileName and fileContent (base64) are required" },
         { status: 400 },
       );
     }
+
+    const store = getLocaleFromRequest(req);
+
+    console.log("[po-upload] POST store:", store, "fileName:", fileName, "contentLength:", String(fileContent).length);
+
+    const variables: Record<string, unknown> = { fileName, fileContent };
+    if (type) variables.type = type;
+
     const data = await graphqlFetch<KleverCheckoutPoUploadData>({
       query: KLEVER_CHECKOUT_PO_UPLOAD_MUTATION,
-      variables: { fileName, fileContent, type },
+      variables,
       token,
+      store,
       cache: "no-store",
     });
-    return NextResponse.json(
-      { success: data.kleverCheckoutPoUpload !== false, fileName },
-      { status: 200 },
-    );
-  } catch (error) {
-    if (isGraphQLRequestError(error)) {
+
+    console.log("[po-upload] Magento kleverCheckoutPoUpload:", data.kleverCheckoutPoUpload);
+
+    // Treat only an explicit truthy response as success.
+    // null, false, 0, "" are all treated as failure.
+    const uploadResult = data.kleverCheckoutPoUpload;
+    const success = uploadResult !== false && uploadResult !== null && uploadResult !== "";
+
+    if (!success) {
+      console.warn("[po-upload] Magento returned falsy result for kleverCheckoutPoUpload:", uploadResult);
       return NextResponse.json(
-        { message: error.message, errors: error.errors },
+        { success: false, message: "File upload was rejected by the server. Please try again." },
+        { status: 400 },
+      );
+    }
+
+    // If Magento returned a non-trivial string (not "true"/"1"/empty), it is the backend
+    // file reference (stored path or name) that must be used when calling the remove mutation.
+    // The caller must store this and pass it back for deletion instead of the display name.
+    const backendRef =
+      typeof uploadResult === "string" && uploadResult !== "true" && uploadResult !== "1"
+        ? uploadResult
+        : fileName;
+
+    console.log("[po-upload] success — fileName:", fileName, "backendRef:", backendRef);
+
+    return NextResponse.json({ success: true, fileName, backendRef }, { status: 200 });
+  } catch (error) {
+    console.error("[po-upload] POST error:", error);
+    if (isGraphQLRequestError(error)) {
+      // Don't forward the raw errors array to the client — it duplicates the message
+      // (Magento surfaces the same text in both error.message and errors[0].message).
+      return NextResponse.json(
+        { message: error.message },
         { status: error.status >= 400 ? error.status : 500 },
       );
     }

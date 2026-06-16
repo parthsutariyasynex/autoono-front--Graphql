@@ -56,6 +56,7 @@ export interface Cart {
 interface CartContextType {
   cart: Cart | null;
   isLoading: boolean;
+  isCartSyncing: boolean;
   error: string | null;
   addToCart: (sku: string, qty: number) => Promise<void>;
   updateCartItem: (itemId: number, qty: number) => Promise<void>;
@@ -92,6 +93,7 @@ export function getWarehouseKey(storeCode: string): string {
 export function CartProvider({ children }: { children: ReactNode }) {
   const [cart, setCart] = useState<Cart | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isCartSyncing, setIsCartSyncing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const pathname = usePathname();
@@ -272,6 +274,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
       console.log(`[CartSync] Warehouse switch: ${lastSynced || "none"} → ${activeKey}`);
       const pathLocale = window.location.pathname.startsWith("/ar") ? "ar" : "en";
 
+      // Signal to checkout that cart contents are being swapped — APIs that require
+      // an active cart (set shipping method, PO upload/delete) must wait.
+      setIsCartSyncing(true);
       try {
         // Steps 1+2 combined: one fetch to snapshot + clear the previous warehouse cart.
         // Avoids the previous pattern of fetching the same cart twice (once to save,
@@ -368,6 +373,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         else localStorage.removeItem("current_synced_cart_storecode");
       } finally {
         isSyncing.current = false;
+        setIsCartSyncing(false);
         setIsLoading(false);
         await fetchCart(false);
         window.dispatchEvent(new Event("cart-updated"));
@@ -721,6 +727,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       value={{
         cart,
         isLoading,
+        isCartSyncing,
         error,
         addToCart,
         updateCartItem,
