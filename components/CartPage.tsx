@@ -21,7 +21,7 @@ const CartPage: React.FC = () => {
     const { t } = useTranslation();
     const lp = useLocalePath();
     const { openGiftModal, availableGifts, hasGifts, isAllGiftsSelected, fetchDiscountPopup } = useGift();
-    const { cart, isLoading, error, removeFromCart, updateCartItem, clearCart, refetchCart } = useCart();
+    const { cart, isLoading, isCartSyncing, error, removeFromCart, updateCartItem, clearCart, refetchCart } = useCart();
     const [pendingQtys, setPendingQtys] = React.useState<Record<number, number>>({});
     const [isClearingCart, setIsClearingCart] = React.useState(false);
 
@@ -99,11 +99,11 @@ const CartPage: React.FC = () => {
         }
     };
 
-    // Show skeleton while loading OR before the first fetch resolves (cart === null).
-    // Without the `cart === null` guard, the initial mount falls through to the
-    // `!hasItems` branch and flashes the "empty cart" UI for one frame before
-    // useEffect triggers the fetch and flips isLoading to true.
-    if (isLoading || cart === null) {
+    // Show skeleton while loading, syncing (warehouse switch in progress), or before
+    // the first fetch resolves. Without the isCartSyncing guard, switching warehouses
+    // can cause a brief "empty cart" flash because refetchCart() runs concurrently
+    // with the sync and may fetch the cart before items are restored to the backend.
+    if (isLoading || isCartSyncing || cart === null) {
         return <CartPageSkeleton items={3} />;
     }
 

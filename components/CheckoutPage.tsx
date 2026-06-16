@@ -1121,12 +1121,45 @@ const CheckoutPageUI: React.FC = () => {
         );
     }
 
+    // Use kleverCheckoutTotals when the API returns meaningful non-zero values.
+    // The ?? operator does NOT catch 0 — if Magento returns subtotal/grand_total as 0
+    // (common for some store configurations before a shipping address is fully committed),
+    // we must fall back to cart values so the Order Summary never shows 0.00 when
+    // the cart has products.
+    const totalsHaveData = totals != null && (
+        Number(totals.grand_total) > 0 || Number(totals.subtotal) > 0
+    );
+
+    // Item-sum fallback: recalculate subtotal from cart items when both the totals
+    // API and cart.subtotal come back as 0 (e.g. Magento pricing module issue for a
+    // specific warehouse on initial load).
+    const itemsFallbackSubtotal = cart.items.reduce(
+        (sum, i) => sum + i.row_total, 0
+    );
+    const cartSubtotal = cart.subtotal > 0 ? cart.subtotal : itemsFallbackSubtotal;
+    const cartGrandTotal = cart.grand_total > 0
+        ? cart.grand_total
+        : cartSubtotal + (cart.tax_amount ?? 0);
+
+    const dtSubtotal = totalsHaveData ? totals!.subtotal : cartSubtotal;
+    const dtTax = totalsHaveData ? totals!.tax_amount : (cart.tax_amount ?? 0);
+    const dtShipping = totalsHaveData ? (totals!.shipping_amount ?? 0) : (cart.shipping_amount ?? 0);
+    const dtDiscount = totalsHaveData ? (totals!.discount_amount ?? 0) : (cart.discount_amount ?? 0);
+    // grand_total from totals can be 0 even when subtotal is valid (e.g. pre-shipping-selection).
+    // Compute from the other display fields in that case so it's never shown as 0.
+    const dtGrandFromApi = totalsHaveData ? totals!.grand_total : null;
+    const dtGrand = (dtGrandFromApi != null && dtGrandFromApi > 0)
+        ? dtGrandFromApi
+        : dtSubtotal > 0
+        ? dtSubtotal + dtTax + dtShipping - dtDiscount
+        : cartGrandTotal;
+
     const displayTotals = {
-        subtotal: totals?.subtotal ?? cart.subtotal,
-        tax_amount: totals?.tax_amount ?? cart.tax_amount,
-        shipping_amount: totals?.shipping_amount ?? 0,
-        grand_total: totals?.grand_total ?? cart.grand_total,
-        discount_amount: totals?.discount_amount ?? 0,
+        subtotal: dtSubtotal,
+        tax_amount: dtTax,
+        shipping_amount: dtShipping,
+        grand_total: dtGrand,
+        discount_amount: dtDiscount,
     };
 
     return (
@@ -1838,7 +1871,10 @@ const CheckoutPageUI: React.FC = () => {
                                                                 >
                                                                     <div className="text-center px-6">
                                                                         <p className="text-h3 text-black font-bold mb-3 tracking-tight">
-                                                                            {isPaymentCommitmentUploading ? t("checkout.uploading") || "Uploading..." : t("m.drop-files-here")}
+                                                                            {/* {isPaymentCommitmentUploading ? t("checkout.uploading") || "Uploading..." : t("m.drop-files-here")} */}
+                                                                            {/* Placeholder - replace with actual translation key */}
+                                                                            {isPaymentCommitmentUploading ? "Drop Files Here" : "Drop Files Here"}
+
                                                                         </p>
                                                                         <p className="text-body-lg text-black/80 font-medium">
                                                                             {t("m.allowed-file-types")} : jpg,jpeg,png,zip,rar,docx,doc,pdf,xls,xlsx,csv,msg

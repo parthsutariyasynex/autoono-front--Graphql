@@ -138,14 +138,15 @@ export function useCheckout(options: UseCheckoutOptions = {}) {
                     currency_code: data.currency_code || "SAR"
                 };
                 console.log("[fetchTotals] mappedTotals:", JSON.stringify(mappedTotals));
-                // Only apply totals when Magento returned meaningful data.
-                // If kleverCheckoutTotals was null (no active quote / no shipping address),
-                // the route returns {} which maps to all-zeros — leave totals as null so
-                // the UI falls back to cart values instead of showing 0.00 everywhere.
-                if (data.cart_id || mappedTotals.subtotal > 0 || mappedTotals.grand_total > 0) {
+                // Only apply totals when Magento returned meaningful price data.
+                // cart_id alone is not sufficient — Magento can return a valid cart_id
+                // with subtotal=0 / grand_total=0 for certain warehouse configurations.
+                // In that case leave totals as null so the CheckoutPage's displayTotals
+                // logic falls back to cart values (never shows 0.00 when cart has items).
+                if (mappedTotals.subtotal > 0 || mappedTotals.grand_total > 0) {
                     setTotals(mappedTotals);
                 } else {
-                    console.log("[fetchTotals] Magento returned empty/null totals — keeping previous totals to avoid showing 0");
+                    console.log("[fetchTotals] Magento returned zero/null totals — skipping setTotals, UI will fall back to cart values");
                 }
             }
         } catch (err) {

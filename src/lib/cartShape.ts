@@ -55,11 +55,28 @@ export function reshapeCustomerCart(cart: CustomerCart): KleverCartShape {
   const appliedTaxes = cart.prices?.applied_taxes ?? [];
   const taxAmount = appliedTaxes.reduce((sum, t) => sum + (t.amount.value || 0), 0);
   const taxLabel = appliedTaxes[0]?.label || "Tax";
-  const subtotal =
+  // Use ?? to get the raw value (distinguishes "not present" from 0), then fall back
+  // to items sum when the API returns an explicit 0 but items have row_total > 0.
+  // The ?? operator alone is insufficient — Magento can return subtotal_excluding_tax: 0
+  // for certain store configurations even when the cart contains priced items.
+  const subtotalFromApi =
     cart.prices?.subtotal_excluding_tax?.value ??
-    cart.prices?.subtotal_including_tax?.value ??
-    items.reduce((sum, i) => sum + i.row_total, 0);
-  const grandTotal = cart.prices?.grand_total.value ?? subtotal;
+    cart.prices?.subtotal_including_tax?.value;
+  const itemsTotal = items.reduce((sum, i) => sum + i.row_total, 0);
+  const subtotal =
+    subtotalFromApi != null && subtotalFromApi > 0
+      ? subtotalFromApi
+      : itemsTotal > 0
+      ? itemsTotal
+      : (subtotalFromApi ?? 0);
+
+  const grandTotalFromApi = cart.prices?.grand_total.value;
+  const grandTotal =
+    grandTotalFromApi != null && grandTotalFromApi > 0
+      ? grandTotalFromApi
+      : grandTotalFromApi === 0 && subtotal > 0
+      ? subtotal
+      : (grandTotalFromApi ?? subtotal);
   const currency = cart.prices?.grand_total.currency ?? "SAR";
   const shippingAmount = cart.shipping_addresses?.[0]?.selected_shipping_method?.amount.value ?? 0;
 

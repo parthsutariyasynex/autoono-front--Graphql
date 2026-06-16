@@ -21,7 +21,10 @@ export async function GET(req: Request) {
       cache: "no-store",
     });
 
+    console.log(`[cart/GET] x-store-code: "${storeCode ?? ""}" customerCart: ${data.customerCart ? "present" : "null"}`);
+
     if (!data.customerCart) {
+      console.log(`[cart/GET] no customerCart — returning empty cart for store: "${storeCode ?? ""}"`);
       return NextResponse.json({
         cart_id: "",
         items_count: 0,
@@ -35,7 +38,9 @@ export async function GET(req: Request) {
       });
     }
 
-    return NextResponse.json(reshapeCustomerCart(data.customerCart));
+    const shaped = reshapeCustomerCart(data.customerCart);
+    console.log(`[cart/GET] store: "${storeCode ?? ""}" items: ${shaped.items.length} subtotal: ${shaped.subtotal} tax: ${shaped.tax_amount} grand_total: ${shaped.grand_total} currency: ${shaped.currency_code}`);
+    return NextResponse.json(shaped);
   } catch (error) {
     if (isGraphQLRequestError(error)) {
       return NextResponse.json(

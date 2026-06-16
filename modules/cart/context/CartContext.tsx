@@ -175,11 +175,22 @@ export function CartProvider({ children }: { children: ReactNode }) {
       }));
       console.log(`[CartFetch] rawItems=${rawItems.length} mappedItems=${items.length} skus=${JSON.stringify(items.map(i => i.sku))}`);
 
-      const subtotal = Number(data.subtotal ?? data.cart?.subtotal ?? 0);
+      // Use items sum as fallback when the API returns subtotal=0 but items have value.
+      // The ?? operator does not catch 0 — Magento can return subtotal_excluding_tax: 0
+      // for some store configurations even when the cart has priced items, causing the
+      // Order Summary to display 0.00 for all line items.
+      const apiSubtotal = Number(data.subtotal ?? data.cart?.subtotal ?? 0);
+      const itemsSubtotal = items.reduce((sum: number, i: CartItem) => sum + i.row_total, 0);
+      const subtotal = apiSubtotal > 0 ? apiSubtotal : itemsSubtotal;
+
       const tax_amount = Number(data.tax_amount ?? data.cart?.tax_amount ?? 0);
       const tax_label = data.tax_label ?? data.cart?.tax_label ?? "Tax";
       const shipping_amount = Number(data.shipping_amount ?? data.cart?.shipping_amount ?? 0);
-      const grand_total = Number(data.grand_total ?? data.cart?.grand_total ?? subtotal);
+
+      // Similarly, prefer API grand_total when positive. When it comes back as 0
+      // but subtotal > 0, use subtotal + tax as the best available estimate.
+      const apiGrandTotal = Number(data.grand_total ?? data.cart?.grand_total ?? 0);
+      const grand_total = apiGrandTotal > 0 ? apiGrandTotal : (subtotal > 0 ? subtotal + tax_amount : 0);
       const currency_code = data.currency_code ?? data.cart?.currency_code ?? "SAR";
       // Magento's kleverapi/cart does not return a discount field directly.
       // Derive it from the totals: discount = subtotal + tax - grand_total (0 when no discount)
@@ -373,9 +384,14 @@ export function CartProvider({ children }: { children: ReactNode }) {
         else localStorage.removeItem("current_synced_cart_storecode");
       } finally {
         isSyncing.current = false;
-        setIsCartSyncing(false);
         setIsLoading(false);
+        // Fetch final cart state BEFORE clearing isCartSyncing.
+        // CartPage uses isCartSyncing as a skeleton guard — clearing it before the
+        // fetch completes causes a brief flash of empty/stale cart (Order Summary
+        // disappears then reappears). Keeping it true until we have correct data
+        // means the skeleton stays visible until the page can render properly.
         await fetchCart(false);
+        setIsCartSyncing(false);
         window.dispatchEvent(new Event("cart-updated"));
       }
     };
