@@ -1182,10 +1182,10 @@ const CheckoutPageUI: React.FC = () => {
                     </div>
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 md:gap-6 lg:gap-8 items-start">
+                <div className="grid grid-cols-1 xl:grid-cols-12 gap-4 md:gap-6 lg:gap-8 items-start">
 
                     {/* ═══════════ Left Column ═══════════ */}
-                    <div className="lg:col-span-9 space-y-3">
+                    <div className="xl:col-span-9 space-y-3">
 
                         <div className="bg-white border border-[#ddd] rounded-sm overflow-hidden transition-all duration-300">
                             <SectionHeader title={t("checkout.shippingAddress")} step={1} />
@@ -1933,7 +1933,7 @@ const CheckoutPageUI: React.FC = () => {
                     </div>
 
                     {/* ═══════════ Right Column (Order Summary) ═══════════ */}
-                    <div className="lg:col-span-3 space-y-6">
+                    <div className="xl:col-span-3 space-y-6">
                         <div className="sticky top-24 overflow-hidden bg-white border border-[#ddd] rounded-sm overflow-hidden transition-all duration-300">
                             {/* Header exactly as per image */}
                             <div className="bg-gray-50/80 p-3 border-b border-[#ddd] flex items-center gap-2.5 h-[50px]">

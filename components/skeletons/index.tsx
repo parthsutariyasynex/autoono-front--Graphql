@@ -380,9 +380,9 @@ export function CheckoutSkeleton() {
         </div>
 
         {/* 12-col grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 md:gap-6 lg:gap-8 items-start">
+        <div className="grid grid-cols-1 xl:grid-cols-12 gap-4 md:gap-6 lg:gap-8 items-start">
           {/* Left column — 4 section cards */}
-          <div className="lg:col-span-8 space-y-3">
+          <div className="xl:col-span-8 space-y-3">
             {/* 1. Shipping Address — list of address cards */}
             <SectionCard>
               <div className="space-y-3 max-h-[460px] overflow-hidden">
@@ -431,7 +431,7 @@ export function CheckoutSkeleton() {
           </div>
 
           {/* Right column — sticky Order Summary */}
-          <div className="lg:col-span-4 space-y-6">
+          <div className="xl:col-span-4 space-y-6">
             <div className="bg-white border border-[#ddd] shadow-lg rounded-sm sticky top-24 overflow-hidden">
               {/* Header: black check circle + title */}
               <div className="bg-gray-50 px-4 sm:px-6 py-3 sm:py-4 flex items-center gap-2 sm:gap-3 border-b border-[#ddd]">
