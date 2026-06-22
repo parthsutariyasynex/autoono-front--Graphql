@@ -34,7 +34,7 @@ import toast from "react-hot-toast";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import DatePicker from "react-datepicker";
-import "react-datepicker/dist/react-datepicker.css";
+import "react-datepicker/dist/react-datepicker.css"; 
 import Price from "@/app/components/Price";
 
 
@@ -102,13 +102,15 @@ const CheckoutPageUI: React.FC = () => {
     const [paymentMethod, setPaymentMethod] = useState("checkmo");
     const [isPlacingOrder, setIsPlacingOrder] = useState(false);
     const [isPoUploadOpen, setIsPoUploadOpen] = useState(false);
-    const [uploadedPOs, setUploadedPOs] = useState<{ fileName: string }[]>([]);
+    const [uploadedPOs, setUploadedPOs] = useState<{ fileName: string; backendRef: string }[]>([]);
     const [isUploading, setIsUploading] = useState(false);
     const [dragActive, setDragActive] = useState(false);
+    const [dragActivePC, setDragActivePC] = useState(false);
     const [isPaymentCommitmentOpen, setIsPaymentCommitmentOpen] = useState(false);
     const [isItemsListOpen, setIsItemsListOpen] = useState(true);
     const [isWarehouseModalOpen, setIsWarehouseModalOpen] = useState(false);
-    const [paymentCommitmentFile, setPaymentCommitmentFile] = useState<File | null>(null);
+    const [uploadedPaymentCommitments, setUploadedPaymentCommitments] = useState<{ fileName: string; backendRef: string }[]>([]);
+    const [isPaymentCommitmentUploading, setIsPaymentCommitmentUploading] = useState(false);
     const [tempSelectedWarehouse, setTempSelectedWarehouse] = useState<{ id: string; name: string } | null>(null);
 
     // Pickup Form States
@@ -127,6 +129,9 @@ const CheckoutPageUI: React.FC = () => {
     const dateRef = useRef<HTMLDivElement>(null);
     const datePickerRef = useRef<any>(null);
     const isCompletingOrderRef = useRef(false);
+    // Tracks whether the payment method was explicitly chosen (from localStorage restore
+    // or a user click). Prevents background API refreshes from overriding the choice.
+    const paymentMethodSetRef = useRef(false);
 
     // New Address Form State
     const [showNewAddressForm, setShowNewAddressForm] = useState(false);
@@ -144,6 +149,22 @@ const CheckoutPageUI: React.FC = () => {
     const [isAddingAddress, setIsAddingAddress] = useState(false);
 
     // Close dropdowns on click outside
+    // Restore selected payment method from localStorage on mount
+    useEffect(() => {
+        const stored = localStorage.getItem("checkout_payment_method");
+        if (stored) {
+            paymentMethodSetRef.current = true;
+            setPaymentMethod(stored);
+        }
+    }, []);
+
+    // Persist payment method to localStorage whenever it changes
+    useEffect(() => {
+        if (paymentMethod) {
+            localStorage.setItem("checkout_payment_method", paymentMethod);
+        }
+    }, [paymentMethod]);
+
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
             if (timeRef.current && !timeRef.current.contains(event.target as Node)) {
@@ -303,30 +324,185 @@ const CheckoutPageUI: React.FC = () => {
     }, [isCheckoutLoading, addresses, router, lp]);
 
     // Auto-select a payment method when the list loads.
-    // Match the live site which defaults to Credit Account for single-shipping checkout.
+    // Auto-select a default payment method when the list first loads.
+    // Never override when the user (or localStorage restore) has already made a choice —
+    // background refreshes from setShippingAddress / fetchPaymentMethods can return
+    // partial lists that temporarily exclude a valid method like banktransfer.
     useEffect(() => {
         if (paymentMethods.length > 0) {
             const isValid = paymentMethods.some(m => m.code === paymentMethod);
-            if (!isValid) {
+            if (!isValid && !paymentMethodSetRef.current) {
                 const credit = paymentMethods.find(m => m.code === 'creditaccount' || m.code === 'credit_account');
                 setPaymentMethod(credit ? credit.code : paymentMethods[0].code);
             }
         }
     }, [paymentMethods, paymentMethod]);
 
-    const handlePaymentCommitmentChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (e.target.files && e.target.files[0]) {
-            setPaymentCommitmentFile(e.target.files[0]);
-            toast.success(t("checkout.fileSelected"));
+    const handlePaymentCommitmentUpload = async (e: React.ChangeEvent<HTMLInputElement> | React.DragEvent) => {
+        let files: File[] = [];
+        if ("files" in e.target && e.target.files) {
+            files = Array.from(e.target.files);
+        } else if ("dataTransfer" in e && e.dataTransfer.files) {
+            files = Array.from(e.dataTransfer.files);
+        }
+        if (files.length === 0) return;
+        const validFiles = files.filter(validateFile);
+        if (validFiles.length === 0) return;
+
+        setIsPaymentCommitmentUploading(true);
+        const justUploadedFileNames = new Set<string>();
+        try {
+            for (const file of validFiles) {
+                if (uploadedPaymentCommitments.some(p => p.fileName === file.name)) {
+                    toast.error(t("checkout.fileAlreadyUploaded").replace("{0}", file.name));
+                    continue;
+                }
+                const base64Content = await new Promise<string>((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.readAsDataURL(file);
+                    reader.onload = () => resolve((reader.result as string).split(",")[1]);
+                    reader.onerror = reject;
+                });
+                const result = await (uploadPoFile as any)({ fileContent: base64Content, fileName: file.name });
+                if (result && result.success === false) {
+                    throw new Error(result.message || t("checkout.uploadFailed"));
+                }
+                const backendRef: string = result?.backendRef || file.name;
+                justUploadedFileNames.add(file.name);
+                // Persist the type-marker so this file is restored to the Bank Transfer
+                // section (not the PO section) after a page refresh.
+                // Store both file.name and backendRef — Magento may sanitize/rename the
+                // file so having multiple aliases ensures the match succeeds on reload.
+                try {
+                    const raw = localStorage.getItem('checkout_pc_file_names');
+                    const pcNames: string[] = raw ? JSON.parse(raw) : [];
+                    let lsChanged = false;
+                    for (const marker of [file.name, backendRef]) {
+                        if (marker && !pcNames.includes(marker)) {
+                            pcNames.push(marker);
+                            lsChanged = true;
+                        }
+                    }
+                    if (lsChanged) localStorage.setItem('checkout_pc_file_names', JSON.stringify(pcNames));
+                } catch { /* ignore */ }
+                setUploadedPaymentCommitments(prev => [...prev, { fileName: file.name, backendRef }]);
+                toast.success(t("checkout.uploaded").replace("{0}", file.name));
+            }
+
+            // Refresh from Magento to normalize backendRef for just-uploaded files
+            if (justUploadedFileNames.size > 0) {
+                try {
+                    const freshData = await getPoUpload();
+                    let filesArray: any[] = [];
+                    if (Array.isArray(freshData)) filesArray = freshData;
+                    else if (freshData?.files && Array.isArray(freshData.files)) filesArray = freshData.files;
+                    else if (freshData?.data && Array.isArray(freshData.data)) filesArray = freshData.data;
+                    else if (freshData && (freshData.fileName || freshData.filename || freshData.file)) filesArray = [freshData];
+                    if (filesArray.length > 0) {
+                        const normalized: { fileName: string; backendRef: string }[] = filesArray.map((item: any) => {
+                            if (typeof item === "string") return { fileName: item, backendRef: item };
+                            const fn = item.fileName || item.filename || item.file_name || item.name || t("checkout.unknownFile");
+                            const br = item.file || item.path || item.stored_name || item.file_path ||
+                                item.file_name || item.filename || item.fileName || item.name || fn;
+                            return { fileName: fn, backendRef: br };
+                        });
+                        // Sync localStorage with Magento's canonical identifiers so that
+                        // page-refresh matching is reliable even if Magento prefixes a path
+                        // (e.g. returns "/media/klever/po_files/receipt.pdf" for "receipt.pdf").
+                        // Use basename matching so a path-prefixed name still links to the
+                        // original plain filename that was written to localStorage at upload time.
+                        const pcBn = (s: string) => (s.split('/').pop() ?? s).split('?')[0];
+                        try {
+                            const raw = localStorage.getItem('checkout_pc_file_names');
+                            const pcNames: string[] = raw ? JSON.parse(raw) : [];
+                            let lsChanged = false;
+                            for (const originalName of justUploadedFileNames) {
+                                const origBn = pcBn(originalName);
+                                const magentoEntry = normalized.find(
+                                    n => n.fileName === originalName || n.backendRef === originalName
+                                        || pcBn(n.fileName) === origBn || pcBn(n.backendRef) === origBn
+                                );
+                                if (magentoEntry) {
+                                    // Store all aliases: the path, the basename, and the backendRef
+                                    for (const alias of [
+                                        magentoEntry.fileName,
+                                        magentoEntry.backendRef,
+                                        pcBn(magentoEntry.fileName),
+                                        pcBn(magentoEntry.backendRef),
+                                    ]) {
+                                        if (alias && !pcNames.includes(alias)) {
+                                            pcNames.push(alias);
+                                            lsChanged = true;
+                                        }
+                                    }
+                                }
+                            }
+                            if (lsChanged) localStorage.setItem('checkout_pc_file_names', JSON.stringify(pcNames));
+                        } catch { /* ignore */ }
+                        setUploadedPaymentCommitments(prev => {
+                            // Update backendRef for just-uploaded files using Magento data; keep other files as-is.
+                            // Use basename matching in case Magento returned a path-prefixed name.
+                            const updated = prev.map(p => {
+                                if (justUploadedFileNames.has(p.fileName)) {
+                                    const pBn = pcBn(p.fileName);
+                                    const magentoEntry = normalized.find(
+                                        n => n.fileName === p.fileName || n.backendRef === p.backendRef
+                                            || pcBn(n.fileName) === pBn || pcBn(n.backendRef) === pBn
+                                    );
+                                    // Keep the user-visible fileName unchanged; only update backendRef
+                                    // to Magento's canonical path (used for the delete call).
+                                    if (magentoEntry) return { fileName: p.fileName, backendRef: magentoEntry.backendRef };
+                                }
+                                return p;
+                            });
+                            // Deduplicate by backendRef
+                            const seen = new Set<string>();
+                            return updated.filter(f => {
+                                if (seen.has(f.backendRef)) return false;
+                                seen.add(f.backendRef);
+                                return true;
+                            });
+                        });
+                    }
+                } catch {
+                    console.warn("[handlePaymentCommitmentUpload] failed to refresh payment commitment file list");
+                }
+            }
+        } catch (error: any) {
+            toast.error(error.message || t("checkout.uploadFailed"));
+        } finally {
+            setIsPaymentCommitmentUploading(false);
+            if (paymentCommitmentRef.current) paymentCommitmentRef.current.value = "";
         }
     };
 
-    const removePaymentCommitment = () => {
-        setPaymentCommitmentFile(null);
-        if (paymentCommitmentRef.current) {
-            paymentCommitmentRef.current.value = "";
+    const removePaymentCommitment = async (backendRef: string) => {
+        // Capture the display fileName before any async work so the localStorage
+        // marker can be cleaned up regardless of when the finally block runs.
+        const entryToRemove = uploadedPaymentCommitments.find(f => f.backendRef === backendRef);
+        setIsPaymentCommitmentUploading(true);
+        try {
+            await deletePoFile(backendRef);
+        } catch (err: any) {
+            // Log the Magento error but do not block the UI removal —
+            // the file may already be gone or the identifier may be mismatched.
+            console.warn("[removePaymentCommitment] Magento delete error:", err?.message);
+        } finally {
+            if (entryToRemove) {
+                try {
+                    const raw = localStorage.getItem('checkout_pc_file_names');
+                    const pcNames: string[] = raw ? JSON.parse(raw) : [];
+                    // Remove all aliases (fileName and backendRef) stored for this file
+                    const updated = pcNames.filter(
+                        n => n !== entryToRemove.fileName && n !== entryToRemove.backendRef
+                    );
+                    localStorage.setItem('checkout_pc_file_names', JSON.stringify(updated));
+                } catch { /* ignore */ }
+            }
+            setUploadedPaymentCommitments(prev => prev.filter(f => f.backendRef !== backendRef));
+            setIsPaymentCommitmentUploading(false);
+            toast.success(t("checkout.fileRemoveSuccess"));
         }
-        toast.success(t("checkout.fileRemoved"));
     };
 
     // Auto-select shipping method when they become available or when type changes
@@ -343,7 +519,8 @@ const CheckoutPageUI: React.FC = () => {
                 false;
 
             if (method && (!selectedShippingMethodCode || !isCorrectType)) {
-                // Only sync if address is confirmed on backend, cart has items, and not loading
+                // Do not auto-set shipping while cart sync is in progress — Magento
+                // rejects "set shipping method" on an empty quote (mid-warehouse-switch).
                 if (isAddressSetOnBackend && !isTotalsLoading && cart && cart.items.length > 0) {
                     console.log("DEBUG: Auto-selecting shipping method:", method.code, "for type:", shippingType);
                     setSelectedShippingMethodCode(method.code);
@@ -365,7 +542,7 @@ const CheckoutPageUI: React.FC = () => {
                 console.log("DEBUG: PO Upload Data:", data);
 
                 // Handle common response formats
-                let filesArray = [];
+                let filesArray: any[] = [];
                 if (Array.isArray(data)) {
                     filesArray = data;
                 } else if (data && Array.isArray(data.files)) {
@@ -376,14 +553,65 @@ const CheckoutPageUI: React.FC = () => {
                     filesArray = [data];
                 }
 
-                const normalized = filesArray.map((item: any) => {
-                    if (typeof item === 'string') return { fileName: item };
-                    return {
-                        fileName: item.fileName || item.filename || item.file_name || item.name || item.file || t("checkout.unknownFile")
-                    };
+                const normalized: { fileName: string; backendRef: string }[] = filesArray.map((item: any) => {
+                    if (typeof item === 'string') return { fileName: item, backendRef: item };
+                    const fileName = item.fileName || item.filename || item.file_name || item.name || t("checkout.unknownFile");
+                    const backendRef =
+                        item.file || item.path || item.stored_name || item.file_path ||
+                        item.file_name || item.filename || item.fileName || item.name || fileName;
+                    return { fileName, backendRef };
                 });
 
-                setUploadedPOs(normalized);
+                // Both PO and Payment Commitment files are stored in the same Magento
+                // field (kleverCheckoutPoFiles). We use a localStorage type-marker written
+                // at upload time to route each file to its correct section on refresh.
+                // Files whose name is in checkout_pc_file_names → Bank Transfer section.
+                // Everything else (including legacy files) → PO Number section.
+                let storedPcNames: Set<string> = new Set();
+                try {
+                    const raw = localStorage.getItem('checkout_pc_file_names');
+                    storedPcNames = raw ? new Set(JSON.parse(raw) as string[]) : new Set();
+                } catch { /* ignore */ }
+
+                // Helper: extract the plain filename from a path like
+                // "/media/klever/po_files/receipt.pdf" → "receipt.pdf".
+                // This lets the split work even when Magento returns full paths but
+                // localStorage only stored the original plain filename at upload time.
+                const bn = (s: string) => (s.split('/').pop() ?? s).split('?')[0];
+
+                const poFiles: { fileName: string; backendRef: string }[] = [];
+                const pcFiles: { fileName: string; backendRef: string }[] = [];
+                for (const file of normalized) {
+                    if (
+                        storedPcNames.has(file.fileName) ||
+                        storedPcNames.has(file.backendRef) ||
+                        storedPcNames.has(bn(file.fileName)) ||
+                        storedPcNames.has(bn(file.backendRef))
+                    ) {
+                        pcFiles.push(file);
+                    } else {
+                        poFiles.push(file);
+                    }
+                }
+
+                setUploadedPOs(poFiles);
+                setUploadedPaymentCommitments(pcFiles);
+
+                // Prune stale localStorage entries (e.g. files removed externally from Magento).
+                // Include basenames alongside full paths so aliases written as plain filenames
+                // are not incorrectly pruned when Magento returns path-prefixed identifiers.
+                const liveIdentifiers = new Set([
+                    ...normalized.map(f => f.fileName),
+                    ...normalized.map(f => f.backendRef),
+                    ...normalized.map(f => bn(f.fileName)),
+                    ...normalized.map(f => bn(f.backendRef)),
+                ]);
+                const cleanPcNames = new Set([...storedPcNames].filter(n => liveIdentifiers.has(n)));
+                if (cleanPcNames.size !== storedPcNames.size) {
+                    try {
+                        localStorage.setItem('checkout_pc_file_names', JSON.stringify([...cleanPcNames]));
+                    } catch { /* ignore */ }
+                }
             } catch (err) {
                 console.error("Failed to fetch PO upload:", err);
             }
@@ -438,9 +666,9 @@ const CheckoutPageUI: React.FC = () => {
     };
 
     const handlePlaceOrder = async () => {
-        // 0. Cart Validation
-        if (!cart || cart.items.length === 0) {
-            toast.error(t("checkout.yourOrderIsEmpty"));
+        // 0. Cart Validation — empty cart or no valid quote ID
+        if (!cart || cart.items.length === 0 || !cart.cart_id) {
+            toast.error(t("checkout.emptyCartMessage") || "Your cart is empty. Please add items before checkout.");
             router.push(lp("/cart"));
             return;
         }
@@ -492,8 +720,12 @@ const CheckoutPageUI: React.FC = () => {
                 setSelectedShippingMethodCode(method.code);
                 try {
                     await setShippingMethod(method.carrierCode, method.methodCode);
-                } catch (err) {
-                    console.error("Auto-repair shipping method failed:", err);
+                } catch (err: any) {
+                    const msg = err?.message || t("checkout.shippingMethodUpdateFailed");
+                    console.error("Auto-repair shipping method failed:", msg);
+                    toast.error(msg);
+                    document.getElementById('step-3')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    return;
                 }
                 toast.success(t("checkout.selectedShipping").replace("{0}", method.title));
             } else {
@@ -502,15 +734,18 @@ const CheckoutPageUI: React.FC = () => {
                 return;
             }
         } else {
-            // Even if already selected in state, re-sync to backend to avoid "shipping method missing" race conditions
+            // Re-sync to backend before placing order.
             const method = shippingMethods.find(m => m.code === selectedShippingMethodCode);
             if (method) {
                 try {
-                    console.log("Syncing shipping method to backend before order placement:", method.code);
+                    console.log("[handlePlaceOrder] syncing shipping method:", method.code);
                     await setShippingMethod(method.carrierCode, method.methodCode);
-                } catch (err) {
-                    console.error("Final shipping method sync failed:", err);
-                    // We continue anyway, maybe it was already set
+                } catch (err: any) {
+                    const msg = err?.message || t("checkout.shippingMethodUpdateFailed");
+                    console.error("[handlePlaceOrder] shipping method sync failed:", msg);
+                    toast.error(msg);
+                    document.getElementById('step-3')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    return;
                 }
             }
         }
@@ -555,6 +790,13 @@ const CheckoutPageUI: React.FC = () => {
             }
 
 
+            // Commit PO number to Magento before placing order — the blur handler
+            // only fires if the user tabs/clicks away; placing order without blurring
+            // would otherwise silently drop the PO number.
+            if (poNumber) {
+                try { await savePoNumber(poNumber); } catch { /* error already surfaced by the hook */ }
+            }
+
             // 4. Call Place Order
             const result = await placeOrder({
                 address_id: Number(selectedAddressId),
@@ -585,6 +827,8 @@ const CheckoutPageUI: React.FC = () => {
             };
 
             localStorage.setItem('last_order_summary', JSON.stringify(orderSummary));
+            // Order placed — clear upload type-markers so the next checkout starts clean.
+            try { localStorage.removeItem('checkout_pc_file_names'); } catch { /* ignore */ }
 
             // Set flag so the empty-cart guard does not redirect to /cart while we navigate to success
             isCompletingOrderRef.current = true;
@@ -659,6 +903,11 @@ const CheckoutPageUI: React.FC = () => {
         if (validFiles.length === 0) return;
 
         setIsUploading(true);
+        // Track only the files uploaded in this batch so the Magento refresh
+        // never replaces uploadedPOs with the full Magento list — payment
+        // commitment files live in the same kleverCheckoutPoFiles field and
+        // must never bleed into the PO section.
+        const justUploadedPoFileNames = new Set<string>();
         try {
             for (const file of validFiles) {
                 // Check for duplicates in UI
@@ -667,25 +916,78 @@ const CheckoutPageUI: React.FC = () => {
                     continue;
                 }
 
-                const base64Promise = new Promise<string>((resolve, reject) => {
+                const base64Content = await new Promise<string>((resolve, reject) => {
                     const reader = new FileReader();
                     reader.readAsDataURL(file);
                     reader.onload = () => {
                         const result = reader.result as string;
-                        const base64 = result.split(",")[1];
-                        resolve(base64);
+                        resolve(result.split(",")[1]);
                     };
                     reader.onerror = error => reject(error);
                 });
 
-                const base64Content = await base64Promise;
-
-                await (uploadPoFile as any)({
+                const result = await (uploadPoFile as any)({
                     fileContent: base64Content,
                     fileName: file.name
                 });
-                setUploadedPOs(prev => [...prev, { fileName: file.name }]);
+
+                if (result && result.success === false) {
+                    throw new Error(result.message || t("checkout.uploadFailed"));
+                }
+
+                const backendRef: string = result?.backendRef || file.name;
+                console.log("[handleFileUpload] optimistic backendRef:", backendRef, "for file:", file.name);
+
+                justUploadedPoFileNames.add(file.name);
+                setUploadedPOs(prev => [...prev, { fileName: file.name, backendRef }]);
                 toast.success(t("checkout.uploaded").replace("{0}", file.name));
+            }
+
+            // Refresh from Magento to normalise backendRef for ONLY the files just
+            // uploaded in this batch. Never replace the whole uploadedPOs list with
+            // the full Magento response — that list includes payment commitment files
+            // (same storage field) which must stay isolated in uploadedPaymentCommitments.
+            if (justUploadedPoFileNames.size > 0) {
+                try {
+                    const freshData = await getPoUpload();
+                    let filesArray: any[] = [];
+                    if (Array.isArray(freshData)) filesArray = freshData;
+                    else if (freshData?.files && Array.isArray(freshData.files)) filesArray = freshData.files;
+                    else if (freshData?.data && Array.isArray(freshData.data)) filesArray = freshData.data;
+                    else if (freshData && (freshData.fileName || freshData.filename || freshData.file)) filesArray = [freshData];
+                    if (filesArray.length > 0) {
+                        const normalized: { fileName: string; backendRef: string }[] = filesArray.map((item: any) => {
+                            if (typeof item === 'string') return { fileName: item, backendRef: item };
+                            const fn = item.fileName || item.filename || item.file_name || item.name || t("checkout.unknownFile");
+                            const br = item.file || item.path || item.stored_name || item.file_path ||
+                                item.file_name || item.filename || item.fileName || item.name || fn;
+                            return { fileName: fn, backendRef: br };
+                        });
+                        console.log("[handleFileUpload] Magento refresh (all files):", normalized);
+                        setUploadedPOs(prev => {
+                            // Update backendRef only for files uploaded in this batch;
+                            // leave all other PO entries untouched and ignore any
+                            // payment commitment entries present in the Magento response.
+                            const updated = prev.map(p => {
+                                if (justUploadedPoFileNames.has(p.fileName)) {
+                                    const magentoEntry = normalized.find(
+                                        n => n.fileName === p.fileName || n.backendRef === p.backendRef
+                                    );
+                                    if (magentoEntry) return magentoEntry;
+                                }
+                                return p;
+                            });
+                            const seen = new Set<string>();
+                            return updated.filter(f => {
+                                if (seen.has(f.backendRef)) return false;
+                                seen.add(f.backendRef);
+                                return true;
+                            });
+                        });
+                    }
+                } catch {
+                    console.warn("[handleFileUpload] failed to refresh PO file list after upload");
+                }
             }
         } catch (error: any) {
             toast.error(error.message || t("checkout.uploadFailed"));
@@ -712,10 +1014,16 @@ const CheckoutPageUI: React.FC = () => {
         handleFileUpload(e);
     };
 
-    const handleDeletePo = async (fileName: string) => {
+    const handleDeletePo = async (fileName: string, backendRef: string) => {
+        if (!cart?.cart_id) {
+            toast.error(t("checkout.emptyCartMessage") || "Your cart is empty. Please add items before checkout.");
+            router.push(lp("/cart"));
+            return;
+        }
         try {
             setIsUploading(true);
-            await deletePoFile(fileName);
+            // Use the backend reference (may differ from display name after page refresh)
+            await deletePoFile(backendRef);
             setUploadedPOs(prev => prev.filter(p => p.fileName !== fileName));
             toast.success(t("checkout.fileRemoveSuccess"));
         } catch (error: any) {
@@ -813,12 +1121,45 @@ const CheckoutPageUI: React.FC = () => {
         );
     }
 
+    // Use kleverCheckoutTotals when the API returns meaningful non-zero values.
+    // The ?? operator does NOT catch 0 — if Magento returns subtotal/grand_total as 0
+    // (common for some store configurations before a shipping address is fully committed),
+    // we must fall back to cart values so the Order Summary never shows 0.00 when
+    // the cart has products.
+    const totalsHaveData = totals != null && (
+        Number(totals.grand_total) > 0 || Number(totals.subtotal) > 0
+    );
+
+    // Item-sum fallback: recalculate subtotal from cart items when both the totals
+    // API and cart.subtotal come back as 0 (e.g. Magento pricing module issue for a
+    // specific warehouse on initial load).
+    const itemsFallbackSubtotal = cart.items.reduce(
+        (sum, i) => sum + i.row_total, 0
+    );
+    const cartSubtotal = cart.subtotal > 0 ? cart.subtotal : itemsFallbackSubtotal;
+    const cartGrandTotal = cart.grand_total > 0
+        ? cart.grand_total
+        : cartSubtotal + (cart.tax_amount ?? 0);
+
+    const dtSubtotal = totalsHaveData ? totals!.subtotal : cartSubtotal;
+    const dtTax = totalsHaveData ? totals!.tax_amount : (cart.tax_amount ?? 0);
+    const dtShipping = totalsHaveData ? (totals!.shipping_amount ?? 0) : (cart.shipping_amount ?? 0);
+    const dtDiscount = totalsHaveData ? (totals!.discount_amount ?? 0) : (cart.discount_amount ?? 0);
+    // grand_total from totals can be 0 even when subtotal is valid (e.g. pre-shipping-selection).
+    // Compute from the other display fields in that case so it's never shown as 0.
+    const dtGrandFromApi = totalsHaveData ? totals!.grand_total : null;
+    const dtGrand = (dtGrandFromApi != null && dtGrandFromApi > 0)
+        ? dtGrandFromApi
+        : dtSubtotal > 0
+        ? dtSubtotal + dtTax + dtShipping - dtDiscount
+        : cartGrandTotal;
+
     const displayTotals = {
-        subtotal: totals?.subtotal ?? cart.subtotal,
-        tax_amount: totals?.tax_amount ?? cart.tax_amount,
-        shipping_amount: totals?.shipping_amount ?? 0,
-        grand_total: totals?.grand_total ?? cart.grand_total,
-        discount_amount: totals?.discount_amount ?? 0,
+        subtotal: dtSubtotal,
+        tax_amount: dtTax,
+        shipping_amount: dtShipping,
+        grand_total: dtGrand,
+        discount_amount: dtDiscount,
     };
 
     return (
@@ -1208,7 +1549,7 @@ const CheckoutPageUI: React.FC = () => {
                                                             </span>
                                                         </div>
                                                         <button
-                                                            onClick={() => handleDeletePo(po.fileName)}
+                                                            onClick={() => handleDeletePo(po.fileName, po.backendRef)}
                                                             className="bg-red-50 text-red-600 px-6 py-3 text-label font-bold uppercase tracking-widest transition-all hover:bg-red-600 hover:text-white border-l border-border active:scale-95"
                                                             disabled={isUploading}
                                                         >
@@ -1491,8 +1832,8 @@ const CheckoutPageUI: React.FC = () => {
                                                             name="payment_method"
                                                             value={method.code}
                                                             checked={isSelected}
-                                                            onChange={() => setPaymentMethod(method.code)}
-                                                            className="appearance-none w-5 h-5 border-2 border-gray-300 rounded-full checked:border-black focus:outline-none transition-all"
+                                                            onChange={() => { paymentMethodSetRef.current = true; setPaymentMethod(method.code); }}
+                                                            className="appearance-none w-4 h-4 border-2 border-gray-300 rounded-full checked:border-black focus:outline-none transition-all"
                                                         />
                                                         {isSelected && (
                                                             <span className="absolute w-2.5 h-2.5 bg-black rounded-full" />
@@ -1525,22 +1866,26 @@ const CheckoutPageUI: React.FC = () => {
                                                         {isPaymentCommitmentOpen && (
                                                             <div className="p-2 md:p-4 bg-white space-y-4 absolute left-0 top-full w-full border border-[#ddd] rounded-b-lg select-none z-[10]">
                                                                 <div
-                                                                    className={`w-full py-10 border-2 border-dashed border-gray-300 bg-gray-50/50 flex flex-col items-center justify-center cursor-pointer transition-all duration-300 hover:border-gray-300 hover:bg-white rounded-sm ${dragActive ? "border-black bg-white" : ""}`}
-                                                                    onClick={() => paymentCommitmentRef.current?.click()}
-                                                                    onDragOver={(e) => { e.preventDefault(); setDragActive(true); }}
-                                                                    onDragLeave={() => setDragActive(false)}
+                                                                    className={`w-full py-10 border-2 border-dashed border-gray-300 bg-gray-50/50 flex flex-col items-center justify-center cursor-pointer transition-all duration-300 hover:border-black hover:bg-white rounded-xl mb-6 ${dragActivePC ? "border-black bg-white" : ""} ${isPaymentCommitmentUploading ? "opacity-60 pointer-events-none" : ""}`}
+                                                                    onClick={() => !isPaymentCommitmentUploading && paymentCommitmentRef.current?.click()}
+                                                                    onDragOver={(e) => { e.preventDefault(); setDragActivePC(true); }}
+                                                                    onDragLeave={() => setDragActivePC(false)}
                                                                     onDrop={(e) => {
                                                                         e.preventDefault();
-                                                                        setDragActive(false);
-                                                                        if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-                                                                            setPaymentCommitmentFile(e.dataTransfer.files[0]);
-                                                                            toast.success(t("common.success"));
-                                                                        }
+                                                                        setDragActivePC(false);
+                                                                        handlePaymentCommitmentUpload(e);
                                                                     }}
                                                                 >
                                                                     <div className="text-center px-6">
                                                                         <p className="text-h3 text-black font-bold mb-3 tracking-tight">{t("m.drop-files-here")}</p>
-                                                                        <p className="text-xs md:text-body-lg text-black/80">
+                                                                        <p className="text-xs md:text-body-lg text-black/80"/>
+                                                                        <p className="text-h3 text-black font-bold mb-3 tracking-tight">
+                                                                            {/* {isPaymentCommitmentUploading ? t("checkout.uploading") || "Uploading..." : t("m.drop-files-here")} */}
+                                                                            {/* Placeholder - replace with actual translation key */}
+                                                                            {isPaymentCommitmentUploading ? "Drop Files Here" : "Drop Files Here"}
+
+                                                                        </p>
+                                                                        <p className="text-body-lg text-black/80 font-medium">
                                                                             {t("m.allowed-file-types")} : jpg,jpeg,png,zip,rar,docx,doc,pdf,xls,xlsx,csv,msg
                                                                         </p>
                                                                     </div>
@@ -1548,26 +1893,30 @@ const CheckoutPageUI: React.FC = () => {
                                                                         type="file"
                                                                         className="hidden"
                                                                         ref={paymentCommitmentRef}
-                                                                        onChange={handlePaymentCommitmentChange}
+                                                                        onChange={handlePaymentCommitmentUpload}
                                                                         accept=".jpg,.jpeg,.png,.zip,.rar,.docx,.doc,.pdf,.xls,.xlsx,.csv,.msg"
+                                                                        multiple
                                                                     />
                                                                 </div>
 
-                                                                {paymentCommitmentFile && (
-                                                                    <div className="flex items-center">
-                                                                        <div className="flex border border-border rounded-sm overflow-hidden group shadow-sm bg-white">
-                                                                            <div className="px-6 py-3 flex-1 flex items-center min-w-0">
-                                                                                <span className="text-body font-bold text-black truncate ltr:mr-2 rtl:ml-2">
-                                                                                    {paymentCommitmentFile.name}
-                                                                                </span>
+                                                                {uploadedPaymentCommitments.length > 0 && (
+                                                                    <div className="flex flex-wrap gap-x-4 gap-y-3">
+                                                                        {uploadedPaymentCommitments.map((pc, idx) => (
+                                                                            <div key={idx} className="flex border border-border rounded-xl overflow-hidden group shadow-sm bg-white">
+                                                                                <div className="px-6 py-3 flex-1 flex items-center min-w-0">
+                                                                                    <span className="text-body font-bold text-black truncate ltr:mr-2 rtl:ml-2">
+                                                                                        {pc.fileName}
+                                                                                    </span>
+                                                                                </div>
+                                                                                <button
+                                                                                    onClick={() => removePaymentCommitment(pc.backendRef)}
+                                                                                    disabled={isPaymentCommitmentUploading}
+                                                                                    className="bg-red-50 text-red-600 px-6 py-3 text-label font-bold uppercase tracking-widest transition-all hover:bg-red-600 hover:text-white border-l border-border active:scale-95 disabled:opacity-50"
+                                                                                >
+                                                                                    {t("m.remove")}
+                                                                                </button>
                                                                             </div>
-                                                                            <button
-                                                                                onClick={removePaymentCommitment}
-                                                                                className="bg-red-50 text-red-600 px-6 py-3 text-label font-bold uppercase tracking-widest transition-all hover:bg-red-600 hover:text-white border-l border-border active:scale-95"
-                                                                            >
-                                                                                {t("m.remove")}
-                                                                            </button>
-                                                                        </div>
+                                                                        ))}
                                                                     </div>
                                                                 )}
                                                             </div>
