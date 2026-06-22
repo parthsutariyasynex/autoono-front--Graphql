@@ -798,7 +798,7 @@ export default function Navbar() {
                 >
                   <ShoppingCart size={24} strokeWidth={1.5} />
                   {cartCount > 0 && (
-                    <span className="absolute w-[20px] h-[20px] lg:w-[26px] lg:h-[26px] font-semibold text-micro lg:text-body -top-[10px] -right-[6px] lg:-right-[14px] bg-primary text-white flex items-center justify-center rounded-full border border-white">
+                    <span className="absolute w-[20px] h-[20px] lg:w-[26px] lg:h-[26px] font-semibold text-micro lg:text-body -top-[10px] lg:-top-[13px] -right-[6px] lg:-right-[14px] bg-primary text-white flex items-center justify-center rounded-full border border-white">
                       {cartCount}
                     </span>
                   )}
