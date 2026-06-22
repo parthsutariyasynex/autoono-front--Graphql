@@ -34,13 +34,13 @@ const CartItem: React.FC<CartItemProps> = ({ item, currencyCode, onUpdateQty, on
     }, [item.qty]);
 
     return (
-        <div className="relative bg-white border border-gray-100 rounded-3xl p-4 lg:p-6 hover:shadow-xl hover:shadow-gray-100/50 transition-all duration-500 group/item">
+        <div className="relative bg-white border border-[#ddd] rounded-sm hover:shadow-xl hover:shadow-gray-100/50 transition-all duration-500 group/item">
             {/* Remove Button */}
             <button
                 onClick={() => {
                     onRemove(item.item_id);
                 }}
-                className="absolute top-2 right-2 w-7 h-7 lg:w-6 lg:h-6 flex items-center justify-center bg-gray-50 text-black/60 rounded-full transition-all z-10 cursor-pointer hover:bg-dangerBright hover:text-black hover:scale-110 active:scale-95 opacity-100 lg:opacity-0 lg:group-hover/item:opacity-100 shadow-sm border border-gray-100"
+                className="absolute top-0 ltr:right-0 rtl:left-0 w-6 h-6 flex items-center justify-center bg-gray-50 text-black/60 rounded-full transition-all z-10 cursor-pointer hover:bg-dangerBright hover:text-black hover:scale-110 active:scale-95 opacity-100 lg:opacity-0 lg:group-hover/item:opacity-100 shadow-sm border border-gray-100"
                 title={t("m.remove-item")}
             >
                 <X size={12} strokeWidth={3.5} className="lg:hidden" />
@@ -48,14 +48,14 @@ const CartItem: React.FC<CartItemProps> = ({ item, currencyCode, onUpdateQty, on
             </button>
 
             {/* Mobile + tablet card layout — below lg (matches CartPage's lg grid switch) */}
-            <div className="lg:hidden">
-                <div className="flex gap-4">
-                    <div className="w-20 h-20 bg-white border border-gray-100 p-2 flex items-center justify-center rounded-2xl shadow-sm">
+            <div className="lg:hidden p-1">
+                <div className="flex gap-4 items-center">
+                    <div className="w-15 h-15 bg-white  flex items-center justify-center rounded-sm ">
                         <img src={item.image_url || "/images/tyre-sample.png"} alt={item.name} className="max-w-full max-h-full object-contain" />
                     </div>
                     <div className="flex-1 min-w-0">
-                        <h3 className="text-xs font-bold text-black leading-tight uppercase line-clamp-2 mb-1">{item.name}</h3>
-                        <div className="flex flex-wrap gap-1 mb-2">
+                        <h3 className="text-xs font-bold text-black leading-tight uppercase line-clamp-2 mb-1 rtl:pl-5 trl:md:pl-0  ltr:pr-5 ltr:md:pr-0">{item.name}</h3>
+                        <div className="flex flex-wrap gap-1">
                             {item.size_display && (
                                 <span className="text-[8px] font-bold text-black/50 bg-gray-50 px-1 py-0.5 rounded uppercase">
                                     {item.size_display}
@@ -68,7 +68,7 @@ const CartItem: React.FC<CartItemProps> = ({ item, currencyCode, onUpdateQty, on
                             )}
                         </div>
                         <div className="flex items-center justify-between">
-                            <div className="flex flex-col">
+                            <div className="flex flex-wrap items-center gap-0 md:gap-2">
                                 <span className="text-[10px] text-black/40 font-bold uppercase">{t("m.unit-price") || "Unit"}</span>
                                 <span className="text-xs font-bold text-black/60">
                                     <Price amount={item.price} />
@@ -81,7 +81,7 @@ const CartItem: React.FC<CartItemProps> = ({ item, currencyCode, onUpdateQty, on
                                 <button
                                     onClick={() => handleQtyChange(localQty - 1)}
                                     disabled={localQty <= 1}
-                                    className="w-8 h-8 flex items-center justify-center hover:bg-primary transition-all disabled:opacity-20"
+                                    className="w-8 h-8 flex items-center justify-center transition-all disabled:opacity-20"
                                 >
                                     <Minus size={12} strokeWidth={3} />
                                 </button>
@@ -102,7 +102,7 @@ const CartItem: React.FC<CartItemProps> = ({ item, currencyCode, onUpdateQty, on
                                 />
                                 <button
                                     onClick={() => handleQtyChange(localQty + 1)}
-                                    className="w-8 h-8 flex items-center justify-center hover:bg-primary transition-all"
+                                    className="w-8 h-8 flex items-center justify-center transition-all"
                                 >
                                     <Plus size={12} strokeWidth={3} />
                                 </button>
@@ -113,14 +113,14 @@ const CartItem: React.FC<CartItemProps> = ({ item, currencyCode, onUpdateQty, on
             </div>
 
             {/* Desktop Layout — lg+ */}
-            <div className="hidden lg:flex items-center">
+            <div className="hidden lg:flex items-center p-1">
                 <div className="w-[45%] flex items-center gap-4">
-                    <div className="w-16 xl:w-20 h-16 xl:h-20 bg-white border border-gray-100 p-1.5 flex items-center justify-center rounded-xl shadow-sm group-hover/item:shadow-md transition-all flex-shrink-0">
+                    <div className="w-12 h-12 bg-white flex items-center justify-center transition-all flex-shrink-0">
                         <img src={item.image_url || "/images/tyre-sample.png"} alt={item.name} className="max-w-full max-h-full object-contain" />
                     </div>
                     <div className="min-w-0">
-                        <h3 className="text-xs xl:text-sm font-bold text-black leading-tight uppercase line-clamp-1">{item.name}</h3>
-                        <div className="flex flex-wrap gap-1.5 mt-2">
+                        <h3 className="text-xs xl:text-sm font-semibold text-black leading-tight uppercase line-clamp-1">{item.name}</h3>
+                        <div className="flex flex-wrap gap-1.5">
                             {item.size_display && (
                                 <span className="text-micro font-bold text-black/50 bg-gray-50 border border-gray-100 px-1.5 py-0.5 rounded-md uppercase">
                                     {item.size_display}
@@ -142,11 +142,11 @@ const CartItem: React.FC<CartItemProps> = ({ item, currencyCode, onUpdateQty, on
                 </div>
 
                 <div className="w-[20%] flex justify-center items-center">
-                    <div className="flex items-center border border-gray-100 bg-white rounded-lg shadow-sm focus-within:ring-2 focus-within:ring-primary transition-all">
+                    <div className="flex items-center border border-[#ddd] bg-white rounded-lg focus-within:ring-1 focus-within:ring-primary transition-all">
                         <button
                             onClick={() => handleQtyChange(localQty - 1)}
                             disabled={localQty <= 1}
-                            className="w-8 h-8 flex items-center justify-center hover:bg-primary transition-all disabled:opacity-20"
+                            className="w-8 h-8 flex items-center justify-center transition-all disabled:opacity-20"
                         >
                             <Minus size={12} strokeWidth={3} />
                         </button>
@@ -167,14 +167,14 @@ const CartItem: React.FC<CartItemProps> = ({ item, currencyCode, onUpdateQty, on
                         />
                         <button
                             onClick={() => handleQtyChange(localQty + 1)}
-                            className="w-8 h-8 flex items-center justify-center hover:bg-primary transition-all"
+                            className="w-8 h-8 flex items-center justify-center transition-all"
                         >
                             <Plus size={12} strokeWidth={3} />
                         </button>
                     </div>
                 </div>
 
-                <div className="w-[20%] text-right pr-4">
+                <div className="w-[20%] ltr:text-right rtl:text-left rtl:pl-4 ltr:pr-4">
                     <span className="text-sm xl:text-base font-bold text-black">
                         <Price amount={item.row_total} />
                     </span>

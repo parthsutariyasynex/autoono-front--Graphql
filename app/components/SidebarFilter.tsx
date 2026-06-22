@@ -40,17 +40,17 @@ const FilterItem = memo(({
                         type="checkbox"
                         checked={isChecked}
                         onChange={(e) => onCheckboxChange(groupCode, option.value, e.target.checked)}
-                        className="peer appearance-none w-4 h-4 border-2 border-gray-300 rounded-[3px] checked:bg-primary checked:border-primary focus:outline-none focus:ring-2 focus:ring-primary/50 focus:ring-offset-1 transition-all cursor-pointer"
+                        className="peer appearance-none outline-none shadow-none w-4 h-4 border-2 border-gray-300 rounded-[3px] checked:bg-primary checked:border-primary focus:outline-none focus:ring-0 focus:ring-primary/50 focus:ring-offset-0 transition-all cursor-pointer"
                     />
-                    <svg className="absolute w-3 h-3 text-black pointer-events-none opacity-0 peer-checked:opacity-100 transition-opacity" viewBox="0 0 14 10" fill="none">
+                    <svg className="absolute w-3 h-3 text-white pointer-events-none opacity-0 peer-checked:opacity-100 transition-opacity" viewBox="0 0 14 10" fill="none">
                         <path d="M1 5L4.5 8.5L13 1" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                     </svg>
                 </div>
-                <span className={`text-body transition-colors leading-tight ${isChecked ? 'text-black font-semibold' : 'text-black/70 font-medium group-hover/label:text-black'}`}>
+                <span className={`text-body transition-colors leading-tight ${isChecked ? 'text-black font-medium' : 'text-black/70 font-medium group-hover/label:text-black'}`}>
                     {translatedLabel}
                 </span>
             </div>
-            <span className="text-caption font-semibold text-black/50 bg-gray-50 px-1.5 py-0.5 rounded border border-gray-100 group-hover/label:bg-gray-100 transition-colors">
+            <span className="text-xs font-semibold text-black/70 bg-gray-30 rounded border border-gray-300 group-hover/label:bg-gray-100 transition-colors w-5 h-5 text-center content-center">
                 {option.count ?? 0}
             </span>
         </label>
@@ -107,7 +107,7 @@ const FilterGroup = memo(({
                                 placeholder={isRtl ? `${t("m.search")}...` : `${t("m.search")} ${translatedLabel}...`}
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
-                                className="w-full pl-3 pr-3 py-1.5 text-xs border border-gray-200 rounded-md outline-none" />
+                                className="w-full pl-3 pr-3 py-1.5 text-xs border border-[#ddd] rounded-sm outline-none focus:border-primary" />
                             <X className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-black/50 cursor-pointer" onClick={() => setSearchTerm("")} />
                         </div>
                     )}
@@ -283,7 +283,7 @@ function SidebarFilter({
     }, [onFilterChange, filterGroups, selectedFilters, t]);
 
     const toggleGroup = useCallback((code: string) => {
-        setExpandedGroups(prev => ({ ...prev, [code]: !prev[code] }));
+        setExpandedGroups(prev => ({ [code]: !prev[code] }));
     }, []);
 
     // Always show every filter group — previously we hid "irrelevant"
@@ -304,7 +304,7 @@ function SidebarFilter({
                 )}
                 <div
                     onClick={() => setIsCollapsed(!isCollapsed)}
-                    className="w-[50px] min-w-[50px] h-full flex items-center justify-center bg-gray-50 cursor-pointer hover:bg-gray-100 transition-all duration-300"
+                    className="w-[50px] min-w-[50px] rtl:rotate-180 h-full flex items-center justify-center bg-gray-50 cursor-pointer hover:bg-gray-100 transition-all duration-300"
                 >
                     {isCollapsed
                         ? <ChevronRight className="w-[18px] h-[18px]" />

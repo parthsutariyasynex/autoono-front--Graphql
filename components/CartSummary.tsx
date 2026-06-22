@@ -90,23 +90,23 @@ const CartSummary: React.FC<CartSummaryProps> = ({ subtotal, taxAmount, taxLabel
     };
 
     return (
-        <div className="md:sticky md:top-28 self-start bg-white border border-gray-100 rounded-sm shadow-[0_10px_40px_rgba(0,0,0,0.05)] overflow-hidden">
+        <div className="md:sticky md:top-28 self-start bg-white border border-[#ddd] rounded-sm shadow-[0_10px_40px_rgba(0,0,0,0.05)] overflow-hidden">
             {/* Header */}
-            <div className="bg-gray-200 px-6 py-4 border-b border-gray-200 flex items-center justify-center">
-                <h2 className="text-[18px] font-[900] text-black uppercase tracking-tight">
+            <div className="bg-gray-200 px-3 py-2 border-b border-gray-200 flex items-center justify-center">
+                <h2 className="text-[18px] font-[700] text-black uppercase tracking-tight">
                     {t("orderDetails.orderSummary") === "ORDER SUMMARY" ? "SUMMARY" : (t("orderDetails.orderSummary") || "SUMMARY")}
                 </h2>
             </div>
 
-            <div className="px-6 py-5 space-y-0">
+            <div className="px-4 py-2 space-y-0">
                 {/* Price Breakdown */}
-                <div className="space-y-3 pb-4 border-b border-gray-100">
+                <div className="space-y-3 pb-3 border-b border-[#ddd]">
                     {/* Subtotal */}
                     <div className="flex justify-between items-center">
-                        <span className="text-[13px] font-[900] text-black uppercase tracking-tight">
+                        <span className="text-[14px] md:text-[16px] font-[700] text-black uppercase tracking-tight">
                             {t("cart.subtotal") || "SUBTOTAL"}
                         </span>
-                        <span className="text-[13px] font-[900] text-black">
+                        <span className="text-[14px] md:text-[16px] font-[700] text-black">
                             <Price amount={subtotal} />
                         </span>
                     </div>
@@ -114,10 +114,10 @@ const CartSummary: React.FC<CartSummaryProps> = ({ subtotal, taxAmount, taxLabel
                     {/* Discount — only shown when items have a discount applied */}
                     {!!discountAmount && discountAmount > 0 && (
                         <div className="flex justify-between items-center">
-                            <span className="text-[#008a00] font-[900] text-caption uppercase tracking-tight">
+                            <span className="text-[#008a00] font-[700] text-[14px] md:text-[16px] uppercase tracking-tight">
                                 {t("m.discount") || "DISCOUNT"}
                             </span>
-                            <span className="font-[900] text-[#008a00] text-body-sm">
+                            <span className="font-[700] text-[#008a00] text-[14px] md:text-[16px]">
                                 - <Price amount={discountAmount} />
                             </span>
                         </div>
@@ -125,38 +125,38 @@ const CartSummary: React.FC<CartSummaryProps> = ({ subtotal, taxAmount, taxLabel
 
                     {/* VAT (15%) */}
                     <div className="flex justify-between items-center">
-                        <span className="text-[13px] font-[900] text-black uppercase tracking-tight">
+                        <span className="text-[14px] md:text-[16px] font-[700] text-black uppercase tracking-tight">
                             {isRtl ? t("m.tax") : "VAT (15%)"}
                         </span>
-                        <span className="text-[13px] font-[900] text-black">
+                        <span className="text-[14px] md:text-[16px] font-[700] text-black">
                             <Price amount={taxAmount} />
                         </span>
                     </div>
 
                     {/* Shipping */}
                     <div className="flex justify-between items-center">
-                        <span className="text-[13px] font-[900] text-black uppercase tracking-tight">
+                        <span className="text-[14px] md:text-[16px] font-[700] text-black uppercase tracking-tight">
                             {t("m.shipping") || "SHIPPING"}
                         </span>
-                        <span className="text-[13px] font-[900] text-black">
+                        <span className="text-[14px] md:text-[16px] font-[700] text-black">
                             <Price amount={shippingAmount} />
                         </span>
                     </div>
                 </div>
 
                 {/* Grand Total */}
-                <div className="flex justify-between items-center pt-4">
-                    <span className="text-[14px] font-[900] text-black uppercase tracking-tight">
+                <div className="flex justify-between items-center pt-2">
+                    <span className="text-[14px] md:text-[16px] font-[700] text-black uppercase tracking-tight">
                         {t("common.grandTotal") || "GRAND TOTAL"}
                     </span>
-                    <span className="text-[14px] font-[900] text-black">
+                    <span className="text-[14px] md:text-[16px] font-[700] text-black">
                         <Price amount={grandTotal} />
                     </span>
                 </div>
 
                 {/* Coupon Code */}
-                <div className="pt-5 border-t border-gray-100 flex flex-col gap-2 mt-4">
-                    <label className="text-[11px] font-[900] text-black uppercase tracking-widest">
+                <div className="pt-3 border-t border-[#ddd] flex flex-col gap-2 mt-2">
+                    <label className="text-[11px] font-[800] text-black uppercase tracking-widest">
                         {t("m.coupon-code") || "Coupon Code"}
                     </label>
                     {activeCoupons.length > 0 ? (
@@ -192,7 +192,7 @@ const CartSummary: React.FC<CartSummaryProps> = ({ subtotal, taxAmount, taxLabel
                                 onChange={(e) => setCouponInput(e.target.value)}
                                 disabled={couponBusy}
                                 placeholder={t("m.enter-discount-code") || "Enter discount code"}
-                                className="flex-1 min-w-0 px-4 text-sm font-medium text-black bg-white border border-gray-200 rounded focus:border-black focus:outline-none transition-all placeholder:text-black/40 placeholder:font-normal disabled:opacity-60"
+                                className="flex-1 min-w-0 px-4 text-sm font-medium text-black bg-white border border-gray-200 rounded focus:border-primary focus:outline-none transition-all placeholder:text-black/40 placeholder:font-normal disabled:opacity-60"
                             />
                             <button
                                 type="submit"
@@ -208,10 +208,10 @@ const CartSummary: React.FC<CartSummaryProps> = ({ subtotal, taxAmount, taxLabel
                 {/* Checkout Button — text-tracking-padding scaled to summary
                     column width. Allowed to wrap to 2 lines if it still doesn't
                     fit on one line so text is never clipped. */}
-                <div className="pt-4">
+                <div className="pt-2">
                     <button
                         onClick={() => router.push(lp("/checkout"))}
-                        className="w-full px-2 py-3 xl:py-4 bg-primary text-[11px] xl:text-[10px] font-[900] uppercase tracking-normal xl:tracking-[0.2em] leading-tight hover:bg-black hover:text-white active:scale-[0.98] transition-all duration-300 shadow-md rounded text-center"
+                        className="w-full px-2 py-3 xl:py-4 bg-primary text-[12px] font-bold font-[700] uppercase tracking-normal xl:tracking-[0.2em] leading-tight hover:bg-black hover:text-white transition-all duration-300 shadow-md rounded text-center"
                     >
                         {t("cart.proceedCheckout") || "PROCEED TO CHECKOUT"}
                         <span className="hidden xl:inline"> »</span>

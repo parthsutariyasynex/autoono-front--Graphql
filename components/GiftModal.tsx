@@ -144,10 +144,10 @@ const GiftModal: React.FC<GiftModalProps> = ({
 
     return (
         <div className="fixed inset-0 z-[200] flex items-end sm:items-center justify-center sm:p-4 bg-black/60 backdrop-blur-sm transition-all duration-300">
-            <div className="bg-white w-full sm:max-w-2xl sm:rounded-lg shadow-2xl overflow-hidden flex flex-col max-h-[92vh] animate-in zoom-in-95 fade-in duration-300">
+            <div className="bg-white w-full sm:max-w-2xl sm:rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh] animate-in zoom-in-95 fade-in duration-300">
 
                 {/* Header */}
-                <div className="bg-[#5b7fcf] px-4 sm:px-6 py-4 flex items-center justify-between">
+                <div className="bg-[#5b7fcf] px-4 sm:px-6 py-4 flex items-center justify-between relative">
                     <h2 className="flex-1 text-center text-base sm:text-lg font-bold text-white uppercase tracking-wider">
                         {ruleName || "Choose your free gift"}
                         {remaining !== undefined && (
@@ -158,7 +158,7 @@ const GiftModal: React.FC<GiftModalProps> = ({
                     </h2>
                     <button
                         onClick={onClose}
-                        className="text-white hover:text-white/70 transition-colors ml-4"
+                        className="absolute ltr:right-3 rtl:left-3 top-1/2 -translate-y-1/2 w-7 h-7 bg-black rounded-full flex items-center justify-center text-white hover:opacity-80 transition-opacity shadow-md"
                         aria-label="Close"
                     >
                         <X size={22} />
@@ -246,7 +246,7 @@ const GiftModal: React.FC<GiftModalProps> = ({
                                                     >
                                                         <div className={`
                                                             w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center overflow-hidden rounded bg-white border
-                                                            ${isSelected ? "ring-2 ring-[#5b7fcf] ring-offset-1 border-[#5b7fcf]" : "border-gray-100"}
+                                                            ${isSelected ? "ring-2 ring-[#5b7fcf] ring-offset-0 border-[#5b7fcf]" : "border-gray-100"}
                                                             ${isDisabled ? "opacity-40" : ""}
                                                         `}>
                                                             <img
@@ -305,7 +305,7 @@ const GiftModal: React.FC<GiftModalProps> = ({
                     <button
                         onClick={handleConfirm}
                         disabled={totalSelected === 0}
-                        className="bg-primary text-white px-10 sm:px-16 py-3.5 text-xs font-bold uppercase tracking-[0.2em] hover:bg-primaryHover transition-all disabled:opacity-40 disabled:cursor-not-allowed flex-1 sm:flex-none shadow-lg"
+                        className="bg-primary text-white px-10 sm:px-16 py-3 text-body md:text-base rounded-lg font-bold uppercase tracking-wider hover:bg-primaryHover transition-all disabled:opacity-40 disabled:cursor-not-allowed flex-1 sm:flex-none shadow-lg"
                     >
                         ADD TO CART
                     </button>
