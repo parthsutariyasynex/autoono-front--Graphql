@@ -555,7 +555,7 @@ export default function ProductsPage({ categoryId: propCategoryId, storeCode: pr
     const pageNumbers: number[] = [];
     for (let p = startPage; p <= endPage; p++) pageNumbers.push(p);
     return (
-      <div className={`flex items-center justify-between ${compact ? 'py-3 px-1' : 'px-6 h-[52px] border-t border-gray-100 bg-gray-50/30'} ${show ? 'opacity-100' : 'opacity-0'} transition-opacity`}>
+      <div className={`flex items-center justify-between ${compact ? 'py-3 px-3' : 'px-6 h-[52px] border-t border-gray-100 bg-gray-50/30'} ${show ? 'opacity-100' : 'opacity-0'} transition-opacity`}>
         <span className={`font-semibold text-black/50 uppercase tracking-widest ${compact ? 'text-caption' : 'text-caption'}`}>
           {compact ? `${displayCount} ${t("m.products")}` : <>{t("m.found")} <span className="text-black">{displayCount}</span> {t("m.products")}</>}
         </span>
@@ -618,9 +618,6 @@ export default function ProductsPage({ categoryId: propCategoryId, storeCode: pr
             <div className="flex flex-col h-full">
               <div className="bg-primary px-5 py-4 flex items-center justify-between flex-shrink-0">
                 <h2 className="text-body-lg font-semibold text-black uppercase tracking-tight">{t("m.filter-options")}</h2>
-                {Object.keys(selectedFilters).length > 0 && (
-                  <button onClick={() => { clearAllFilters(); setIsMobileFilterOpen(false); }} className="text-label font-semibold text-black/70 uppercase underline">{t("m.clear-all")}</button>
-                )}
               </div>
               <div className="flex-1 overflow-y-auto">
                 <div className="[&>aside]:!w-full [&>aside]:!h-auto [&>aside]:!static [&>aside]:!border-0 [&>aside]:!overflow-visible [&>aside>div]:!static [&>aside>div]:!h-auto [&>aside>div:first-child]:!hidden">
@@ -642,13 +639,13 @@ export default function ProductsPage({ categoryId: propCategoryId, storeCode: pr
         <div className="flex-1 flex flex-col w-full">
 
           {/* ── MOBILE CONTROLS ── */}
-          <div className="xl:hidden flex flex-col gap-2 mb-3">
+          <div className="xl:hidden flex flex-col gap-2 mb-3 mt-2">
             {/* Controls: 2 cols for SKU lookup (no filters), 3 cols otherwise.
                 At lg+ the Filter button is hidden (sidebar replaces it), so the
                 grid drops to 2 cols to fill the row evenly with Favorites + Sort. */}
-            <div className={`grid ${hideFilters ? "grid-cols-2" : "grid-cols-3 lg:grid-cols-2"} gap-2`}>
-              <button onClick={() => router.push(lp("/favorites"))} className="h-[44px] bg-white border border-gray-200 rounded-xl flex items-center justify-center gap-2 text-label font-semibold uppercase tracking-wider shadow-sm active:scale-95 cursor-pointer">
-                <Star className="w-4 h-4 fill-black text-black" /> {t("m.favourite-products")}
+            <div className={`grid ${hideFilters ? "grid-cols-2" : "grid-cols-3 lg:grid-cols-2"} gap-2 px-3`}>
+              <button onClick={() => router.push(lp("/favorites"))} className=" h-[44px] bg-white border border-gray-200 rounded-xl flex items-center justify-center gap-2 text-label font-semibold uppercase tracking-wider shadow-sm active:scale-95 cursor-pointer">
+                <Star className="w-4 h-4 fill-black text-black hidden md:block" /> {t("m.favourite-products")}
               </button>
               <button onClick={() => setIsMobileSortOpen(true)} className="h-[44px] bg-white border border-gray-200 rounded-xl flex items-center justify-center gap-2 text-label font-semibold uppercase tracking-wider shadow-sm active:scale-95 cursor-pointer">
                 <ChevronDown className="w-4 h-4" />
@@ -663,7 +660,7 @@ export default function ProductsPage({ categoryId: propCategoryId, storeCode: pr
             </div>
             {/* Active filter chips — wrapped in a stable-height slot so the
                 grid below doesn't jump when chips appear/disappear. */}
-            <div className="min-h-[38px] flex items-center">
+            <div className="min-h-auto flex items-center px-3">
               {(Object.keys(selectedFilterLabels).length > 0 || searchByTerm || itemCodeTerm || isFavorite) && (
                 <div className="flex items-center gap-2 overflow-x-auto custom-scrollbar-hide py-1 w-full">
                   <span className="text-caption font-bold text-black uppercase tracking-tight whitespace-nowrap px-1">
@@ -727,7 +724,7 @@ export default function ProductsPage({ categoryId: propCategoryId, storeCode: pr
 
           {/* ── MOBILE/TABLET CARD LIST ── */}
           {/* lg:grid-cols-2 keeps cards comfortable next to the 300px sidebar at 1024-1279px. */}
-          <div className="xl:hidden flex-1 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-2 gap-2.5 overflow-y-auto">
+          <div className="xl:hidden flex-1 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-2 gap-2.5 overflow-y-auto px-3">
             {loading ? <MobileCardShimmer /> : serverError ? (
               <div className="flex-1 flex items-center justify-center py-10 px-4 col-span-full">
                 <div className="bg-red-50 border border-red-100 text-red-700 px-5 py-4 rounded-xl flex flex-col items-center gap-3 w-full shadow-sm text-center">
@@ -764,12 +761,12 @@ export default function ProductsPage({ categoryId: propCategoryId, storeCode: pr
 
           {/* ── DESKTOP CONTROLS + TABLE ── */}
           {/* For search results or empty results the sidebar is gone → full rounding; otherwise right-rounded only */}
-          <div className={`hidden xl:flex flex-col bg-white shadow-sm border border-gray-200 overflow-hidden ${hideFilters || (!loading && products.length === 0) ? "md:rounded-2xl" : "md:rounded-r-2xl border-l-0"}`}>
+          <div className={`hidden xl:flex flex-col bg-white shadow-sm border border-gray-200 overflow-hidden ${hideFilters || (!loading && products.length === 0) ? "" : "border-l-0"}`}>
             {/* Desktop header */}
             {(loading || products.length > 0) && (
               <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center gap-4 min-h-[60px]">
                 <div className="flex items-center gap-4">
-                  <button onClick={() => router.push(lp("/favorites"))} className="bg-gray-50 border border-gray-200 text-black px-4 py-2 rounded-xl flex items-center gap-2 shadow-sm text-xs font-semibold active:scale-95 cursor-pointer uppercase tracking-wider">
+                  <button onClick={() => router.push(lp("/favorites"))} className="bg-gray-50 border border-gray-200 text-black px-4 py-2 rounded-sm flex items-center gap-2 shadow-sm text-xs font-semibold active:scale-95 cursor-pointer uppercase tracking-wider">
                     <Star className="w-5 h-5 fill-black text-black" /> {t("sidebar.favoriteProducts")}
                   </button>
                   <div className="flex flex-1 items-center gap-3 overflow-x-auto custom-scrollbar-hide max-w-[800px]">
@@ -812,7 +809,7 @@ export default function ProductsPage({ categoryId: propCategoryId, storeCode: pr
                   value={sortBy}
                   onChange={setSortBy}
                   options={[{ label: t("products.sortByDefault"), value: "none" }, { label: t("products.sortByLowToHigh"), value: "price-asc" }, { label: t("products.sortByHighToLow"), value: "price-desc" }]}
-                  buttonClassName="bg-gray-50 px-4 py-2 rounded-xl border border-gray-200 text-xs font-medium text-black cursor-pointer shadow-sm hover:border-gray-300 whitespace-nowrap"
+                  buttonClassName="bg-gray-50 px-4 py-2 rounded-sm border border-gray-200 text-xs font-medium text-black cursor-pointer shadow-sm hover:border-gray-300 whitespace-nowrap"
                   minWidth={190}
                 />
               </div>

@@ -133,7 +133,7 @@ const Popup: React.FC<PopupProps> = ({
                 // Use h-screen so the panel always fills the full viewport height.
                 // h-full alone doesn't resolve to viewport height reliably inside
                 // a fixed-positioned flex container in all browser/CSS contexts.
-                return "h-screen w-full sm:w-[440px] md:w-[520px] lg:w-[560px] overflow-x-hidden flex flex-col";
+                return "h-screen w-full md:w-[400px] overflow-x-hidden flex flex-col";
             case "slide-bottom":
                 return "w-full sm:max-w-2xl rounded-t-2xl";
             default: // centered modal

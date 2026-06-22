@@ -834,7 +834,7 @@ export default function Navbar() {
             links occupy the same vertical space. Without this, the bar
             measures ~16px during loading and jumps to ~40px after
             hydration, pushing every page section below it down. */}
-        <nav ref={warehouseNavRef} className="bg-primary w-full hidden md:block h-9">
+        <nav ref={warehouseNavRef} className="bg-primary w-full hidden md:block h-11">
           <div className="flex items-center justify-center w-full h-full px-4">
             {navLoading ? (
               <div className="flex items-center gap-6">
@@ -871,7 +871,7 @@ export default function Navbar() {
                     {hasChildren ? (
                       <span
                         onClick={() => setOpenWarehouseMenu(isOpen ? null : item.href)}
-                        className={`py-3 flex items-center h-full px-2.5 lg:px-7 text-base font-medium capitalize transition-all duration-200 whitespace-nowrap cursor-pointer select-none ${isActive
+                        className={`py-3 flex items-center h-full px-5 lg:px-7 text-sm md:text-base font-medium capitalize transition-all duration-200 whitespace-nowrap cursor-pointer select-none ${isActive
                           ? "bg-black text-white"
                           : "text-black hover:bg-black hover:text-white"
                           }`}
@@ -881,7 +881,7 @@ export default function Navbar() {
                     ) : (
                       <Link
                         href={href}
-                        className={`py-3 flex items-center h-full px-2.5 lg:px-7 text-base font-medium capitalize transition-all duration-200 whitespace-nowrap ${isActive
+                        className={`py-3 flex items-center h-full px-5 lg:px-7 text-sm md:text-base font-medium capitalize transition-all duration-200 whitespace-nowrap ${isActive
                           ? "bg-black text-white"
                           : "text-black hover:bg-black hover:text-white"
                           }`}
@@ -923,7 +923,7 @@ export default function Navbar() {
                                       document.cookie = `NEXT_STORE=${w.code};path=/;max-age=${60 * 60 * 24 * 365};samesite=lax`;
                                       setOpenWarehouseMenu(null);
                                     }}
-                                    className={`text-start px-6 py-2.5 text-body font-bold transition-colors cursor-pointer !text-black ${isSelected ? "bg-primary border-l-2 border-black" : "hover:bg-primary hover:!text-white"}`}
+                                    className={`text-start px-6 py-2.5 text-sm font-medium transition-colors cursor-pointer !text-black ${isSelected ? "bg-primary border-l-2 border-black" : "hover:bg-primary hover:!text-white"}`}
                                   >
                                     {w.label}
                                   </Link>
@@ -938,7 +938,7 @@ export default function Navbar() {
                                   key={idx}
                                   href={childHref}
                                   onClick={() => setOpenWarehouseMenu(null)}
-                                  className="px-6 py-2.5 text-body font-semibold text-black hover:bg-primary hover:text-white transition-colors"
+                                  className="px-6 py-2.5 text-sm font-medium text-black hover:bg-primary hover:text-white transition-colors"
                                 >
                                   {child.label}
                                 </Link>
@@ -1007,7 +1007,7 @@ export default function Navbar() {
                             type="button"
                             onClick={() => setMobileOpenMenu(mobileOpenMenu === item.href ? null : item.href)}
                             aria-expanded={mobileOpenMenu === item.href}
-                            className={`w-full py-2.5 text-body font-semibold uppercase tracking-wide flex items-center justify-between cursor-pointer ${isActive ? "text-primary" : "text-black"
+                            className={`w-full py-2.5 text-sm font-semibold uppercase tracking-wide flex items-center justify-between cursor-pointer ${isActive ? "text-primary" : "text-black"
                               }`}
                           >
                             {resolveLabel(item)}
@@ -1024,11 +1024,10 @@ export default function Navbar() {
                             onClick={() => setIsMenuOpen(false)}
                           >
                             {resolveLabel(item)}
-                            <span className="text-black/40 group-hover:text-primary transition-colors text-caption">→</span>
                           </Link>
                         )}
                         {isWarehouse && warehouseItems.length > 0 && mobileOpenMenu === item.href && (
-                          <div className="pl-3 border-l-2 border-gray-100 ml-1 mb-1">
+                          <div className="mb-1">
                             {[...warehouseItems]
                               .sort((a, b) => {
                                 if (a.code === currentStore) return -1;
@@ -1053,7 +1052,7 @@ export default function Navbar() {
                                       document.cookie = `NEXT_STORE=${w.code};path=/;max-age=${60 * 60 * 24 * 365};samesite=lax`;
                                       setIsMenuOpen(false);
                                     }}
-                                    className={`block w-full text-start py-2 text-label font-semibold cursor-pointer !text-black ${isSelected ? "font-black" : "opacity-70 hover:opacity-100"}`}
+                                    className={`block w-full text-start py-2 text-sm font-medium cursor-pointer !text-black ${isSelected ? "font-black" : "opacity-70 hover:opacity-100"}`}
                                   >
                                     {w.label}
                                   </Link>

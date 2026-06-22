@@ -137,12 +137,12 @@ const CartPage: React.FC = () => {
     }
 
     return (
-        <div className="min-h-screen bg-surfaceOverlay pb-4 lg:pb-10">
+        <div className="min-auto bg-surfaceOverlay pb-4 lg:pb-10">
             {/* Main Content Container */}
-            <div className="w-full px-4 md:px-12 pt-8 md:pt-14">
+            <div className="w-full px-3 lg:px-12 pt-4 md:pt-8">
 
                 {/* Breadcrumbs & Title Section */}
-                <div className="mb-10 md:mb-14 text-center">
+                <div className="mb-4 md:mb-8 text-center">
                     <h1 className="text-xl md:text-2xl font-bold text-black uppercase tracking-tight mb-2">
                         {t("cart.title")}
                     </h1>
@@ -165,7 +165,7 @@ const CartPage: React.FC = () => {
                     return (
                         <button
                             onClick={openGiftModal}
-                            className={`w-full mb-8 active:scale-[0.99] transition-all duration-200 py-3.5 px-6 flex items-center justify-center gap-3 cursor-pointer ${hasGifts
+                            className={`rounded-sm w-full mb-3 w-max transition-all duration-200 py-3 px-6 flex items-center justify-center gap-3 cursor-pointer ${hasGifts
                                 ? "bg-white border-2 border-[#008a00] hover:bg-green-50"
                                 : "bg-[#008a00] hover:bg-[#006e00]"
                                 }`}
@@ -196,7 +196,7 @@ const CartPage: React.FC = () => {
                 {/* Items + Summary side-by-side from lg+ only. Below lg (mobile +
                     tablet) they stack so the item rows get full width and use the
                     roomy card layout instead of a cramped desktop table row. */}
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 md:gap-8 xl:gap-16 items-start">
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 md:gap-8 xl:gap-8 items-start">
 
                     {/* Left Column (Items & Actions) */}
                     <div className="lg:col-span-8 xl:col-span-9 flex flex-col min-w-0">
@@ -204,15 +204,15 @@ const CartPage: React.FC = () => {
                         <div className="flex flex-col h-full">
                             {/* Table Header (Sticky Top) — lg+ only; it aligns with the
                                 desktop row layout, which also kicks in at lg+. */}
-                            <div className="hidden lg:flex sticky top-0 z-20 bg-white border border-gray-100 rounded-xl items-center py-4 px-10 mb-4 shadow-sm">
-                                <div className="w-[45%] text-caption font-bold text-black uppercase tracking-widest">{t("cart.itemDescription")}</div>
-                                <div className="w-[15%] text-caption font-bold text-black uppercase tracking-widest text-center">{t("cart.price")}</div>
-                                <div className="w-[20%] text-caption font-bold text-black uppercase tracking-widest text-center">{t("cart.qty")}</div>
-                                <div className="w-[20%] text-caption font-bold text-black uppercase tracking-widest text-right">{t("cart.total")}</div>
+                            <div className="hidden lg:flex sticky top-0 z-20 bg-white border border-[#ddd] rounded-sm items-center py-4 px-5 mb-4">
+                                <div className="w-[45%] text-label font-bold text-black uppercase tracking-widest">{t("cart.itemDescription")}</div>
+                                <div className="w-[15%] text-label font-bold text-black uppercase tracking-widest text-center">{t("cart.price")}</div>
+                                <div className="w-[20%] text-label font-bold text-black uppercase tracking-widest text-center">{t("cart.qty")}</div>
+                                <div className="w-[20%] text-label font-bold text-black uppercase tracking-widest ltr:text-right rtl:text-left">{t("cart.total")}</div>
                             </div>
 
                             {/* Scrollable Items Container */}
-                            <div className="flex-1 custom-scrollbar pr-2 space-y-4 pb-4">
+                            <div className="flex-1 custom-scrollbar space-y-2 pb-4">
                                 {cart.items.map((item) => (
                                     <CartItem
                                         key={item.item_id}
@@ -225,7 +225,7 @@ const CartPage: React.FC = () => {
                             </div>
 
                             {/* Actions Bar */}
-                            <div className="mt-6">
+                            <div className="mt-0">
                                 <div className="space-y-4">
                                     <CartActions
                                         itemsCount={cart.items_count}

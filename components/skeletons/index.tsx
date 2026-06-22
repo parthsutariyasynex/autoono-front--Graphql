@@ -235,20 +235,20 @@ export function CartItemSkeleton() {
 // summary card on the right.
 export function CartPageSkeleton({ items = 3 }: { items?: number }) {
   return (
-    <div className="min-h-screen bg-surfaceOverlay pb-4 lg:pb-10">
-      <div className="w-full px-4 md:px-12 pt-8 md:pt-14">
+    <div className="min-auto bg-surfaceOverlay pb-4 lg:pb-10">
+      <div className="w-full px-3 lg:px-12 pt-8 md:pt-8">
         {/* Centered title + primary bar */}
-        <div className="mb-10 md:mb-14 text-center flex flex-col items-center gap-2">
+        <div className="mb-4 md:mb-8 text-center flex flex-col items-center gap-2">
           <Pulse className="h-7 md:h-8 w-32" />
           <div className="h-1 w-12 bg-primary" />
         </div>
 
         {/* 12-col grid — lg+ matches new CartPage breakpoint (stacks below lg) */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 md:gap-8 xl:gap-16 items-start">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 md:gap-8 xl:gap-8 items-start">
           {/* Left column — items */}
           <div className="lg:col-span-8 xl:col-span-9 flex flex-col min-w-0">
             {/* Sticky table header (lg+) — matches real header */}
-            <div className="hidden lg:flex bg-white border border-gray-100 rounded-xl items-center py-4 px-10 mb-4 shadow-sm">
+            <div className="hidden lg:flex bg-white border border-gray-100 rounded-sm items-center py-4 px-5 mb-4 shadow-sm">
               <div className="w-[45%]"><Pulse className="h-3 w-32" /></div>
               <div className="w-[15%] flex justify-center"><Pulse className="h-3 w-12" /></div>
               <div className="w-[20%] flex justify-center"><Pulse className="h-3 w-10" /></div>
@@ -256,29 +256,25 @@ export function CartPageSkeleton({ items = 3 }: { items?: number }) {
             </div>
 
             {/* Item cards — rounded-3xl matching real CartItem */}
-            <div className="space-y-4 pb-4">
+            <div className="space-y-2 pb-4">
               {Array.from({ length: items }).map((_, i) => (
-                <div key={i} className="relative bg-white border border-gray-100 rounded-3xl p-4 lg:p-6">
+                <div key={i} className="relative bg-white border border-gray-100 rounded-sm">
                   {/* Mobile + tablet card layout — below lg to match CartItem */}
-                  <div className="lg:hidden flex gap-4">
-                    <Pulse className="w-20 h-20 flex-shrink-0 rounded-2xl border border-gray-100" />
+                  <div className="lg:hidden flex gap-4 p-1">
+                    <Pulse className="w-15 h-15 flex-shrink-0 rounded-sm border border-gray-100" />
                     <div className="flex-1 min-w-0 space-y-2">
                       <Pulse className="h-4 w-3/4" />
-                      <div className="flex gap-1 mb-2">
+                      <div className="flex flex-row items-center gap-2">
                         <Pulse className="h-5 w-16 rounded-sm" />
                         <Pulse className="h-5 w-16 rounded-sm" />
-                      </div>
-                      <div className="flex items-center justify-between pt-2">
-                        <Pulse className="h-5 w-20" />
-                        <Pulse className="h-9 w-24 rounded-sm border border-gray-100" />
                       </div>
                     </div>
                   </div>
 
                   {/* Desktop layout — lg+, 4 columns matching header widths */}
-                  <div className="hidden lg:flex items-center">
+                  <div className="hidden lg:flex items-center p-1">
                     <div className="w-[45%] flex items-center gap-4">
-                      <Pulse className="w-16 xl:w-20 h-16 xl:h-20 flex-shrink-0 rounded-xl border border-gray-100" />
+                      <Pulse className="w-12 h-12 flex-shrink-0 rounded-sm border border-gray-100" />
                       <div className="min-w-0 space-y-2 flex-1">
                         <Pulse className="h-4 w-3/4" />
                         <div className="flex gap-1.5">
@@ -293,7 +289,7 @@ export function CartPageSkeleton({ items = 3 }: { items?: number }) {
                     <div className="w-[20%] flex justify-center">
                       <Pulse className="h-10 w-32 rounded-sm border border-gray-100" />
                     </div>
-                    <div className="w-[20%] flex justify-end pr-4">
+                    <div className="w-[20%] flex justify-end rtl:pl-4 ltr:pr-4">
                       <Pulse className="h-5 w-20" />
                     </div>
                   </div>
@@ -302,7 +298,7 @@ export function CartPageSkeleton({ items = 3 }: { items?: number }) {
             </div>
 
             {/* Actions bar — Update / Clear buttons */}
-            <div className="mt-6 flex flex-col sm:flex-row gap-3 justify-end">
+            <div className="mt-0 flex flex-col sm:flex-row gap-3 justify-end">
               <Pulse className="h-11 w-full sm:w-32 rounded-sm" />
               <Pulse className="h-11 w-full sm:w-40 rounded-sm" />
             </div>
@@ -312,11 +308,11 @@ export function CartPageSkeleton({ items = 3 }: { items?: number }) {
           <div className="lg:col-span-4 xl:col-span-3 w-full">
             <div className="lg:sticky lg:top-28 bg-white border border-gray-100 rounded-sm shadow-[0_10px_40px_rgba(0,0,0,0.05)] overflow-hidden">
               {/* Summary header bar */}
-              <div className="bg-gray-200 px-6 py-4 border-b border-gray-200 flex items-center justify-center">
+              <div className="bg-gray-200 px-3 py-2 border-b border-gray-200 flex items-center justify-center">
                 <Pulse className="h-4 w-32" />
               </div>
               {/* Body */}
-              <div className="px-6 py-5 space-y-0">
+              <div className="px-2 py-2 space-y-0">
                 <div className="space-y-3 pb-4 border-b border-gray-100">
                   {Array.from({ length: 3 }).map((_, i) => (
                     <div key={i} className="flex justify-between items-center">
@@ -356,8 +352,8 @@ export function CartPageSkeleton({ items = 3 }: { items?: number }) {
 export function CheckoutSkeleton() {
   // One section card with a SectionHeader-style strip (50px) and body
   const SectionCard = ({ children }: { children: React.ReactNode }) => (
-    <div className="bg-white border border-border shadow-sm rounded-xl overflow-hidden">
-      <div className="bg-gray-50/80 px-4 py-3 border-b border-border flex items-center justify-between h-[50px]">
+    <div className="bg-white border border-[#ddd] shadow-sm rounded-sm overflow-hidden">
+      <div className="bg-gray-50/80 px-3 border-b border-border flex items-center justify-between h-[50px]">
         <div className="flex items-center gap-2.5">
           <div className="w-5 h-5 rounded-full bg-black" />
           <Pulse className="h-3 w-32" />
@@ -370,28 +366,28 @@ export function CheckoutSkeleton() {
 
   return (
     <div className="min-h-screen flex flex-col w-full bg-surfacePage text-xs italic-none">
-      <main className="flex-1 w-full px-4 md:px-6 lg:px-8 py-4 md:py-6 lg:py-10 pt-2 md:pt-4">
+      <main className="flex-1 w-full px-3 lg:px-12 lg:px-8 pt-4 md:pt-8 pb-4 md:pb-8">
         {/* Header: back link + centered title + gradient line */}
-        <div className="flex flex-col items-center justify-center text-center gap-4 mb-12 relative">
-          <div className="lg:absolute left-0 top-1/2 lg:-translate-y-1/2 flex items-center gap-2 mb-4 lg:mb-0">
-            <Pulse className="w-8 h-8 rounded-full border border-black !bg-transparent" />
+        <div className="flex flex-col items-center justify-center text-center gap-4 mb-4 md:mb-8  relative">
+          <div className="lg:absolute rtl:right-0 ltr:left-0 top-1/2 lg:-translate-y-1/2 flex items-center gap-2 mb-4 lg:mb-0">
+            <Pulse className="w-6 h-6 rounded-full border border-black !bg-transparent" />
             <Pulse className="hidden sm:block h-3 w-32" />
           </div>
           <div className="flex flex-col items-center gap-4">
             <Pulse className="h-7 md:h-8 w-44" />
-            <div className="h-[2px] w-full max-w-[400px] bg-gradient-to-r from-transparent via-primary to-transparent" />
+            <div className="h-1 w-12 bg-primary mx-auto" />
           </div>
         </div>
 
         {/* 12-col grid */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 md:gap-6 lg:gap-8 items-start">
           {/* Left column — 4 section cards */}
-          <div className="lg:col-span-8 space-y-6">
+          <div className="lg:col-span-8 space-y-3">
             {/* 1. Shipping Address — list of address cards */}
             <SectionCard>
               <div className="space-y-3 max-h-[460px] overflow-hidden">
                 {Array.from({ length: 3 }).map((_, i) => (
-                  <div key={i} className="flex items-start gap-3 p-4 border border-border bg-white rounded-xl">
+                  <div key={i} className="flex items-start gap-3 p-4 border border-border bg-white rounded-sm">
                     <Pulse className="w-5 h-5 rounded-full mt-1" />
                     <div className="flex-1 min-w-0 space-y-2">
                       <Pulse className="h-4 w-48" />
@@ -436,9 +432,9 @@ export function CheckoutSkeleton() {
 
           {/* Right column — sticky Order Summary */}
           <div className="lg:col-span-4 space-y-6">
-            <div className="bg-white border border-border shadow-lg rounded-xl sticky top-24 overflow-hidden">
+            <div className="bg-white border border-[#ddd] shadow-lg rounded-sm sticky top-24 overflow-hidden">
               {/* Header: black check circle + title */}
-              <div className="bg-gray-50 px-4 sm:px-6 py-3 sm:py-4 flex items-center gap-2 sm:gap-3 border-b border-border">
+              <div className="bg-gray-50 px-4 sm:px-6 py-3 sm:py-4 flex items-center gap-2 sm:gap-3 border-b border-[#ddd]">
                 <div className="w-5 h-5 rounded-full bg-black" />
                 <Pulse className="h-3 w-32" />
               </div>

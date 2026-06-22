@@ -113,13 +113,13 @@ export default function NotificationDrawer({ isOpen, onClose }: NotificationDraw
                             <p className="text-xs text-black/50 mt-2 font-medium tracking-widest uppercase">{t("notifications.upToDate")}</p>
                         </div>
                     ) : (
-                        <div className="divide-y divide-gray-100 pb-24">
+                        <div className="divide-y divide-gray-100">
                             {notifications.map((item, index) => (
                                 <Link
                                     key={`${item.notification_id || index}-${index}`}
                                     href={getRowHref(item)}
                                     onClick={() => onRowClick(item)}
-                                    className={`p-6 flex flex-col gap-1 transition-all relative border-l-4 cursor-pointer hover:bg-gray-50 ${!item.is_read ? "bg-warningBgLight border-primary" : "bg-white border-transparent"
+                                    className={`px-6 py-3 flex flex-col gap-1 transition-all relative cursor-pointer hover:bg-gray-50 ${!item.is_read ? "bg-warningBgLight border-primary" : "bg-white border-transparent"
                                         }`}
                                 >
                                     {/* Header Row: Title & Remove */}

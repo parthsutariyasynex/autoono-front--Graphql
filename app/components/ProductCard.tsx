@@ -139,11 +139,11 @@ function ProductCardImpl({
     // variant === "row"
     return (
         <tr className="hover:bg-primary/5 transition-colors group h-auto md:h-[52px]">
-            <td className="px-2 md:px-4 text-body-sm font-normal text-black/80 text-center">
+            <td className="px-2 md:px-4 text-body font-normal text-black/80 text-center">
                 {product.brand || "—"}
             </td>
             <td className="px-2 md:px-4 text-center">
-                <span className="text-body-sm font-normal text-black block leading-tight">{product.name || "—"}</span>
+                <span className="text-body font-normal text-black block leading-tight">{product.name || "—"}</span>
             </td>
             <td className="px-2 md:px-4 text-center">
                 <div className="w-10 h-10 mx-auto">
@@ -182,7 +182,7 @@ function ProductCardImpl({
                                         const val = e.target.value.replace(/\D/g, "");
                                         onQtyChange(product.sku, parseInt(val) || 0);
                                     }}
-                                    className="w-8 h-8 border-2 border-gray-100 rounded-md flex items-center justify-center text-label font-semibold text-black bg-white shadow-sm text-center outline-none focus:border-primary transition-colors"
+                                    className="w-8 h-8 border-1 border-gray-300 rounded-sm flex items-center justify-center text-label font-semibold text-black bg-white shadow-sm text-center outline-none focus:border-primary transition-colors"
                                     onFocus={(e) => { const t = e.target; setTimeout(() => t.select(), 0); }}
                                     onClick={(e) => (e.target as HTMLInputElement).select()}
                                     onKeyDown={(e) => { if (e.key === "Enter") onAddToCart(product); }}
@@ -190,18 +190,18 @@ function ProductCardImpl({
                             ) : <div className="w-8 h-8" />}
 
                             {!isOutOfStock ? (
-                                <button onClick={() => onAddToCart(product)} disabled={isAdding} className={`w-8 h-8 rounded-md flex items-center justify-center shadow-md hover:-translate-y-0.5 transition-all cursor-pointer ${isJustAdded ? "bg-green-500 text-white" : "bg-primary text-black"}`}>
+                                <button onClick={() => onAddToCart(product)} disabled={isAdding} className={`w-8 h-8 rounded-sm flex items-center justify-center shadow-md transition-all cursor-pointer ${isJustAdded ? "bg-green-500 text-white" : "bg-primary text-black"}`}>
                                     {isJustAdded
                                         ? <Check size={15} strokeWidth={3} />
                                         : <ShoppingCart size={15} strokeWidth={2.5} className={isAdding ? "opacity-40" : ""} />}
                                 </button>
                             ) : (
-                                <button onClick={() => onInquiry(product)} className="w-8 h-8 bg-primary text-black rounded-md flex items-center justify-center shadow-md active:scale-95 cursor-pointer">
+                                <button onClick={() => onInquiry(product)} className="w-8 h-8 bg-primary text-black rounded-sm flex items-center justify-center shadow-md active:scale-95 cursor-pointer">
                                     <Info size={15} strokeWidth={2.5} />
                                 </button>
                             )}
 
-                            <button onClick={() => onToggleFavorite(product)} className={`w-8 h-8 rounded-md flex items-center justify-center shadow-md active:scale-95 cursor-pointer ${isFavorite ? "bg-primary text-black" : "bg-white text-black/50 border border-gray-100 hover:border-primary"}`}>
+                            <button onClick={() => onToggleFavorite(product)} className={`w-8 h-8 rounded-sm flex items-center justify-center shadow-md cursor-pointer ${isFavorite ? "bg-primary text-black" : "bg-white text-black/50 border border-[#ddd]"}`}>
                                 <Star size={15} fill={isFavorite ? "currentColor" : "none"} strokeWidth={2.5} />
                             </button>
                         </div>

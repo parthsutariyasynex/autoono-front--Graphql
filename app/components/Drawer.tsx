@@ -31,15 +31,15 @@ export default function Drawer({ isOpen, onClose, children, title, scrollable = 
                 button needs to flip to the left to avoid overlapping the title. */}
             <button
                 onClick={onClose}
-                className="absolute ltr:right-4 rtl:left-4 top-4 z-[110] p-2 bg-white/80 backdrop-blur-sm rounded-full shadow-sm hover:bg-gray-100 transition-colors text-black/60 hover:text-black"
+                className="absolute ltr:right-4 rtl:left-4 top-4 z-[110] p-1 bg-white/80 backdrop-blur-sm rounded-full shadow-sm hover:bg-gray-100 transition-colors text-black/60 hover:text-black"
                 aria-label="Close drawer"
             >
-                <X size={22} strokeWidth={2.5} />
+                <X size={16} strokeWidth={2.5} />
             </button>
 
             {/* Header if title exists */}
             {title && (
-                <div className="px-6 py-5 border-b border-gray-100 flex-shrink-0">
+                <div className="bg-primary px-5 py-4 flex items-center justify-between flex-shrink-0">
                     <h2 className="text-xl font-bold text-black">{title}</h2>
                 </div>
             )}

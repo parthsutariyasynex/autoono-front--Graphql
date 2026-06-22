@@ -232,7 +232,7 @@ const SearchPopup: React.FC<SearchPopupProps> = ({ isOpen, onClose }) => {
             scrollable={false}
             closeOnOverlayClick={false}
         >
-            <div className="relative p-6 md:p-10" dir={isRtl ? "rtl" : "ltr"}>
+            <div className="relative p-3 md:p-10" dir={isRtl ? "rtl" : "ltr"}>
                 {/* Close Button */}
                 <button
                     onClick={onClose}
@@ -250,7 +250,7 @@ const SearchPopup: React.FC<SearchPopupProps> = ({ isOpen, onClose }) => {
                             value={query}
                             onChange={(e) => setQuery(e.target.value)}
                             placeholder={t("nav.searchPlaceholder")}
-                            className="flex-1 px-6 md:px-10 text-base md:text-lg font-bold text-black outline-none placeholder:text-black/40 placeholder:font-medium bg-transparent min-w-0 ltr:text-left rtl:text-right"
+                            className="flex-1 px-6 md:px-7 text-base md:text-lg font-medium text-black outline-none placeholder:text-black/40 placeholder:font-medium bg-transparent min-w-0 ltr:text-left rtl:text-right"
                         />
                         <button
                             type="submit"
@@ -266,7 +266,7 @@ const SearchPopup: React.FC<SearchPopupProps> = ({ isOpen, onClose }) => {
                             {isSearching && (
                                 <div className="py-2">
                                     {Array.from({ length: 3 }).map((_, i) => (
-                                        <div key={i} className="flex items-center gap-3 px-6 md:px-10 py-3 animate-pulse">
+                                        <div key={i} className="flex items-center gap-3 px-6 md:px-7 py-3 animate-pulse">
                                             <div className="h-10 w-10 flex-shrink-0 rounded-md bg-gray-200" />
                                             <div className="flex-1 space-y-1.5">
                                                 <div className="h-3.5 bg-gray-200 rounded w-3/4" />
@@ -278,12 +278,12 @@ const SearchPopup: React.FC<SearchPopupProps> = ({ isOpen, onClose }) => {
                                 </div>
                             )}
                             {/* {!isSearching && suggestions.length > 0 && (
-                                <div className="px-6 md:px-10 py-2 border-b border-gray-100 bg-gray-50/50 text-caption font-bold text-black/40 uppercase tracking-widest">
+                                <div className="px-6 md:px-7 py-2 border-b border-gray-100 bg-gray-50/50 text-caption font-bold text-black/40 uppercase tracking-widest">
                                     {t("m.found")} {totalFound} {t("m.products")}
                                 </div>
                             )} */}
                             {!isSearching && noResults && (
-                                <div className="px-6 md:px-10 py-6 text-center text-black/50 text-sm font-medium">
+                                <div className="px-6 md:px-7 py-6 text-center text-black/50 text-sm font-medium">
                                     {t("quickOrder.noProducts")}
                                 </div>
                             )}
@@ -291,10 +291,10 @@ const SearchPopup: React.FC<SearchPopupProps> = ({ isOpen, onClose }) => {
                                 <div
                                     key={`${item.sku}-${idx}`}
                                     onClick={() => handleSuggestionClick(item)}
-                                    className="px-6 md:px-10 py-3.5 hover:bg-gray-50 cursor-pointer border-b border-gray-50 last:border-0 transition-colors"
+                                    className="px-3 md:px-7 py-3.5 hover:bg-gray-50 cursor-pointer border-b border-gray-50 last:border-0 transition-colors"
                                 >
                                     <div className="flex items-center justify-between gap-3">
-                                        <span className="text-[14px] md:text-[15px] font-bold text-black truncate">{item.label}</span>
+                                        <span className="text-[14px] md:text-[15px] font-medium text-black truncate">{item.label}</span>
                                         {item.sku && (
                                             <span className="text-caption text-black/50 font-medium uppercase tracking-wider flex-shrink-0">{item.sku}</span>
                                         )}
@@ -304,7 +304,7 @@ const SearchPopup: React.FC<SearchPopupProps> = ({ isOpen, onClose }) => {
                             {/* {!isSearching && totalFound > suggestions.length && (
                                 <div
                                     onClick={() => handleSearch()}
-                                    className="px-6 md:px-10 py-3 hover:bg-primary/10 cursor-pointer bg-gray-50/50 text-center text-caption font-bold text-primary uppercase tracking-widest transition-colors"
+                                    className="px-6 md:px-7 py-3 hover:bg-primary/10 cursor-pointer bg-gray-50/50 text-center text-caption font-bold text-primary uppercase tracking-widest transition-colors"
                                 >
                                     {t("m.view-all")} ({totalFound})
                                 </div>
