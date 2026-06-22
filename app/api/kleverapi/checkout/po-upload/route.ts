@@ -24,16 +24,38 @@ export async function GET(req: Request) {
     });
     const raw = data.kleverCheckoutPoFiles;
     console.log("[po-upload/GET] raw kleverCheckoutPoFiles:", JSON.stringify(raw));
-    let files: unknown = raw;
-    if (typeof raw === "string") {
+
+    // Always normalise to a flat string[] regardless of what Magento returns:
+    //   null | undefined          → []
+    //   string[] (real JS array)  → filtered to strings
+    //   string (JSON array)       → parsed and filtered
+    //   string (JSON object)      → Object.values — handles PHP-style {"0":"f.pdf"}
+    //   plain string              → [raw]
+    let files: string[] = [];
+    if (raw === null || raw === undefined) {
+      files = [];
+    } else if (Array.isArray(raw)) {
+      files = raw.filter((f): f is string => typeof f === "string");
+    } else if (typeof raw === "string") {
       try {
-        files = JSON.parse(raw);
+        const parsed: unknown = JSON.parse(raw);
+        if (Array.isArray(parsed)) {
+          files = parsed.filter((f): f is string => typeof f === "string");
+        } else if (parsed && typeof parsed === "object") {
+          // PHP-style associative array: {"0":"file.pdf","1":"file2.pdf"}
+          files = Object.values(parsed as Record<string, unknown>)
+            .filter((v): v is string => typeof v === "string");
+        } else if (typeof parsed === "string" && parsed) {
+          files = [parsed];
+        }
       } catch {
-        files = raw ? [{ name: raw }] : [];
+        // Not valid JSON — treat the whole value as a single filename
+        if (raw) files = [raw];
       }
     }
-    console.log("[po-upload/GET] parsed files:", JSON.stringify(files));
-    return NextResponse.json(files ?? [], { status: 200 });
+
+    console.log("[po-upload/GET] normalized files:", JSON.stringify(files));
+    return NextResponse.json(files, { status: 200 });
   } catch (error) {
     if (isGraphQLRequestError(error)) {
       return NextResponse.json(
