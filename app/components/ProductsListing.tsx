@@ -338,6 +338,18 @@ export default function ProductsPage({ categoryId: propCategoryId, storeCode: pr
     return () => clearTimeout(handler);
   }, [selectedFilters]);
 
+  const sortDropdownRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!isMobileSortOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (sortDropdownRef.current && !sortDropdownRef.current.contains(e.target as Node)) {
+        setIsMobileSortOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [isMobileSortOpen]);
+
   useEffect(() => {
     const abortController = new AbortController();
     const loadProducts = async () => {
@@ -647,10 +659,30 @@ export default function ProductsPage({ categoryId: propCategoryId, storeCode: pr
               <button onClick={() => router.push(lp("/favorites"))} className=" h-[44px] bg-white border border-gray-200 rounded-xl flex items-center justify-center gap-2 text-label font-semibold uppercase tracking-wider shadow-sm active:scale-95 cursor-pointer">
                 <Star className="w-4 h-4 fill-black text-black hidden md:block" /> {t("m.favourite-products")}
               </button>
-              <button onClick={() => setIsMobileSortOpen(true)} className="h-[44px] bg-white border border-gray-200 rounded-xl flex items-center justify-center gap-2 text-label font-semibold uppercase tracking-wider shadow-sm active:scale-95 cursor-pointer">
-                <ChevronDown className="w-4 h-4" />
-                {sortBy === "none" ? t("products.sortByDefault") : sortBy === "price-asc" ? t("products.sortByLowToHigh") : t("products.sortByHighToLow")}
-              </button>
+              <div className="relative" ref={sortDropdownRef}>
+                <button onClick={() => setIsMobileSortOpen(prev => !prev)} className="w-full h-[44px] bg-white border border-gray-200 rounded-xl flex items-center justify-center gap-2 text-label font-semibold uppercase tracking-wider shadow-sm active:scale-95 cursor-pointer">
+                  <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${isMobileSortOpen ? "rotate-180" : ""}`} />
+                  {sortBy === "none" ? t("products.sortByDefault") : sortBy === "price-asc" ? t("products.sortByLowToHigh") : t("products.sortByHighToLow")}
+                </button>
+                {isMobileSortOpen && (
+                  <div className="absolute top-full left-0 mt-1 w-full min-w-max bg-white rounded-xl shadow-xl border border-gray-100 z-[200] py-1 overflow-hidden">
+                    {[
+                      { value: "none", label: t("products.sortByDefault") },
+                      { value: "price-asc", label: t("products.sortByLowToHigh") },
+                      { value: "price-desc", label: t("products.sortByHighToLow") },
+                    ].map((opt) => (
+                      <button
+                        key={opt.value}
+                        onClick={() => { setSortBy(opt.value); setIsMobileSortOpen(false); }}
+                        className={`w-full px-4 py-3 text-label font-semibold text-start flex items-center justify-between transition-colors ${sortBy === opt.value ? "bg-primary/10 text-black" : "text-black/80 hover:bg-gray-50"}`}
+                      >
+                        {opt.label}
+                        {sortBy === opt.value && <Check size={16} className="text-primary ml-3" strokeWidth={3} />}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
               {!hideFilters && (
                 <button onClick={() => setIsMobileFilterOpen(true)} className="lg:hidden h-[44px] bg-white border border-gray-200 rounded-xl flex items-center justify-center gap-2 text-label font-semibold uppercase tracking-wider shadow-sm active:scale-95 cursor-pointer">
                   <Filter className="w-4 h-4" /> Filter
@@ -691,36 +723,6 @@ export default function ProductsPage({ categoryId: propCategoryId, storeCode: pr
               )}
             </div>
           </div>
-
-          {/* Mobile Sort Bottom Sheet */}
-          {isMobileSortOpen && (
-            <div className="xl:hidden fixed inset-0 z-[100]">
-              <div className="absolute inset-0 bg-black/40" onClick={() => setIsMobileSortOpen(false)} />
-              <div className="absolute bottom-0 left-0 right-0 bg-white rounded-t-2xl shadow-2xl animate-in slide-in-from-bottom duration-300">
-                <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
-                  <h3 className="text-body-lg font-semibold uppercase tracking-tight">{t("products.sortByDefault")}</h3>
-                  <button onClick={() => setIsMobileSortOpen(false)} className="p-1 text-black/50 hover:text-black"><X size={20} /></button>
-                </div>
-                <div className="flex flex-col py-2">
-                  {[
-                    { value: "none", label: t("products.sortByDefault") },
-                    { value: "price-asc", label: t("products.sortByLowToHigh") },
-                    { value: "price-desc", label: t("products.sortByHighToLow") },
-                  ].map((opt) => (
-                    <button
-                      key={opt.value}
-                      onClick={() => { setSortBy(opt.value); setIsMobileSortOpen(false); }}
-                      className={`px-5 py-3.5 text-body font-semibold text-start flex items-center justify-between transition-colors ${sortBy === opt.value ? "bg-primary/10 text-black" : "text-black/80 hover:bg-gray-50"}`}
-                    >
-                      {opt.label}
-                      {sortBy === opt.value && <Check size={18} className="text-primary" strokeWidth={3} />}
-                    </button>
-                  ))}
-                </div>
-                <div className="h-[env(safe-area-inset-bottom,0px)]" />
-              </div>
-            </div>
-          )}
 
           {/* ── MOBILE/TABLET CARD LIST ── */}
           {/* lg:grid-cols-2 keeps cards comfortable next to the 300px sidebar at 1024-1279px. */}
