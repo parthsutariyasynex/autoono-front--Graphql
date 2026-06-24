@@ -491,7 +491,7 @@ export default function OrderDetailsPage() {
 
 
     const formatDate = (dateString: string) => {
-        if (!dateString) return "-";
+        if (!dateString) return ;
         const dateObj = new Date(dateString);
         return dateObj.toLocaleDateString("en-US", {
             year: "numeric",
@@ -526,7 +526,7 @@ export default function OrderDetailsPage() {
             <div className="min-h-screen flex flex-col w-full bg-surfacePage">
                 <div className="flex flex-col lg:flex-row flex-1 w-full">
                     <Sidebar />
-                    <main className="flex-1 w-full p-4 md:p-8">
+                    <main className="px-4 md:px-6 lg:px-8 py-4 md:py-6 lg:py-5 w-full">
                         <OrderDetailSkeleton />
                     </main>
                 </div>
@@ -571,12 +571,13 @@ export default function OrderDetailsPage() {
                 <Sidebar />
 
                 {/* Right Content */}
-                <main className="flex-1 w-full px-4 md:px-6 lg:px-8 py-10 min-w-0 text-xs">
+                <main className="flex-1 w-full px-4 md:px-6 lg:px-8 py-4 md:py-6 lg:py-5 min-w-0 text-xs">
                     {/* Header Section */}
-                    <div className="flex flex-col mb-10 no-print">
-                        <div className="flex flex-col border-b border-gray-100 pb-6">
+                    <div className="flex flex-col mb-3.5 no-print">
+                        <div className="flex flex-col border-b border-[#ddd] pb-3">
+                            
                             <div className="flex items-center gap-3 md:gap-5 mb-1.5 flex-wrap">
-                                <h1 className="text-h3 md:text-h1-sm font-[900] text-black uppercase tracking-tight leading-none">
+                                <h1 className="text-h3 md:text-h1-sm font-[700] text-black uppercase tracking-tight leading-none">
                                     {safeTranslate("orderHash", "ORDER #")} {order.increment_id}
                                 </h1>
 
@@ -594,10 +595,10 @@ export default function OrderDetailsPage() {
                             </div>
                         </div>
 
-                        <div className="flex flex-col sm:flex-row justify-start items-stretch sm:items-center gap-3 w-full">
+                        <div className="flex flex-col sm:flex-row justify-start items-stretch sm:items-center gap-3 w-full mt-3">
                             <button
                                 onClick={handleReorder}
-                                className="bg-primary hover:bg-primary text-black font-bold py-2.5 px-6 md:px-8 rounded-md text-body-sm uppercase tracking-widest transition-all shadow-sm active:scale-95 border border-primary w-full sm:w-auto"
+                                className="bg-primary hover:bg-primary text-black font-bold py-2.5 px-6 rounded-sm text-body-sm uppercase tracking-widest transition-all shadow-sm border border-primary w-full sm:w-auto"
                             >
                                 {safeTranslate("reorder", "REORDER")}
 
@@ -607,7 +608,7 @@ export default function OrderDetailsPage() {
                             {/* {!isPaid && (
                                 <button
                                     onClick={() => setIsPaymentModalOpen(true)}
-                                    className="bg-primary hover:bg-primaryHover text-white font-bold py-2.5 px-6 md:px-8 rounded-md text-label uppercase tracking-widest transition-all shadow-sm active:scale-95 border border-primary w-full sm:w-auto"
+                                    className="bg-primary hover:bg-primaryHover text-white font-bold py-2.5 px-6 rounded-sm text-label uppercase tracking-widest transition-all shadow-sm border border-primary w-full sm:w-auto"
                                 >
                                     {t("orders.makePayment")}
                                 </button>
@@ -623,7 +624,7 @@ export default function OrderDetailsPage() {
                                     <button
                                         onClick={handleCancelOrder}
                                         disabled={isCancelling}
-                                        className={`bg-red-600 hover:bg-red-700 text-white font-bold py-2.5 px-6 md:px-8 rounded-md text-body-sm uppercase tracking-widest transition-all shadow-sm active:scale-95 border border-red-600 flex items-center justify-center gap-2 no-print w-full sm:w-auto ${isCancelling ? 'opacity-70 cursor-not-allowed' : ''}`}
+                                        className={`bg-red-600 hover:bg-red-700 text-white font-bold py-2.5 px-6 rounded-sm text-body-sm uppercase tracking-widest transition-all shadow-sm border border-red-600 flex items-center justify-center gap-2 no-print w-full sm:w-auto ${isCancelling ? 'opacity-70 cursor-not-allowed' : ''}`}
                                     >
                                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className={isCancelling ? "opacity-40" : ""}>
                                             <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -636,7 +637,7 @@ export default function OrderDetailsPage() {
                             <button
                                 onClick={handlePrintOrder}
                                 disabled={isPrinting}
-                                className={`bg-white hover:bg-gray-50 text-black font-bold py-2.5 px-6 md:px-8 rounded-md text-label uppercase tracking-widest transition-all border border-border shadow-sm flex items-center justify-center gap-2 no-print active:scale-95 w-full sm:w-auto ${isPrinting ? 'opacity-70 cursor-not-allowed' : ''}`}
+                                className={`bg-white hover:bg-gray-50 text-black font-bold py-2.5 px-6 rounded-sm text-body-sm uppercase tracking-widest transition-all border border-[#ddd] shadow-sm flex items-center justify-center gap-2 no-print w-full sm:w-auto ${isPrinting ? 'opacity-70 cursor-not-allowed' : ''}`}
                             >
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className={isPrinting ? "opacity-40" : ""}>
                                     <polyline points="6 9 6 2 18 2 18 9"></polyline>
@@ -650,40 +651,43 @@ export default function OrderDetailsPage() {
                     </div>
 
                     {/* Items Ordered Table */}
-                    <div className="bg-white rounded-md border border-border overflow-hidden mb-10 shadow-sm">
-                        <div className="border-b border-border px-3 md:px-6 py-3 md:py-4 bg-gray-50">
-                            <h2 className="text-xs font-bold text-black uppercase tracking-widest">
+
+                       <div className="table-title">
+                            <h2 className="text-body-lg md:text-h3-sm font-bold text-black uppercase mb-2">
                                 {safeTranslate("itemsOrdered", "Items Ordered")}
                             </h2>
+                            <hr className="border-[#ddd] mb-3" />
                         </div>
+
+                    <div className="bg-white border border-[#ddd] overflow-hidden mb-10 shadow-sm">
                         {/* Desktop Table */}
                         <div className="hidden md:block overflow-x-auto">
                             <table className="w-full text-start min-w-[500px]">
-                                <thead className="bg-gray-50/50 text-label font-bold text-black uppercase border-b border-border">
-                                    <tr>
-                                        <th className="px-3 md:px-6 py-3 md:py-4 tracking-widest text-start">{safeTranslate("productName", "Product Name")}</th>
-                                        <th className="px-3 md:px-6 py-3 md:py-4 tracking-widest text-center">{safeTranslate("sku", "SKU")}</th>
-                                        <th className="px-3 md:px-6 py-3 md:py-4 tracking-widest text-center">{safeTranslate("price", "Price")}</th>
-                                        <th className="px-3 md:px-6 py-3 md:py-4 tracking-widest text-center">{safeTranslate("qty", "Qty")}</th>
-                                        <th className="px-3 md:px-6 py-3 md:py-4 tracking-widest text-end">{safeTranslate("subtotal", "Subtotal")}</th>
+                                <thead className="bg-gray-50/50 text-label font-semibold text-black uppercase border-b border-[#ddd]">
+                                    <tr className="bg-primary">
+                                        <th className="px-3 md:px-6 py-3 tracking-widest text-start">{safeTranslate("productName", "Product Name")}</th>
+                                        <th className="px-3 md:px-6 py-3 tracking-widest text-center">{safeTranslate("sku", "SKU")}</th>
+                                        <th className="px-3 md:px-6 py-3 tracking-widest text-center">{safeTranslate("price", "Price")}</th>
+                                        <th className="px-3 md:px-6 py-3 tracking-widest text-center">{safeTranslate("qty", "Qty")}</th>
+                                        <th className="px-3 md:px-6 py-3 tracking-widest text-end">{safeTranslate("subtotal", "Subtotal")}</th>
                                     </tr>
                                 </thead>
-                                <tbody className="divide-y divide-border">
+                                <tbody className="divide-y divide-[#ddd]">
                                     {order.items?.map((item: any, idx: number) => (
-                                        <tr key={item.item_id || item.id} className={`text-xs hover:bg-primary/5 transition-colors ${idx % 2 !== 0 ? 'bg-gray-50' : 'bg-white'}`}>
-                                            <td className="px-3 md:px-6 py-3 md:py-5 text-black font-bold text-start">
+                                        <tr key={item.item_id || item.id || idx} className={`text-xs hover:bg-primary/5 transition-colors ${idx % 2 !== 0 ? 'bg-gray-50' : 'bg-white'}`}>
+                                            <td className="px-3 md:px-6 py-3 text-black font-semibold text-start">
                                                 {item.name}
                                             </td>
-                                            <td className="px-3 md:px-6 py-3 md:py-5 text-black/50 font-bold text-center">
+                                            <td className="px-3 md:px-6 py-3 text-black/50 font-semibold text-center">
                                                 {item.sku}
                                             </td>
-                                            <td className="px-3 md:px-6 py-3 md:py-5 text-black font-bold text-center">
+                                            <td className="px-3 md:px-6 py-3 text-black font-semibold text-center">
                                                 {formatCurrency(item.price)}
                                             </td>
-                                            <td className="px-3 md:px-6 py-3 md:py-5 text-center text-black/60 font-bold uppercase">
+                                            <td className="px-3 md:px-6 py-3 text-center text-black/60 font-semibold uppercase">
                                                 {Math.round(item.qty_ordered)}
                                             </td>
-                                            <td className="px-3 md:px-6 py-3 md:py-5 text-end font-bold text-black">
+                                            <td className="px-3 md:px-6 py-3 text-end font-semibold text-black">
 
                                                 {formatCurrency(item.row_total)}
                                             </td>
@@ -696,57 +700,57 @@ export default function OrderDetailsPage() {
                         {/* Mobile Card View */}
                         <div className="md:hidden divide-y divide-border">
                             {order.items?.map((item: any, idx: number) => (
-                                <div key={item.item_id || item.id} className={`p-4 text-xs ${idx % 2 !== 0 ? 'bg-gray-50' : 'bg-white'}`}>
-                                    <p className="text-black font-bold text-sm mb-2">{item.name}</p>
-                                    <p className="text-black/50 font-bold uppercase tracking-widest text-caption mb-3">{safeTranslate("sku", "SKU")}: {item.sku}</p>
+                                <div key={item.item_id || item.id || idx} className={`p-4 text-xs ${idx % 2 !== 0 ? 'bg-gray-50' : 'bg-white'}`}>
+                                    <p className="text-black font-semibold text-sm mb-2">{item.name}</p>
+                                    <p className="text-black/50 font-semibold uppercase tracking-widest text-caption mb-3">{safeTranslate("sku", "SKU")}: {item.sku}</p>
 
                                     <div className="flex justify-between items-center mb-1">
-                                        <span className="text-black/60 font-bold uppercase tracking-widest">{safeTranslate("price", "Price")}</span>
+                                        <span className="text-black/60 font-semibold uppercase tracking-widest">{safeTranslate("price", "Price")}</span>
 
-                                        <span className="text-black font-bold">{formatCurrency(item.price)}</span>
+                                        <span className="text-black font-semibold">{formatCurrency(item.price)}</span>
                                     </div>
                                     <div className="flex justify-between items-center mb-1">
-                                        <span className="text-black/60 font-bold uppercase tracking-widest">{safeTranslate("qty", "Qty")}</span>
+                                        <span className="text-black/60 font-semibold uppercase tracking-widest">{safeTranslate("qty", "Qty")}</span>
 
-                                        <span className="text-black/60 font-bold">{Math.round(item.qty_ordered)}</span>
+                                        <span className="text-black/60 font-semibold">{Math.round(item.qty_ordered)}</span>
                                     </div>
                                     <div className="flex justify-between items-center pt-2 border-t border-gray-100">
-                                        <span className="text-black font-bold uppercase tracking-widest">{safeTranslate("subtotal", "Subtotal")}</span>
+                                        <span className="text-black font-semibold uppercase tracking-widest">{safeTranslate("subtotal", "Subtotal")}</span>
 
-                                        <span className="text-black font-bold">{formatCurrency(item.row_total)}</span>
+                                        <span className="text-black font-semibold">{formatCurrency(item.row_total)}</span>
                                     </div>
                                 </div>
                             ))}
                         </div>
 
                         {/* Order Summary */}
-                        <div className="flex ltr:justify-end rtl:justify-start p-4 md:p-8 bg-gray-50/30 border-t border-border">
-                            <div className="w-full max-w-[340px] space-y-3">
-                                <div className="flex justify-between items-center text-xs">
-                                    <span className="text-black/50 font-bold uppercase tracking-widest flex-1 text-end me-10">{safeTranslate("itemsTotal", "Items Total")}</span>
+                        <div className="flex ltr:justify-end rtl:justify-start p-4">
+                            <div className="w-full max-w-[340px] space-y-1.5">
+                                <div className="flex justify-between items-center text-sm">
+                                    <span className="text-black font-normal uppercase tracking-widest flex-1 text-end me-10">{safeTranslate("itemsTotal", "Items Total")}</span>
 
-                                    <span className="font-bold text-black w-[110px] text-end">
+                                    <span className="font-normal text-black w-[110px] text-end">
                                         {formatCurrency(order.subtotal)}
                                     </span>
                                 </div>
 
-                                <div className="flex justify-between items-center text-xs">
-                                    <span className="text-black/50 font-bold uppercase tracking-widest flex-1 text-end me-10">{safeTranslate("vat", "VAT (15%)")}</span>
+                                <div className="flex justify-between items-center text-sm">
+                                    <span className="text-black font-normal uppercase tracking-widest flex-1 text-end me-10">{safeTranslate("vat", "VAT (15%)")}</span>
 
-                                    <span className="font-bold text-black w-[110px] text-end">
+                                    <span className="font-normal text-black w-[110px] text-end">
                                         {formatCurrency(order.tax_amount)}
                                     </span>
                                 </div>
 
-                                <div className="flex justify-between items-center text-black pt-4 border-t border-gray-200">
-                                    <span className="font-bold uppercase tracking-tighter flex-1 text-end me-10 text-[15px]">{safeTranslate("grandTotal", "Grand Total")}</span>
-                                    <span className="font-bold w-[110px] text-end text-[15px]">
+                                <div className="flex justify-between items-center text-black">
+                                    <span className="font-bold uppercase tracking-tighter flex-1 text-end me-10 text-sm">{safeTranslate("grandTotal", "Grand Total")}</span>
+                                    <span className="font-bold w-[110px] text-end text-sm">
                                         {formatCurrency(order.grand_total)}
                                     </span>
                                 </div>
 
-                                <div className="flex justify-between items-center text-label pt-1 pt-4 opacity-50">
-                                    <span className="text-black/60 font-bold uppercase tracking-widest flex-1 text-end me-10">{safeTranslate("totalQty", "Total Qty")}</span>
+                                <div className="flex justify-between items-center text-sm">
+                                    <span className="text-black font-bold uppercase tracking-widest flex-1 text-end me-10">{safeTranslate("totalQty", "Total Qty")}</span>
 
                                     <span className="font-bold text-black w-[110px] text-end">
                                         {Math.round(order.total_item_count || order.items?.reduce((acc: number, item: any) => acc + (item.qty_ordered || 0), 0))}
@@ -758,19 +762,20 @@ export default function OrderDetailsPage() {
 
                     {/* Order Information Section */}
                     <div className="mb-10">
-                        <div className="border-b-2 border-primary inline-block pb-1 mb-10">
-                            <h2 className="text-h3-sm md:text-[18px] font-bold text-black uppercase tracking-tight">
-                                {safeTranslate("orderInfo", "Order Information")}
+                        <div className="table-title">
+                            <h2 className="text-body-lg md:text-h3-sm font-bold text-black uppercase mb-2">
+                                 {safeTranslate("orderInfo", "Order Information")}
                             </h2>
+                            <hr className="border-[#ddd] mb-3" />
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8">
                             {/* Shipping Address */}
-                            <div className="bg-white border border-border rounded-md shadow-sm overflow-hidden">
-                                <div className="bg-gray-50 px-5 py-3 border-b border-border">
-                                    <h3 className="text-xs font-bold text-black uppercase tracking-widest">{safeTranslate("shippingAddress", "Shipping Address")}</h3>
+                            <div className="border border-[#ddd] bg-white shadow-sm rounded-none">
+                                <div className="bg-surfaceHover px-4 py-3 border-b border-[#ddd] text-black font-bold uppercase text-body">
+                                    <h3 className="box-title">{safeTranslate("shippingAddress", "Shipping Address")}</h3>
                                 </div>
-                                <div className="p-4 md:p-6 text-xs text-black/70 leading-relaxed min-h-[140px]">
+                                <div className="p-3 md:p-5 text-body text-black/80 space-y-2.5 font-medium leading-relaxed min-h-[140px]">
                                     {shippingAddress ? (
                                         <div className="space-y-1">
                                             <p className="font-bold text-black uppercase mb-2">{shippingAddress.firstname} {shippingAddress.lastname}</p>
@@ -789,12 +794,12 @@ export default function OrderDetailsPage() {
                             </div>
 
                             {/* Shipping Method */}
-                            <div className="bg-white border border-border rounded-md shadow-sm overflow-hidden">
-                                <div className="bg-gray-50 px-5 py-3 border-b border-border">
-                                    <h3 className="text-xs font-bold text-black uppercase tracking-widest">{safeTranslate("shippingMethod", "Shipping Method")}</h3>
+                            <div className="border border-[#ddd] bg-white shadow-sm rounded-none">
+                                <div className="bg-surfaceHover px-4 py-3 border-b border-[#ddd] text-black font-bold uppercase text-body">
+                                    <h3 className="box-title">{safeTranslate("shippingMethod", "Shipping Method")}</h3>
 
                                 </div>
-                                <div className="p-4 md:p-6 text-xs text-black/70 leading-relaxed min-h-[140px]">
+                                <div className="p-3 md:p-5 text-body text-black/80 space-y-2.5 font-medium leading-relaxed min-h-[140px]">
                                     <p className="font-bold text-black uppercase mb-2">{translateDynamic(order.shipping_description || t("pickupFromWarehouse"))}</p>
 
                                     <div className="mt-4 pt-4 border-t border-gray-100">
@@ -806,12 +811,12 @@ export default function OrderDetailsPage() {
                             </div>
 
                             {/* Billing Address */}
-                            <div className="bg-white border border-border rounded-md shadow-sm overflow-hidden">
-                                <div className="bg-gray-50 px-5 py-3 border-b border-border">
-                                    <h3 className="text-xs font-bold text-black uppercase tracking-widest">{safeTranslate("billingAddress", "Billing Address")}</h3>
+                            <div className="border border-[#ddd] bg-white shadow-sm rounded-none">
+                                <div className="bg-surfaceHover px-4 py-3 border-b border-[#ddd] text-black font-bold uppercase text-body">
+                                    <h3 className="box-title">{safeTranslate("billingAddress", "Billing Address")}</h3>
 
                                 </div>
-                                <div className="p-4 md:p-6 text-xs text-black/70 leading-relaxed min-h-[140px]">
+                                <div className="p-3 md:p-5 text-body text-black/80 space-y-2.5 font-medium leading-relaxed min-h-[140px]">
                                     {billingAddress ? (
                                         <div className="space-y-1">
                                             <p className="font-bold text-black uppercase mb-2">{billingAddress.firstname} {billingAddress.lastname}</p>
@@ -830,12 +835,12 @@ export default function OrderDetailsPage() {
                             </div>
 
                             {/* Payment Method */}
-                            <div className="bg-white border border-border rounded-md shadow-sm overflow-hidden">
-                                <div className="bg-gray-50 px-5 py-3 border-b border-border">
-                                    <h3 className="text-xs font-bold text-black uppercase tracking-widest">{safeTranslate("paymentMethod", "Payment Method")}</h3>
+                            <div className="border border-[#ddd] bg-white shadow-sm rounded-none">
+                                <div className="bg-surfaceHover px-4 py-3 border-b border-[#ddd] text-black font-bold uppercase text-body">
+                                    <h3 className="box-title">{safeTranslate("paymentMethod", "Payment Method")}</h3>
 
                                 </div>
-                                <div className="p-4 md:p-6 text-xs text-black/70 leading-relaxed min-h-[140px]">
+                                <div className="p-3 md:p-5 text-body text-black/80 space-y-2.5 font-medium leading-relaxed min-h-[140px]">
                                     <p className="font-bold text-black uppercase mb-1">{translateDynamic(order.payment?.method_title || paymentMethod)}</p>
 
                                     <div className="mt-4 pt-4 border-t border-gray-100 flex items-center gap-2">
@@ -849,10 +854,13 @@ export default function OrderDetailsPage() {
 
                     {/* Order Attachments Section */}
                     <div className="mb-12">
-                        <div className="border-b-2 border-primary inline-block pb-1 mb-10">
-                            <h2 className="text-h3-sm md:text-[18px] font-bold text-black uppercase tracking-tight">
-                                {safeTranslate("orderAttachments", "Order Attachments")}
+  
+
+                        <div className="table-title">
+                            <h2 className="text-body-lg md:text-h3-sm font-bold text-black uppercase mb-2">
+                                  {safeTranslate("orderAttachments", "Order Attachments")}
                             </h2>
+                            <hr className="border-[#ddd] mb-3" />
                         </div>
 
                         {attachmentsError ? (
@@ -865,16 +873,16 @@ export default function OrderDetailsPage() {
                                 <div className="max-w-5xl mx-auto px-4 py-6 animate-pulse space-y-4"><div className="h-7 bg-gray-200 rounded w-48"/>{Array.from({length:4}).map((_,i)=><div key={i} className="h-16 bg-gray-200 rounded-xl"/>)}</div>
                             </div>
                         ) : attachments.length > 0 ? (
-                            <div className="bg-white border border-border rounded-md overflow-hidden shadow-sm">
+                            <div className="bg-white border border-[#ddd] overflow-hidden mb-10 shadow-sm">
                                 <div className="overflow-x-auto">
                                     <table className="w-full text-xs border-collapse">
                                         <thead className="bg-gray-50 border-b border-border">
-                                            <tr className="h-[50px]">
-                                                <th className="px-3 md:px-6 py-3 md:py-4 font-bold text-black text-left tracking-widest uppercase">{safeTranslate("fileName", "File Name")}</th>
-                                                <th className="px-3 md:px-6 py-3 md:py-4 font-bold text-black text-center tracking-widest uppercase">{safeTranslate("type", "Type")}</th>
-                                                <th className="px-3 md:px-6 py-3 md:py-4 font-bold text-black text-center tracking-widest uppercase">{safeTranslate("createdOn", "Created On")}</th>
-                                                <th className="px-3 md:px-6 py-3 md:py-4 font-bold text-black text-center tracking-widest uppercase">{safeTranslate("dueDate", "Due Date")}</th>
-                                                <th className="px-3 md:px-6 py-3 md:py-4 font-bold text-black text-center tracking-widest uppercase">{safeTranslate("payment", "Payment")}</th>
+                                            <tr className="bg-primary">
+                                                <th className="jsx-ce6aae4edec06621 px-3 md:px-6 py-3 whitespace-nowrap text-black text-left tracking-widest uppercase">{safeTranslate("fileName", "File Name")}</th>
+                                                <th className="jsx-ce6aae4edec06621 px-3 md:px-6 py-3 whitespace-nowrap text-black text-center tracking-widest uppercase">{safeTranslate("type", "Type")}</th>
+                                                <th className="jsx-ce6aae4edec06621 px-3 md:px-6 py-3 whitespace-nowrap text-black text-center tracking-widest uppercase">{safeTranslate("createdOn", "Created On")}</th>
+                                                <th className="jsx-ce6aae4edec06621 px-3 md:px-6 py-3 whitespace-nowrap text-black text-center tracking-widest uppercase">{safeTranslate("dueDate", "Due Date")}</th>
+                                                <th className="jsx-ce6aae4edec06621 px-3 md:px-6 py-3 whitespace-nowrap text-black text-center tracking-widest uppercase">{safeTranslate("payment", "Payment")}</th>
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-border">
@@ -898,25 +906,25 @@ export default function OrderDetailsPage() {
 
                                                 return (
                                                     <tr key={currentAttachmentId} className={`hover:bg-primary/5 transition-colors ${idx % 2 !== 0 ? 'bg-gray-50' : 'bg-white'}`}>
-                                                        <td className="px-3 md:px-6 py-3 md:py-5 text-left">
+                                                        <td className="px-3 md:px-6 py-3 text-left">
                                                             <button
                                                                 onClick={() => handleOpenAttachment(attachment)}
                                                                 disabled={isOpening}
-                                                                className="text-primary hover:text-black font-bold break-all text-left cursor-pointer inline-flex items-center gap-2 disabled:opacity-60 disabled:cursor-wait underline underline-offset-4"
+                                                                className="text-primary hover:text-black font-semibold break-all text-left cursor-pointer inline-flex items-center gap-2 disabled:opacity-60 disabled:cursor-wait underline underline-offset-4"
                                                             >
                                                                 {attachment.file_name || "-"}
                                                             </button>
                                                         </td>
-                                                        <td className="px-3 md:px-6 py-3 md:py-5 text-center text-black/60 font-bold uppercase">
+                                                        <td className="px-3 md:px-6 py-3 text-center text-black/60 font-bold uppercase">
                                                             {attachment.document_type || attachment.attachment_type || "-"}
                                                         </td>
-                                                        <td className="px-3 md:px-6 py-3 md:py-5 text-center text-black/60 font-bold uppercase">
+                                                        <td className="px-3 md:px-6 py-3 text-center text-black/60 font-bold uppercase">
                                                             {formatDateDDMMYYYY(attachment.upload_date)}
                                                         </td>
-                                                        <td className="px-3 md:px-6 py-3 md:py-5 text-center text-black/50 font-bold uppercase">
+                                                        <td className="px-3 md:px-6 py-3 text-center text-black/50 font-bold uppercase">
                                                             {attachment.invoice_due ? formatDateDDMMYYYY(attachment.invoice_due) : "-"}
                                                         </td>
-                                                        <td className="px-3 md:px-6 py-3 md:py-5 text-center">
+                                                        <td className="px-3 md:px-6 py-3 text-center">
                                                             <span className="inline-flex px-2 py-1 bg-gray-100 text-black/70 rounded-full text-caption font-bold uppercase tracking-widest">
                                                                 {attachment.payment || attachment.payment_status || "-"}
                                                             </span>
@@ -937,12 +945,13 @@ export default function OrderDetailsPage() {
 
                     {/* Payment History Section */}
                     <div className="mb-12" id="payment-history-section">
-                        <div className="flex items-center justify-between border-b border-gray-100 pb-2 mb-8">
-                            <div className="border-b-2 border-primary inline-block pb-1">
-                                <h2 className="text-h3-sm md:text-[18px] font-bold text-black uppercase tracking-tight">
+                        <div className="flex items-center justify-between border-b border-[#ddd] pb-2 mb-3">
+                            <div className="inline-block">
+                                <h2 className="text-body-lg md:text-h3-sm font-bold text-black uppercase">
                                     {t("m.payment-historydso") || "Payment History"}
                                 </h2>
                             </div>
+                            <hr className="border-[#ddd] mb-3" />
                             {isPaid ? (
                                 <div className="text-green-600 font-bold text-label uppercase tracking-widest flex items-center gap-1">
                                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
@@ -960,40 +969,40 @@ export default function OrderDetailsPage() {
                             )}
                         </div>
 
-                        <div className="bg-white border border-border rounded-md overflow-hidden shadow-sm">
+                        <div className="bg-white border border-[#ddd] overflow-hidden mb-10 shadow-sm">
                             <div className="overflow-x-auto">
                                 <table className="w-full text-xs border-collapse">
                                     <thead className="bg-gray-50 border-b border-border">
-                                        <tr className="h-[50px]">
-                                            <th className="px-3 md:px-4 py-3 md:py-4 font-bold text-black text-center tracking-widest uppercase">{safeTranslate("receiptNo", "Receipt No")}</th>
-                                            <th className="px-3 md:px-4 py-3 md:py-4 font-bold text-black text-center tracking-widest uppercase">{safeTranslate("paymentDate", "Payment Date")}</th>
-                                            <th className="px-3 md:px-4 py-3 md:py-4 font-bold text-black text-center tracking-widest uppercase">{safeTranslate("paymentMethod", "Payment Method")}</th>
-                                            <th className="px-3 md:px-4 py-3 md:py-4 font-bold text-black text-center tracking-widest uppercase">{safeTranslate("invoiceAmount", "Invoice Amount")}</th>
-                                            <th className="px-3 md:px-4 py-3 md:py-4 font-bold text-black text-center tracking-widest uppercase">{safeTranslate("paidAmount", "Paid Amount")}</th>
-                                            <th className="px-3 md:px-4 py-3 md:py-4 font-bold text-black text-center tracking-widest uppercase">{safeTranslate("dueAmount", "Due Amount")}</th>
-                                            <th className="px-3 md:px-4 py-3 md:py-4 font-bold text-black text-center tracking-widest uppercase">{t("orders.status")}</th>
-                                            <th className="px-3 md:px-4 py-3 md:py-4 font-bold text-black text-center tracking-widest uppercase">{safeTranslate("proof", "Proof")}</th>
-                                            <th className="px-3 md:px-4 py-3 md:py-4 font-bold text-black text-center tracking-widest uppercase">{safeTranslate("action", "Action")}</th>
+                                        <tr className="bg-primary">
+                                            <th className="px-3 md:px-4 py-3 font-bold text-black text-center tracking-widest uppercase whitespace-nowrap">{safeTranslate("receiptNo", "Receipt No")}</th>
+                                            <th className="px-3 md:px-4 py-3 font-bold text-black text-center tracking-widest uppercase whitespace-nowrap">{safeTranslate("paymentDate", "Payment Date")}</th>
+                                            <th className="px-3 md:px-4 py-3 font-bold text-black text-center tracking-widest uppercase whitespace-nowrap">{safeTranslate("paymentMethod", "Payment Method")}</th>
+                                            <th className="px-3 md:px-4 py-3 font-bold text-black text-center tracking-widest uppercase whitespace-nowrap">{safeTranslate("invoiceAmount", "Invoice Amount")}</th>
+                                            <th className="px-3 md:px-4 py-3 font-bold text-black text-center tracking-widest uppercase whitespace-nowrap">{safeTranslate("paidAmount", "Paid Amount")}</th>
+                                            <th className="px-3 md:px-4 py-3 font-bold text-black text-center tracking-widest uppercase whitespace-nowrap">{safeTranslate("dueAmount", "Due Amount")}</th>
+                                            <th className="px-3 md:px-4 py-3 font-bold text-black text-center tracking-widest uppercase whitespace-nowrap">{t("orders.status")}</th>
+                                            <th className="px-3 md:px-4 py-3 font-bold text-black text-center tracking-widest uppercase whitespace-nowrap">{safeTranslate("proof", "Proof")}</th>
+                                            <th className="px-3 md:px-4 py-3 font-bold text-black text-center tracking-widest uppercase whitespace-nowrap">{safeTranslate("action", "Action")}</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-border text-center">
                                         {paymentHistory.map((payment: any, index: number) => (
                                             <tr key={payment.id || payment.receipt_no || index} className="hover:bg-primary/5 bg-white">
-                                                <td className="px-3 md:px-4 py-4 text-black/80 font-medium">{payment.receipt_no}</td>
-                                                <td className="px-3 md:px-4 py-4 text-black/80 font-medium">
+                                                <td className="px-3 md:px-4 py-3 text-black/80 font-medium">{payment.receipt_no}</td>
+                                                <td className="px-3 md:px-4 py-3 text-black/80 font-medium">
                                                     {payment.payment_date ? new Date(payment.payment_date).toLocaleDateString("en-GB").replace(/\//g, "-") : "-"}
                                                 </td>
-                                                <td className="px-3 md:px-4 py-4 text-black/80 font-medium">{payment.payment_method}</td>
-                                                <td className="px-3 md:px-4 py-4 text-black/80 font-bold">
+                                                <td className="px-3 md:px-4 py-3 text-black/80 font-medium">{payment.payment_method}</td>
+                                                <td className="px-3 md:px-4 py-3 text-black/80 font-bold">
                                                     {formatCurrency(payment.invoice_amount || order.grand_total || 575)}
                                                 </td>
-                                                <td className="px-3 md:px-4 py-4 text-black/80 font-bold">
+                                                <td className="px-3 md:px-4 py-3 text-black/80 font-bold">
                                                     {formatCurrency(payment.paid_payment)}
                                                 </td>
-                                                <td className="px-3 md:px-4 py-4 text-black/80 font-bold text-red-500">
+                                                <td className="px-3 md:px-4 py-3 text-black/80 font-bold text-red-500">
                                                     {formatCurrency(payment.due_payment)}
                                                 </td>
-                                                <td className="px-3 md:px-4 py-4">
+                                                <td className="px-3 md:px-4 py-3">
                                                     <span className={`inline-flex px-3 py-1 rounded-sm text-caption font-bold uppercase tracking-tight border ${payment.payment_status === "Full Paid"
                                                         ? "bg-successBg text-successDark border-successBorder"
                                                         : "bg-warningLight text-warningOrange border-warningBar"
@@ -1001,12 +1010,12 @@ export default function OrderDetailsPage() {
                                                         {t(`data.${payment.payment_status}`) !== `data.${payment.payment_status}` ? t(`data.${payment.payment_status}`) : payment.payment_status}
                                                     </span>
                                                 </td>
-                                                <td className="px-3 md:px-4 py-4 text-black/50 font-medium">-</td>
-                                                <td className="px-3 md:px-4 py-4">
+                                                <td className="px-3 md:px-4 py-3 text-black/50 font-medium">-</td>
+                                                <td className="px-3 md:px-4 py-3">
                                                     <div className="flex items-center justify-center gap-2">
                                                         <button
                                                             onClick={() => fetchSinglePayment(payment.id)}
-                                                            className="bg-warningDeep text-white px-3 py-1.5 rounded-sm font-bold text-caption uppercase tracking-wide hover:bg-primaryHover transition-colors shadow-sm"
+                                                            className="bg-black text-white px-3 py-1.5 rounded-sm font-bold text-caption uppercase tracking-wide hover:bg-primaryHover transition-colors shadow-sm"
                                                         >
                                                             {safeTranslate("edit", "Edit")}
                                                         </button>
@@ -1121,8 +1130,8 @@ export default function OrderDetailsPage() {
                         </tr>
                     </thead>
                     <tbody>
-                        {order.items?.map((item: any) => (
-                            <tr key={item.item_id}>
+                        {order.items?.map((item: any, idx: number) => (
+                            <tr key={item.item_id || item.id || idx}>
                                 <td>
                                     <p className="item-name">{item.name}</p>
                                     <p className="item-sku">{item.sku}</p>

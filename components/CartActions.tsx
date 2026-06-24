@@ -28,7 +28,7 @@ const CartActions: React.FC<CartActionsProps> = ({ itemsCount, onClearCart, onUp
                 <button
                     onClick={onClearCart}
                     disabled={isClearingCart}
-                    className="flex-1 md:flex-none whitespace-pre px-4 py-2 bg-white text-black text-[12px] font-bold uppercase tracking-[0.2em] hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-all border border-gray-100 cursor-pointer rounded-sm shadow-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    className="flex-1 md:flex-none whitespace-pre px-4 py-2 bg-white text-black text-[12px] font-bold uppercase tracking-[0.2em] hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-all border border-[#ddd] cursor-pointer rounded-sm shadow-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
 
                     {t("cart.clearCart")}

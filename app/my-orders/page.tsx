@@ -90,7 +90,7 @@ function mapOrder(item: any, paidByOrderId?: Map<string, number>): Order {
 export default function MyOrdersPage() {
     return (
         <Suspense fallback={
-            <div className="min-h-screen flex flex-col w-full bg-surfacePage">
+            <div className="flex flex-col w-full bg-surfacePage">
                 <div className="flex flex-col lg:flex-row flex-1 w-full">
                     <SidebarSkeleton />
                     <MyOrdersSkeleton rows={8} />
@@ -420,7 +420,7 @@ function MyOrdersPageContent() {
     const isEmpty = hasFetched && !isLoading && orders.length === 0;
 
     if (authStatus === "loading") return (
-        <div className="min-h-screen flex flex-col w-full bg-surfacePage">
+        <div className="flex flex-col w-full bg-surfacePage">
             <div className="flex flex-col lg:flex-row flex-1 w-full">
                 <Sidebar />
                 <MyOrdersSkeleton rows={8} />
@@ -429,26 +429,25 @@ function MyOrdersPageContent() {
     );
 
     return (
-        <div className="min-h-screen flex flex-col w-full bg-surfacePage">
+        <div className="flex flex-col w-full bg-surfacePage">
             <div className="flex flex-col lg:flex-row flex-1 w-full">
                 <Sidebar />
 
-                <main className="flex-1 w-full px-4 md:px-6 lg:px-8 py-4 md:py-8 lg:py-10">
+                <main className="flex-1 w-full px-4 md:px-6 lg:px-8 py-4 md:py-6 lg:py-5">
                     {/* Page header — title + decorative gradient line + Export button.
                           Mobile  : stacks (title with gradient line beneath, then full-width button)
                           sm/md/+ : title and button on same row, gradient line fills the gap */}
-                    <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-6 md:mb-10">
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-5">
                         <div className="flex items-center gap-4 flex-1 min-w-0">
                             <h1 className="text-h3 md:text-[26px] font-bold text-black uppercase tracking-wide whitespace-nowrap">
                                 {t("orders.title")}
                             </h1>
-                            <div className="h-[2px] flex-1 bg-gradient-to-r from-primary to-transparent"></div>
                         </div>
                         {!isInitializing && !isEmpty && (
                             <button
                                 onClick={handleExportOrders}
                                 disabled={isExporting}
-                                className={`w-full sm:w-auto flex-shrink-0 justify-center flex items-center gap-2 border-2 border-primary text-black text-body-sm font-bold px-5 py-2 uppercase tracking-wide hover:bg-primary transition-colors ${isExporting ? 'opacity-70 cursor-not-allowed' : ''}`}
+                                className={`w-full sm:w-auto flex-shrink-0 justify-center flex items-center gap-2 border-2 border-primary text-black text-body-sm font-bold px-5 py-2 uppercase tracking-wide hover:text-white rounded-sm hover:bg-primary transition-colors ${isExporting ? 'opacity-70 cursor-not-allowed' : ''}`}
                             >
                                 {isExporting ? (
                                     <span className="animate-pulse opacity-60">{t("orders.exporting")}</span>
@@ -489,7 +488,7 @@ function MyOrdersPageContent() {
                     {isInitializing ? (
                         <OrdersTableSkeleton rows={8} />
                     ) : isEmpty ? (
-                        <div className="py-12 bg-white border border-gray-100 rounded-lg shadow-sm px-4 md:px-10">
+                        <div className="p-3 md:p-5 bg-white border border-[#ddd] rounded-sm shadow-sm">
                             <div className="mb-4">
                                 <button
                                     onClick={handleResetClick}

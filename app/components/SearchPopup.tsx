@@ -291,10 +291,10 @@ const SearchPopup: React.FC<SearchPopupProps> = ({ isOpen, onClose }) => {
                                 <div
                                     key={`${item.sku}-${idx}`}
                                     onClick={() => handleSuggestionClick(item)}
-                                    className="px-3 md:px-7 py-3.5 hover:bg-gray-50 cursor-pointer border-b border-gray-50 last:border-0 transition-colors"
+                                    className="px-3 md:px-7 py-2 hover:bg-gray-50 cursor-pointer border-b border-gray-50 last:border-0 transition-colors"
                                 >
                                     <div className="flex items-center justify-between gap-3">
-                                        <span className="text-[14px] md:text-[15px] font-medium text-black truncate">{item.label}</span>
+                                        <span className="text-[14px] font-medium text-black truncate">{item.label}</span>
                                         {item.sku && (
                                             <span className="text-caption text-black/50 font-medium uppercase tracking-wider flex-shrink-0">{item.sku}</span>
                                         )}

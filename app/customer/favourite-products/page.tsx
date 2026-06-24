@@ -255,7 +255,7 @@ export default function FavouriteProducts({ title }: { title?: React.ReactNode }
                         </h1>
                     )}
                 </div>
-                <div className="h-[2px] flex-1 bg-gradient-to-r from-primary to-transparent"></div>
+                <div className="h-[2px] flex-1 ltr:bg-gradient-to-r rtl:bg-gradient-to-l from-primary to-transparent"></div>
             </div>
 
             {/* Mobile/Tablet Card List */}

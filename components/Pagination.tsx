@@ -138,7 +138,7 @@ const Pagination: React.FC<PaginationProps> = ({
     const visiblePages = getVisiblePages();
 
     return (
-        <div className="flex flex-col md:flex-row items-center justify-between py-3 md:py-4 px-1 gap-4 mt-4 border-t border-gray-100">
+        <div className="flex flex-col md:flex-row items-center justify-between py-3 md:py-4 px-1 gap-4 mt-4 border-t border-[#ddd] w-full">
             {/* Item count */}
             <div className="text-body md:text-body-lg text-black/60 font-medium order-2 md:order-1">
                 {t("favorites.show")} <span className="text-black font-extrabold"><bdi dir="ltr">{startItem} - {endItem}</bdi></span> {t("favorites.of")} <span className="text-black font-extrabold"><bdi dir="ltr">{totalItems}</bdi></span> {totalItems === 1 ? t("m.item") : t("m.items")}

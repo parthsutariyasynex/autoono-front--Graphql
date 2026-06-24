@@ -4,7 +4,7 @@ import { usePathname } from "next/navigation";
 
 // ─── Skeleton primitives ──────────────────────────────────────────────────────
 const Pulse = ({ className = "" }: { className?: string }) => (
-  <div className={`animate-pulse bg-gray-200 rounded ${className}`} />
+  <div className={`py-1 animate-pulse bg-gray-200 rounded ${className}`} />
 );
 
 // ─── Navbar Skeleton ──────────────────────────────────────────────────────────
@@ -36,7 +36,7 @@ export function NavbarSkeleton() {
 // ─── Sidebar Skeleton ─────────────────────────────────────────────────────────
 export function SidebarSkeleton() {
   return (
-    <aside className="w-full lg:w-56 xl:w-64 flex-shrink-0 bg-surfaceMuted border-b lg:border-b-0 ltr:lg:border-r rtl:lg:border-l border-gray-200 z-30 sticky top-[56px] sm:top-[64px] lg:top-[108px] h-auto lg:h-[calc(100vh-108px)] overflow-hidden">
+    <aside className="w-full lg:w-56 xl:w-64 flex-shrink-0 bg-surfaceMuted border-b lg:border-b-0 ltr:lg:border-r rtl:lg:border-l border-gray-200 z-30 sticky top-[56px] sm:top-[64px] lg:top-[108px] h-auto overflow-hidden">
       <nav className="p-0 lg:p-4">
         <ul className="flex flex-row lg:flex-col space-y-0 lg:space-y-1">
           {Array.from({ length: 7 }).map((_, i) => (
@@ -215,14 +215,11 @@ export function ProductDetailSkeleton() {
 // ─── Cart Item Skeleton ───────────────────────────────────────────────────────
 export function CartItemSkeleton() {
   return (
-    <div className="flex items-start gap-4 p-4 border-b border-gray-100">
-      <Pulse className="h-20 w-20 flex-shrink-0 rounded-sm" />
+    <div className="flex items-start gap-4 px-3 md:px-6 py-3 border-b border-gray-100">
       <div className="flex-1 space-y-2">
         <Pulse className="h-4 w-3/4 rounded" />
         <Pulse className="h-3 w-1/2 rounded" />
         <div className="flex items-center justify-between pt-2">
-          <Pulse className="h-8 w-24 rounded" />
-          <Pulse className="h-5 w-16 rounded" />
         </div>
       </div>
     </div>
@@ -489,7 +486,7 @@ export function OrdersTableSkeleton({ rows = 8 }: { rows?: number }) {
         {Array.from({ length: rows }).map((_, i) => (
           <div
             key={i}
-            className="border border-gray-200 rounded-lg bg-white p-4 space-y-3"
+            className="border border-[#ddd] rounded-sm bg-white p-4 space-y-3"
           >
             <div className="flex items-center justify-between">
               <Pulse className="h-5 w-24" />
@@ -544,7 +541,7 @@ export function OrdersTableSkeleton({ rows = 8 }: { rows?: number }) {
 // inside another page (e.g. StatementSkeleton).
 export function MyOrdersSkeleton({ rows = 8 }: { rows?: number }) {
   return (
-    <div className="flex-1 w-full px-4 md:px-6 lg:px-8 py-4 md:py-8 lg:py-10">
+    <div className="flex-1 w-full px-4 md:px-6 lg:px-8 py-4 md:py-6 lg:py-5">
       {/* Title row + export button */}
       <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 mb-6 md:mb-10">
         <Pulse className="h-7 md:h-8 w-40 md:w-48" />
@@ -571,7 +568,7 @@ export function MyOrdersSkeleton({ rows = 8 }: { rows?: number }) {
 // ─── Order Detail Skeleton ────────────────────────────────────────────────────
 export function OrderDetailSkeleton() {
   return (
-    <div className="max-w-5xl mx-auto px-4 py-6 space-y-6">
+    <div className="max-w-full mx-auto space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <Pulse className="h-7 w-48 rounded" />
@@ -587,9 +584,10 @@ export function OrderDetailSkeleton() {
         ))}
       </div>
       {/* Items table */}
-      <div className="bg-white rounded-sm border border-gray-100 overflow-hidden">
-        <div className="px-4 py-3 border-b border-gray-100">
-          <Pulse className="h-5 w-24 rounded" />
+      <div className="bg-white overflow-hidden">
+        <div className="border-b border-gray-100">
+          <Pulse className="h-5 w-24 rounded mb-2" />
+           <hr className="border-[#ddd] mb-3"/>
         </div>
         {Array.from({ length: 4 }).map((_, i) => (
           <CartItemSkeleton key={i} />
@@ -614,22 +612,21 @@ export function OrderDetailSkeleton() {
 // (TOTAL ORDER QTY + TOTAL ORDER VALUE) · w-3/4 bottom filters
 export function DashboardSkeleton() {
   return (
-    <div className="flex-1 p-4 md:p-8 lg:p-10 bg-surfacePage min-h-0">
-      <div className="w-full space-y-12">
+    <div className="flex-1 px-4 md:px-6 lg:px-8 py-4 md:py-6 lg:py-5 bg-surfacePage min-h-0">
+      <div className="w-full space-y-6">
         {/* Title with gradient line */}
-        <div className="flex items-center gap-4 mb-2">
+        <div className="flex items-center gap-4 mb-5">
           <Pulse className="h-8 w-40" />
-          <div className="h-[2px] flex-1 bg-gradient-to-r from-primary to-transparent" />
         </div>
 
         {/* Compare section — matches real page: full width on mobile/tablet/lg,
             half-width only at xl (1280+). */}
-        <section className="bg-white w-full xl:w-1/2 border border-border rounded-xl overflow-hidden">
-          <div className="bg-gray-100 p-4 px-6 border-b border-border flex items-center gap-3">
+        <section className="bg-white w-full xl:w-[475px] border border-[#ddd] rounded-sm overflow-hidden">
+          <div className="px-4 py-3 border-b border-[#ddd] flex items-center gap-3">
             <Pulse className="h-[18px] w-[18px]" />
             <Pulse className="h-4 w-24" />
           </div>
-          <div className="p-8 px-8 md:px-12 flex flex-col md:flex-row items-center justify-between gap-6 md:gap-12">
+          <div className="p-3 md:p-4 flex flex-col md:flex-row items-center justify-between gap-3 md:gap-12">
             <Pulse className="flex-1 h-11 w-full rounded-sm" />
             <Pulse className="h-7 w-14 rounded-full" />
             <Pulse className="flex-1 h-11 w-full rounded-sm" />
@@ -642,18 +639,18 @@ export function DashboardSkeleton() {
           const valueHeight = sectionIdx === 0 ? "h-9 w-28" : "h-7 w-32";
           return (
             <section key={sectionIdx}>
-              <div className="flex items-center gap-4 mb-6">
-                <Pulse className="h-6 w-48" />
-                <div className="h-[2px] w-12 bg-primary" />
+              <div className="flex flex-col">
+                <Pulse className="h-6 w-48 mb-3" />
+                <hr className="border-[#ddd] mb-6"/>
               </div>
-              <div className="w-full xl:w-3/4 grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="w-full xl:w-3/4 grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-6">
                 {Array.from({ length: 3 }).map((_, i) => (
-                  <div key={i} className="bg-white border border-border rounded-xl overflow-hidden">
-                    <div className="bg-primary h-10 px-5 flex justify-between items-center border-b border-border">
+                  <div key={i} className="bg-white border border-[#ddd] rounded-sm overflow-hidden">
+                    <div className="bg-primary h-10 px-5 flex justify-between items-center border-b border-[#ddd]">
                       <Pulse className="h-3 w-20" />
                       <div className="w-1.5 h-1.5 rounded-full bg-primary" />
                     </div>
-                    <div className="py-10 px-4 flex justify-center">
+                    <div className="py-5 px-4 flex justify-center">
                       <Pulse className={valueHeight} />
                     </div>
                   </div>
@@ -664,15 +661,15 @@ export function DashboardSkeleton() {
         })}
 
         {/* Bottom filters — matches real page: full width through lg, 75% only at xl. */}
-        <section className="w-full xl:w-3/4 grid grid-cols-1 md:grid-cols-2 gap-8 pt-4">
+        <section className="w-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 md:grid-cols-3 gap-6 pt-4">
           {Array.from({ length: 2 }).map((_, i) => (
             <div key={i} className="flex flex-col gap-4">
               <Pulse className="h-4 w-32" />
-              <div className="bg-white border border-border rounded-xl overflow-hidden">
-                <div className="bg-primary border-b border-border h-12 px-5 flex items-center">
+              <div className="bg-white border border-border rounded-sm overflow-hidden">
+                <div className="bg-primary border-b border-border h-10 px-5 flex items-center">
                   <Pulse className="h-4 w-40" />
                 </div>
-                <div className="py-8 px-6 flex justify-center">
+                <div className="py-5 px-6 flex justify-center">
                   <Pulse className="h-8 w-20" />
                 </div>
               </div>
@@ -724,8 +721,8 @@ export function FavouriteProductsSkeleton({ count = 6 }: { count?: number }) {
     <div className="w-full font-rubik overflow-hidden">
       {/* Centered Page Title — matches real (no gradient line)
           h1 text-h3 md:text-h1-sm → ~28/34px rendered */}
-      <div className="text-center mb-8">
-        <Pulse className="h-7 md:h-9 w-56 mx-auto" />
+      <div className="mb-5">
+        <Pulse className="h-7 md:h-9 w-56" />
       </div>
 
       {/* Mobile card grid — only below md, table takes over from md+ */}
@@ -799,7 +796,7 @@ export function FavouriteProductsSkeleton({ count = 6 }: { count?: number }) {
 
       {/* Pagination — matches real Pagination component (flex-col md:flex-row,
           round button placeholders, count text + page-size selector). */}
-      <div className="flex flex-col md:flex-row items-center justify-between py-3 md:py-4 px-1 gap-4 mt-4 border-t border-gray-100">
+      <div className="flex flex-col md:flex-row items-center justify-between py-3 md:py-4 px-1 gap-4 mt-4 border-t border-[#ddd] w-full">
         <Pulse className="h-4 w-44 order-2 md:order-1" />
         <div className="flex items-center gap-1.5 md:gap-2 order-1 md:order-2">
           <Pulse className="h-9 md:h-10 w-9 md:w-10 rounded-full" />
@@ -821,10 +818,10 @@ export function FavouriteProductsSkeleton({ count = 6 }: { count?: number }) {
 //       - pagination footer (3 sections, stacked until lg)
 export function NotificationsSkeleton({ count = 8 }: { count?: number }) {
   return (
-    <div className="w-full py-4 md:py-10">
+    <div className="w-full">
       <div className="flex flex-col lg:flex-row gap-0">
         <SidebarSkeleton />
-        <main className="flex-1 min-w-0 px-4 md:px-6 lg:px-8">
+        <main className="flex-1 min-w-0 px-4 md:px-6 lg:px-8 py-4 md:py-6 lg:py-5">
           {/* Title h1 (text-h3 md:text-[26px], ~28/32px line-height) */}
           <Pulse className="h-7 md:h-9 w-48 md:w-64 mb-6 md:mb-10" />
 
@@ -934,9 +931,9 @@ export function CreditLimitSkeleton() {
 // drop zone + Choose File + Submit · 2-column files table.
 export function ForecastSkeleton({ rows = 6 }: { rows?: number }) {
   return (
-    <div className="flex-1 w-full px-4 md:px-6 lg:px-8 py-4 md:py-6 lg:py-10 bg-surfacePage min-w-0">
+    <div className="flex-1 w-full px-4 md:px-6 lg:px-8 py-4 md:py-6 lg:py-5 bg-surfacePage min-w-0">
       {/* Header: title + refresh button */}
-      <div className="flex justify-between items-center mb-6 md:mb-10">
+      <div className="flex justify-between items-center mb-5">
         <Pulse className="h-7 md:h-8 w-40" />
         <Pulse className="h-9 w-28 rounded-sm border border-gray-200" />
       </div>
@@ -993,33 +990,33 @@ export function ForecastSkeleton({ rows = 6 }: { rows?: number }) {
 // dropdown + download button.
 export function StatementSkeleton() {
   return (
-    <div className="flex-1 w-full px-4 md:px-6 lg:px-8 py-4 md:py-6 lg:py-10">
+    <div className="flex-1 w-full px-4 md:px-6 lg:px-8 py-4 md:py-6 lg:py-5">
       {/* Title */}
       <Pulse className="h-7 md:h-8 w-40 mb-6 md:mb-10" />
 
       {/* Form card */}
-      <div className="max-w-[700px] bg-white border border-gray-200 rounded-sm shadow-sm overflow-hidden">
+      <div className="max-w-[700px] bg-white border [#ddd] shadow-sm overflow-hidden">
         {/* Card header strip */}
-        <div className="bg-surfaceMuted px-6 py-3 border-b border-gray-200">
+        <div className="bg-surfaceMuted px-4 py-3 border-b [#ddd]">
           <Pulse className="h-5 w-44" />
         </div>
         {/* Card body */}
-        <div className="p-4 md:p-8">
+        <div className="p-3 md:p-5">
           {/* Date inputs (2 columns) */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8 mb-4 md:mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8 mb-4">
             <div className="space-y-2">
               <Pulse className="h-4 w-24" />
-              <Pulse className="w-full h-[45px] border border-gray-200 rounded-sm" />
+              <Pulse className="w-full h-[45px] border [#ddd] rounded-sm" />
             </div>
             <div className="space-y-2">
               <Pulse className="h-4 w-24" />
-              <Pulse className="w-full h-[45px] border border-gray-200 rounded-sm" />
+              <Pulse className="w-full h-[45px] border [#ddd] rounded-sm" />
             </div>
           </div>
           {/* Statement type dropdown */}
           <div className="mb-6 md:mb-10 space-y-2">
             <Pulse className="h-4 w-16" />
-            <Pulse className="w-full h-[45px] border border-gray-200 rounded-sm" />
+            <Pulse className="w-full h-[45px] border [#ddd] rounded-sm" />
           </div>
           {/* Download button */}
           <Pulse className="w-full sm:w-48 h-12 rounded-sm" />
@@ -1212,12 +1209,12 @@ export function QuickOrderSkeleton() {
 // (Doc type + Invoice due + Reset) + 6-column attachments table.
 export function OrderAttachmentsSkeleton({ rows = 6 }: { rows?: number }) {
   return (
-    <div className="flex-1 w-full px-4 md:px-6 lg:px-8 py-4 md:py-6 lg:py-10">
+    <div className="flex-1 w-full px-4 md:px-6 lg:px-8 py-4 md:py-6 lg:py-5">
       {/* Title */}
       <Pulse className="h-7 md:h-8 w-48 mb-6 md:mb-10" />
 
       {/* Search row */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 mb-6 md:mb-8">
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 mb-3">
         <Pulse className="w-full sm:w-[200px] h-[40px] rounded-sm border border-border" />
         <Pulse className="w-full sm:w-24 h-[40px] rounded-sm" />
       </div>
@@ -1411,16 +1408,16 @@ export function AccountSkeleton() {
   // Sharp-cornered cards (rounded-none) like the real my-account page
   const card = "border border-gray-200 bg-white shadow-sm";
   return (
-    <div className="flex-1 w-full px-4 md:px-6 lg:px-8 py-4 md:py-6 lg:py-10 bg-surfacePage">
+    <div className="flex-1 w-full px-4 md:px-6 lg:px-8 py-4 md:py-6 lg:py-5 bg-surfacePage">
       {/* Title */}
-      <Pulse className="h-7 w-48 rounded mb-6 md:mb-10" />
+      <Pulse className="h-7 w-48 rounded mb-5" />
 
       <div className="space-y-8">
         {/* ACCOUNT INFORMATION */}
         <div>
-          <Pulse className="h-5 w-44 rounded mb-3" />
-          <hr className="border-gray-200 mb-6" />
-          <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 md:gap-6">
+          <Pulse className="h-5 w-44 rounded mb-1.5 md:mb-3" />
+          <hr className="border-gray-200 mb-3 md:mb-6" />
+          <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 md:gap-6">
             <div className={card}>
               <div className="bg-surfaceHover px-4 py-3 border-b border-gray-200">
                 <Pulse className="h-4 w-36 rounded" />
@@ -1429,17 +1426,13 @@ export function AccountSkeleton() {
                 {Array.from({ length: 8 }).map((_, i) => (
                   <Pulse key={i} className="h-3.5 w-full rounded" />
                 ))}
-                <div className="flex flex-col md:flex-row gap-3 pt-4">
+                <div className="flex flex-col md:flex-row gap-3 pt-1">
                   <Pulse className="h-9 w-full md:w-24 rounded-sm" />
                   <Pulse className="h-9 w-full md:w-44 rounded-sm" />
                 </div>
               </div>
             </div>
-          </div>
-        </div>
-
-        {/* SALES + BEHAVIOR row — xl:grid-cols-2 to match real my-account page */}
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 md:gap-6">
+          {/* SALES + BEHAVIOR row — xl:grid-cols-2 to match real my-account page */}
           {Array.from({ length: 2 }).map((_, i) => (
             <div key={i} className={card}>
               <div className="bg-surfaceHover px-4 py-3 border-b border-gray-200">
@@ -1452,7 +1445,12 @@ export function AccountSkeleton() {
               </div>
             </div>
           ))}
+
+          </div>
         </div>
+
+        
+ 
 
         {/* CREDIT LIMIT */}
         <div className={card}>
@@ -1468,8 +1466,8 @@ export function AccountSkeleton() {
 
         {/* ADDRESS BOOK */}
         <div>
-          <Pulse className="h-5 w-44 rounded mb-3" />
-          <hr className="border-gray-200 mb-6" />
+          <Pulse className="h-5 w-44 rounded mb-1.5 md:mb-3" />
+          <hr className="border-gray-200 mb-3 md:mb-6" />
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 md:gap-6">
             {Array.from({ length: 2 }).map((_, i) => (
               <div key={i} className={card}>
@@ -1521,7 +1519,6 @@ export function AddressBookSkeleton() {
         <section>
           <div className="flex items-center gap-4 mb-8">
             <Pulse className="h-7 w-52" />
-            <div className="h-[2px] flex-1 bg-gradient-to-r from-primary to-transparent" />
           </div>
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
             {Array.from({ length: 2 }).map((_, i) => (
@@ -1568,7 +1565,6 @@ export function AddressBookSkeleton() {
         <section>
           <div className="flex items-center gap-4 mb-8">
             <Pulse className="h-7 w-60" />
-            <div className="h-[2px] flex-1 bg-gradient-to-r from-primary to-transparent" />
           </div>
 
           <div className="bg-white border border-border rounded-xl shadow-sm overflow-hidden">
@@ -1688,16 +1684,16 @@ export function CheckoutSuccessSkeleton() {
 // + mobile card variant.
 export function ManageAccountsSkeleton({ rows = 5 }: { rows?: number }) {
   return (
-    <div className="flex-1 w-full px-4 md:px-6 lg:px-8 py-10 bg-white">
+    <div className="flex-1 w-full px-4 md:px-6 lg:px-8 py-4 md:py-6 lg:py-5 bg-white">
       {/* Header action bar */}
-      <div className="flex justify-between items-center mb-6 md:mb-10">
+      <div className="flex justify-between items-center mb-5">
         <Pulse className="h-7 md:h-8 w-64" />
       </div>
 
       {/* Mobile cards */}
       <div className="md:hidden space-y-3">
         {Array.from({ length: rows }).map((_, i) => (
-          <div key={i} className="bg-white border border-gray-200 rounded-md p-4 shadow-sm">
+          <div key={i} className="bg-white border border-[#ddd] rounded-sm p-4">
             <div className="flex items-start justify-between gap-3 mb-3">
               <div className="min-w-0 flex-1 space-y-2">
                 <Pulse className="h-3 w-32" />
@@ -1869,7 +1865,7 @@ export function AboutSkeleton({ hero = true }: { hero?: boolean } = {}) {
 
   // The shared body — reused whether the hero is rendered above it or not.
   const Body = (
-    <div className="space-y-6 animate-pulse">
+    <div className="space-y-3 md:space-y-6 animate-pulse">
       {/* Title — centered, uppercase */}
       <div className="flex justify-center mb-10 sm:mb-14">
         <div className="h-9 sm:h-[45px] md:h-12 bg-gray-200 rounded w-56 sm:w-64 md:w-72" />
@@ -1949,7 +1945,7 @@ export function LocationsSkeleton() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-16">
           {/* Address Card */}
           <div className="lg:col-span-4">
-            <div className="border border-gray-100 p-6 sm:p-8 shadow-sm space-y-3">
+            <div className="border border-[#ddd] p-6 shadow-sm space-y-3">
               <Pulse className="h-5 w-40" />
               <Pulse className="h-4 w-full" />
               <Pulse className="h-4 w-5/6" />
@@ -2005,7 +2001,7 @@ export function RouteAwareSkeleton() {
         <div className="min-h-screen flex flex-col w-full bg-white">
           <div className="flex flex-col lg:flex-row flex-1 w-full">
             <SidebarSkeleton />
-            <main className="flex-1 w-full px-4 md:px-6 lg:px-8 py-4 md:py-6 lg:py-10 bg-white min-w-0">
+            <main className="flex-1 w-full px-4 md:px-6 lg:px-8 py-4 md:py-6 lg:py-5 bg-white min-w-0">
               <FavouriteProductsSkeleton count={8} />
             </main>
           </div>
@@ -2020,7 +2016,7 @@ export function RouteAwareSkeleton() {
         <div className="min-h-screen flex flex-col w-full bg-white">
           <div className="flex flex-col lg:flex-row flex-1 w-full">
             <SidebarSkeleton />
-            <main className="flex-1 w-full px-4 md:px-6 lg:px-8 py-4 md:py-6 lg:py-10 bg-white min-w-0">
+            <main className="flex-1 w-full px-4 md:px-6 lg:px-8 py-4 md:py-6 lg:py-5 bg-white min-w-0">
               <FavouriteProductsSkeleton count={8} />
             </main>
           </div>

@@ -170,9 +170,9 @@ const GiftModal: React.FC<GiftModalProps> = ({
                     <table className="w-full border-collapse text-sm">
                         <thead className="sticky top-0 z-10">
                             <tr className="border-b border-gray-200 bg-white">
-                                <th className="px-3 sm:px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider w-10 sm:w-14">Select</th>
-                                <th className="px-2 sm:px-3 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider w-14 sm:w-20">Image</th>
-                                <th className="px-2 sm:px-3 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Name</th>
+                                <th className="px-3 sm:px-4 py-3 rtl:text-right ltr:text-left text-xs font-bold text-gray-500 uppercase tracking-wider w-10 sm:w-14">Select</th>
+                                <th className="px-2 sm:px-3 py-3 rtl:text-right ltr:text-left text-xs font-bold text-gray-500 uppercase tracking-wider w-14 sm:w-20">Image</th>
+                                <th className="px-2 sm:px-3 py-3 rtl:text-right ltr:text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Name</th>
                                 <th className="px-3 sm:px-4 py-3 text-center text-xs font-bold text-gray-500 uppercase tracking-wider w-24 sm:w-28">Qty</th>
                             </tr>
                         </thead>
@@ -305,7 +305,7 @@ const GiftModal: React.FC<GiftModalProps> = ({
                     <button
                         onClick={handleConfirm}
                         disabled={totalSelected === 0}
-                        className="bg-primary text-white px-10 sm:px-16 py-3 text-body md:text-base rounded-lg font-bold uppercase tracking-wider hover:bg-primaryHover transition-all disabled:opacity-40 disabled:cursor-not-allowed flex-1 sm:flex-none shadow-lg"
+                        className="bg-primary text-white px-10 sm:px-16 py-3 text-body md:text-base rounded-sm font-bold uppercase tracking-wider hover:bg-primaryHover transition-all disabled:opacity-40 disabled:cursor-not-allowed flex-1 sm:flex-none shadow-lg"
                     >
                         ADD TO CART
                     </button>

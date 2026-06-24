@@ -142,27 +142,27 @@ export default function NotificationsPage() {
         <>
 
 
-            <div className="w-full py-4 md:py-10">
+            <div className="w-full">
                 <div className="flex flex-col lg:flex-row gap-0">
                     {/* SIDEBAR */}
                     <Sidebar />
 
                     {/* MAIN CONTENT */}
-                    <main className="flex-1 min-w-0 px-4 md:px-6 lg:px-8">
-                        <h1 className="text-h3 md:text-[26px] font-bold text-black mb-6 md:mb-10 uppercase tracking-wide">
+                    <main className="flex-1 min-w-0 px-4 md:px-6 lg:px-8 py-4 md:py-6 lg:py-5">
+                        <h1 className="text-h3 sm:text-h3 md:text-[26px] font-bold text-black mb-5 uppercase tracking-wide">
                             {t('notifications.title')}
                         </h1>
 
-                        <div className="border border-border rounded-sm overflow-hidden shadow-sm">
+                        <div className="overflow-hidden">
                             {/* Desktop Table */}
                             <div className="hidden md:block overflow-x-auto">
-                                <table className="w-full text-left border-collapse table-fixed min-w-[600px]">
+                                <table className="w-full text-body text-left border-collapse border border-[#ddd]">
                                     <thead>
-                                        <tr className="border-b border-border">
-                                            <th className="px-3 lg:px-6 py-4 text-body font-bold text-black uppercase text-center w-[14%] border-r border-border">{t('common.date')}</th>
-                                            <th className="px-3 lg:px-6 py-4 text-body font-bold text-black uppercase text-center w-[18%] border-r border-border">{t('m.title')}</th>
-                                            <th className="px-3 lg:px-6 py-4 text-body font-bold text-black uppercase text-center w-[40%] border-r border-border">{t('m.message')}</th>
-                                            <th className="px-3 lg:px-6 py-4 text-body font-bold text-black uppercase text-center w-[28%]">{t('common.action')}</th>
+                                        <tr className="bg-primary text-label uppercase font-bold tracking-widest">
+                                            <th className="px-2 xl:px-4 py-2 border border-warning/30 text-body font-bold text-black uppercase text-center w-[14%]">{t('common.date')}</th>
+                                            <th className="px-2 xl:px-4 py-2 border border-warning/30 text-body font-bold text-black uppercase text-center w-[18%]">{t('m.title')}</th>
+                                            <th className="px-2 xl:px-4 py-2 border border-warning/30 text-body font-bold text-black uppercase text-center w-[40%]">{t('m.message')}</th>
+                                            <th className="px-2 xl:px-4 py-2 border border-warning/30 text-body font-bold text-black uppercase text-center w-[28%]">{t('common.action')}</th>
                                         </tr>
                                     </thead>
                                     <tbody className="bg-white">
@@ -170,10 +170,10 @@ export default function NotificationsPage() {
                                             <>
                                                 {Array.from({ length: 6 }).map((_, i) => (
                                                     <tr key={i} className="border-b border-border animate-pulse">
-                                                        <td className="px-6 py-5 border-r border-border"><div className="h-4 bg-gray-200 rounded w-24 mx-auto" /></td>
-                                                        <td className="px-6 py-5 border-r border-border"><div className="h-4 bg-gray-200 rounded w-32 mx-auto" /></td>
-                                                        <td className="px-6 py-5 border-r border-border"><div className="h-4 bg-gray-200 rounded w-full" /></td>
-                                                        <td className="px-6 py-5"><div className="h-4 bg-gray-200 rounded w-20 mx-auto" /></td>
+                                                        <td className="px-2 xl:px-4 py-2 border-r border-border"><div className="h-4 bg-gray-200 rounded w-24 mx-auto" /></td>
+                                                        <td className="px-2 xl:px-4 py-2 border-r border-border"><div className="h-4 bg-gray-200 rounded w-32 mx-auto" /></td>
+                                                        <td className="px-2 xl:px-4 py-2 border-r border-border"><div className="h-4 bg-gray-200 rounded w-full" /></td>
+                                                        <td className="px-2 xl:px-4 py-2"><div className="h-4 bg-gray-200 rounded w-20 mx-auto" /></td>
                                                     </tr>
                                                 ))}
                                             </>
@@ -183,23 +183,23 @@ export default function NotificationsPage() {
                                                     key={`${item.notification_id || index}-${index}`}
                                                     className={`border-b border-border last:border-0 transition-colors ${!item.is_read ? "bg-warningBgLight" : "bg-white"}`}
                                                 >
-                                                    <td className="px-6 py-6 text-body-lg text-black text-center border-r border-border align-middle relative">
+                                                    <td className="px-2 xl:px-4 py-1.5 border-r border-gray-200 text-body-lg text-black border-border align-middle relative">
                                                         {!item.is_read && (
                                                             <div className="absolute left-2 top-1/2 -translate-y-1/2 w-2 h-2 bg-primary rounded-full shadow-sm"></div>
                                                         )}
                                                         {formatDate(item.date_added_formatted, locale)}
                                                     </td>
-                                                    <td className={`px-6 py-6 text-body-lg text-center border-r border-border align-middle ${!item.is_read ? "font-bold text-black" : "font-normal text-black/70"}`}>
+                                                    <td className={`px-2 xl:px-4 py-1.5 border-r border-gray-200 text-body-lg text-center align-middle ${!item.is_read ? "font-medium text-black" : "font-normal text-black/70"}`}>
                                                         {getOrderLink(item) ? (
                                                             <Link href={getOrderLink(item)!} className="hover:text-primary transition-colors cursor-pointer underline-offset-2 hover:underline">
                                                                 {translateNotificationText(item.title, locale)}
                                                             </Link>
                                                         ) : translateNotificationText(item.title, locale)}
                                                     </td>
-                                                    <td className={`px-6 py-6 text-body-lg text-center border-r border-border leading-relaxed align-middle ${!item.is_read ? "font-medium text-black" : "text-black/70"}`}>
+                                                    <td className={`px-2 xl:px-4 py-1.5 border-r border-gray-200 text-body-lg text-center leading-relaxed align-middle ${!item.is_read ? "font-medium text-black" : "text-black/70"}`}>
                                                         {translateNotificationText(item.description, locale)}
                                                     </td>
-                                                    <td className="px-3 lg:px-6 py-6 text-body text-center align-middle">
+                                                    <td className="px-2 xl:px-4 py-1.5 border-r border-gray-200 text-body text-center align-middle">
                                                         {/* Buttons:
                                                               md  (no sidebar) → side-by-side, plenty of room
                                                               lg  (sidebar 256px → tight main) → stack vertically
@@ -207,11 +207,11 @@ export default function NotificationsPage() {
                                                         <div className="flex flex-row lg:flex-col xl:flex-row items-center justify-center gap-2 lg:gap-1.5 xl:gap-2 text-black">
                                                             {!item.is_read && (
                                                                 <>
-                                                                    <button onClick={(e) => { e.stopPropagation(); markAsRead(item.notification_id); }} className="hover:text-primary transition-colors font-bold whitespace-nowrap">{t('m.mark-as-read')}</button>
+                                                                    <button onClick={(e) => { e.stopPropagation(); markAsRead(item.notification_id); }} className="hover:text-primary transition-colors font-medium whitespace-nowrap">{t('m.mark-as-read')}</button>
                                                                     <span className="inline lg:hidden xl:inline text-black/30">|</span>
                                                                 </>
                                                             )}
-                                                            <button onClick={(e) => { e.stopPropagation(); removeNotification(item.notification_id, item.is_read); }} disabled={deletingIds.includes(item.notification_id)} className="hover:text-primary cursor-pointer transition-colors font-bold disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap">
+                                                            <button onClick={(e) => { e.stopPropagation(); removeNotification(item.notification_id, item.is_read); }} disabled={deletingIds.includes(item.notification_id)} className="hover:text-primary cursor-pointer transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap">
                                                                 {deletingIds.includes(item.notification_id) ? t('common.loading') : t('m.remove')}
                                                             </button>
                                                         </div>
@@ -232,7 +232,7 @@ export default function NotificationsPage() {
                                 {isLoading ? (
                                     <div className="space-y-0 animate-pulse">
                                         {Array.from({ length: 6 }).map((_, i) => (
-                                            <div key={i} className="p-4 border-b border-border flex flex-col gap-2">
+                                            <div key={i} className="bg-white p-3 rounded-sm border border-[#ddd] mb-3 flex flex-col gap-2">
                                                 <div className="h-4 bg-gray-200 rounded w-24" />
                                                 <div className="h-4 bg-gray-200 rounded w-3/4" />
                                                 <div className="h-3 bg-gray-200 rounded w-full" />
@@ -243,7 +243,7 @@ export default function NotificationsPage() {
                                     notifications.map((item, index) => (
                                         <div
                                             key={`mobile-${item.notification_id || index}-${index}`}
-                                            className={`p-4 border-b border-border last:border-0 transition-colors ${!item.is_read ? "bg-warningBgLight" : "bg-white"}`}
+                                            className={`bg-white p-3 rounded-sm border border-[#ddd] mb-3 overflow-visible ${!item.is_read ? "bg-warningBgLight" : "bg-white"}`}
                                         >
                                             <div className="flex items-start justify-between gap-2 mb-2">
                                                 <div className="flex items-center gap-2">

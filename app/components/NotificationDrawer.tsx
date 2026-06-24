@@ -119,7 +119,7 @@ export default function NotificationDrawer({ isOpen, onClose }: NotificationDraw
                                     key={`${item.notification_id || index}-${index}`}
                                     href={getRowHref(item)}
                                     onClick={() => onRowClick(item)}
-                                    className={`px-6 py-3 flex flex-col gap-1 transition-all relative cursor-pointer hover:bg-gray-50 ${!item.is_read ? "bg-warningBgLight border-primary" : "bg-white border-transparent"
+                                    className={`px-4 py-2 flex flex-col transition-all relative cursor-pointer hover:bg-gray-50 ${!item.is_read ? "bg-warningBgLight border-[#ddd]" : "bg-white border-[#ddd]"
                                         }`}
                                 >
                                     {/* Header Row: Title & Remove */}
@@ -134,7 +134,7 @@ export default function NotificationDrawer({ isOpen, onClose }: NotificationDraw
                                                 removeNotification(item.notification_id, item.is_read);
                                             }}
                                             disabled={deletingIds.includes(item.notification_id)}
-                                            className="w-7 h-7 flex items-center justify-center bg-gray-100 hover:bg-black hover:text-white text-black/50 rounded-full transition-all flex-shrink-0 disabled:opacity-50"
+                                            className="w-6 h-6 flex items-center justify-center bg-gray-100 hover:bg-black hover:text-white text-black rounded-full transition-all flex-shrink-0 disabled:opacity-50 border border-border"
                                             aria-label="Remove notification"
                                         >
                                             <X size={12} strokeWidth={3} className={deletingIds.includes(item.notification_id) ? "opacity-30" : ""} />
@@ -142,13 +142,13 @@ export default function NotificationDrawer({ isOpen, onClose }: NotificationDraw
                                     </div>
 
                                     {/* Message */}
-                                    <p className={`text-body leading-relaxed mt-1 ${!item.is_read ? "text-black/80 font-medium" : "text-black/60"
+                                    <p className={`text-body leading-relaxed ${!item.is_read ? "text-black/80 font-medium" : "text-black/60"
                                         }`}>
                                         {translateNotification(item.description)}
                                     </p>
 
                                     {/* Footer: Date & Mark as Read */}
-                                    <div className="flex justify-between items-center mt-3">
+                                    <div className="flex justify-between items-center">
                                         <p className="text-label text-black/50 font-bold uppercase tracking-widest">
                                             {isRtl ? formatNotificationDate(item.date_added || item.date_added_formatted) : item.date_added_formatted}
                                         </p>
@@ -160,7 +160,7 @@ export default function NotificationDrawer({ isOpen, onClose }: NotificationDraw
                                                     e.stopPropagation();
                                                     markAsRead(item.notification_id);
                                                 }}
-                                                className="text-caption font-bold uppercase tracking-widest pointer-events-auto text-primary hover:text-black transition-colors"
+                                                className="text-caption font-bold uppercase tracking-widest pointer-events-auto text-primary hover:text-black transition-colors mt-2"
                                             >
                                                 {t("notifications.markRead")}
                                             </button>

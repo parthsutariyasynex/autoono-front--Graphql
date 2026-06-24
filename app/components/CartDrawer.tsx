@@ -60,12 +60,12 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
             >
                 <div className="flex flex-col flex-1 min-h-0 bg-white">
                     {/* Header Sub-info */}
-                    <div className="px-6 py-4 bg-gray-50/50 border-b border-gray-100">
+                    <div className="px-4 py-2.5 bg-gray-50/50 border-b border-[#ddd]">
                         <div className="flex justify-between items-center">
-                            <span className="text-label font-semibold text-black/50 uppercase tracking-widest leading-none">
+                            <span className="text-sm font-semibold text-black uppercase tracking-widest leading-none">
                                 {t("cart.subtotal")}
                             </span>
-                            <span className="text-[17px] font-semibold text-black price currency-riyal">
+                            <span className="text-sm font-semibold text-black price ">
                                 <Price amount={cart?.subtotal || 0} />
                             </span>
                         </div>
@@ -103,11 +103,11 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
                                 </button>
                             </div>
                         ) : (
-                            <div className="divide-y divide-gray-100 pb-20">
+                            <div className="divide-y divide-[#ddd] pb-20">
                                 {cart?.items.map((item) => (
-                                    <div key={item.item_id} className="p-6 flex gap-6 hover:bg-gray-50/30 transition-all group">
+                                    <div key={item.item_id} className="px-4 py-2 flex gap-3 hover:bg-gray-50/30 transition-all group items-center">
                                         {/* Left: Product Image */}
-                                        <div className="w-24 h-24 bg-white border border-gray-100 rounded-lg flex-shrink-0 p-2 flex items-center justify-center shadow-sm group-hover:shadow-md transition-all duration-300">
+                                        <div className="w-16 h-16 bg-white border border-[#ddd] rounded-sm flex-shrink-0 p-1 flex items-center justify-center shadow-sm group-hover:shadow-md transition-all duration-300">
                                             <img
                                                 src={item.image_url || "/images/tyre-sample.png"}
                                                 alt={item.name}
@@ -121,22 +121,31 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
                                         </div>
 
                                         {/* Center: Info */}
-                                        <div className="flex-1 min-w-0 flex flex-col justify-center">
-                                            <div>
-                                                <h3 className="text-sm font-semibold text-black leading-snug line-clamp-2 uppercase tracking-tight">
+                                        <div className="flex-1 min-w-0 flex flex-col justify-center gap-1">
+                                            <div className="flex gap-1 justify-between items-start">
+                                                <h3 className="text-sm font-medium text-black leading-snug line-clamp-2 uppercase tracking-tight">
                                                     {item.name}
                                                 </h3>
-                                                <p className="text-h3-sm font-semibold text-black mt-1.5 price currency-riyal">
-                                                    <Price amount={item.price} />
-                                                </p>
+
+                                                <button
+                                                    onClick={() => setConfirmId(item.item_id)}
+                                                    className="w-6 h-6 flex items-center justify-center text-black transition-all relative top-[-4px]"
+                                                    aria-label="Remove item"
+                                                >
+                                                    <Trash2 size={16} strokeWidth={2.5} />
+                                                </button>
+                                             
                                             </div>
 
                                             {/* Quantity & Actions */}
-                                            <div className="flex items-center justify-between mt-4">
-                                                <div className="flex items-center bg-gray-100 rounded-md p-0.5 border border-gray-200">
+                                            <div className="flex items-center justify-between mt-0">
+                                                   <p className="text-h3-sm font-semibold text-black mt-0.5 price">
+                                                    <Price amount={item.price} />
+                                                </p>
+                                                <div className="flex items-center border border-[#ddd] bg-white rounded-lg focus-within:ring-1 focus-within:ring-primary transition-all">
                                                     <button
                                                         onClick={() => updateCartItem(item.item_id, item.qty - 1)}
-                                                        className="w-7 h-7 flex items-center justify-center hover:bg-white hover:shadow-sm rounded transition-all text-black/70 disabled:opacity-30"
+                                                        className="w-7 h-7 flex items-center justify-center transition-all text-black/70 disabled:opacity-30"
                                                         disabled={item.qty <= 1}
                                                     >
                                                         <Minus size={12} strokeWidth={3} />
@@ -146,19 +155,13 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
                                                     </span>
                                                     <button
                                                         onClick={() => updateCartItem(item.item_id, item.qty + 1)}
-                                                        className="w-7 h-7 flex items-center justify-center hover:bg-white hover:shadow-sm rounded transition-all text-black/70"
+                                                        className="w-7 h-7 flex items-center justify-center transition-all text-black/70"
                                                     >
                                                         <Plus size={12} strokeWidth={3} />
                                                     </button>
                                                 </div>
 
-                                                <button
-                                                    onClick={() => setConfirmId(item.item_id)}
-                                                    className="w-9 h-9 flex items-center justify-center text-black/40 hover:text-red-500 hover:bg-red-50 rounded-full transition-all"
-                                                    aria-label="Remove item"
-                                                >
-                                                    <Trash2 size={18} strokeWidth={2.5} />
-                                                </button>
+                                                
                                             </div>
                                         </div>
                                     </div>
@@ -168,11 +171,11 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
                     </div>
 
                     {/* Bottom Section */}
-                    <div className="p-6 bg-white border-t border-gray-100 shadow-[0_-10px_40px_rgba(0,0,0,0.04)] z-10">
+                    <div className="p-4 bg-white border-t border-[#ddd] shadow-[0_-10px_40px_rgba(0,0,0,0.04)] z-10">
                         <Link
                             href={lp("/cart")}
                             onClick={onClose}
-                            className="w-full h-[55px] bg-primary hover:bg-black text-black hover:text-white font-semibold rounded-sm transition-all duration-300 flex items-center justify-center shadow-lg hover:shadow-xl uppercase tracking-[0.2em] text-body-sm"
+                            className="flex items-center justify-center shadow-lg w-full px-2 py-3 xl:py-4 bg-primary text-[12px] font-bold font-[700] uppercase tracking-normal xl:tracking-[0.2em] leading-tight hover:bg-black hover:text-white transition-all duration-300 shadow-md rounded text-center"
                         >
                             {t("cart.viewAndEditCart")}
                         </Link>
