@@ -103,7 +103,7 @@ const CreditLimit = () => {
     // Magento sets is_visible=false when total_credit_limit=0, but the
     // customer still has a credit account and should see their (zero) balance.
 
-    const cardClass = "flex shadow-sm rounded-lg overflow-hidden transition-all duration-300 hover:shadow-md transform hover:-translate-y-1 group";
+    const cardClass = "flex shadow-sm rounded-sm overflow-hidden transition-all duration-300 hover:shadow-md transform hover:-translate-y-1 group";
     const iconContainerClass = "w-16 md:w-20 flex items-center justify-center p-3 transition-colors duration-300";
     const contentClass = "flex-1 p-3 md:p-4 flex flex-col justify-center items-end text-white";
 
@@ -112,7 +112,7 @@ const CreditLimit = () => {
             <h2 className="text-[14px] md:text-[16px] font-bold text-black uppercase mb-3">
                 {t("m.credit-account-information") || "Credit Account Information"}
             </h2>
-            <hr className="border-gray-200 mb-6" />
+            <hr className="border-[#ddd] mb-6" />
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 mb-8">
                 {/* Total Credit Limit */}

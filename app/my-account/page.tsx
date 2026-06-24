@@ -104,8 +104,8 @@ export default function MyAccountPage() {
         return num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     };
 
-    const cardBase = "border border-gray-200 bg-white shadow-sm rounded-none";
-    const sectionHeader = "bg-surfaceHover px-4 py-3 border-b border-gray-200 text-black font-bold uppercase text-body";
+    const cardBase = "border border-[#ddd] bg-white shadow-sm rounded-none";
+    const sectionHeader = "bg-surfaceHover px-4 py-3 border-b border-[#ddd] text-black font-bold uppercase text-body";
 
     const addresses = (customer as any).addresses as Address[] | undefined;
     const defaultBilling = addresses?.find((a: Address) => a.default_billing);
@@ -138,7 +138,7 @@ export default function MyAccountPage() {
                     <Sidebar />
 
                     {/* Right Content */}
-                    <main className="flex-1 w-full px-4 md:px-6 lg:px-8 py-4 md:py-6 lg:py-10">
+                    <main className="flex-1 w-full px-4 md:px-6 lg:px-8 py-4 md:py-6 lg:py-5">
 
                         {/* Sub-account Identity Banner */}
                         {isSubAccountSession && (
@@ -150,7 +150,7 @@ export default function MyAccountPage() {
                             </div>
                         )}
 
-                        <h1 className="text-h3 sm:text-h3 md:text-[26px] font-bold text-black mb-6 md:mb-10 uppercase tracking-wide">
+                        <h1 className="text-h3 sm:text-h3 md:text-[26px] font-bold text-black mb-5 uppercase tracking-wide">
                             {t("account.title")}
                         </h1>
 
@@ -158,12 +158,12 @@ export default function MyAccountPage() {
                             {/* ACCOUNT INFORMATION */}
                             <div>
                                 <h2 className="text-body-lg md:text-h3-sm font-bold text-black uppercase mb-3">{t("account.accountInformation")}</h2>
-                                <hr className="border-gray-200 mb-6" />
+                                <hr className="border-[#ddd] mb-6" />
 
                                 {/* Single card — half-width at xl so it doesn't dominate huge desktops,
                                     but full-width up to lg so the right half isn't empty next to the
                                     256px sidebar at 1024-1279px. */}
-                                <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 md:gap-6">
+                                <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 md:gap-6">
                                     {/* Contact Information */}
                                     <div className={cardBase}>
                                         <div className={sectionHeader}>
@@ -179,7 +179,7 @@ export default function MyAccountPage() {
                                             <p>{t("m.location")}: {customerLocation}</p>
                                             <p>{t("account.contactInformation")}: <bdi dir="ltr">{(customer as any).email}</bdi> ,<bdi dir="ltr">{customerMobile}</bdi></p>
 
-                                            <div className="flex flex-col md:flex-row gap-3 pt-4 md:pt-6">
+                                            <div className="flex flex-col md:flex-row gap-3 pt-1">
                                                 <Link href={lp("/customer/account/edit")} className="w-full md:w-auto text-center bg-primary hover:bg-primaryHover text-black text-body-sm font-bold px-6 py-2 uppercase transition-all rounded-sm">
                                                     {t("m.edit")}
                                                 </Link>
@@ -189,35 +189,33 @@ export default function MyAccountPage() {
                                             </div>
                                         </div>
                                     </div>
+
+                                        {/* SALES DATA */}
+                                    <div className={cardBase}>
+                                        <div className={sectionHeader}>
+                                            {t("m.sales-data-qty")}
+                                        </div>
+                                        <div className="p-3 md:p-5 text-body text-black/80 space-y-2.5 font-medium leading-relaxed">
+                                            <p>{t("m.total-sales-qty")}: {getAttr("total_sales_qty", "0")}</p>
+                                            <p>{t("m.order-frequency")}: {getAttr("order_frequency", "0")} {t("account.ordersPerMonth")}</p>
+                                        </div>
+                                    </div>
+
+                                    {/* CUSTOMER BEHAVIOR */}
+                                    <div className={cardBase}>
+                                        <div className={sectionHeader}>
+                                            {t("m.customer-behavior")}
+                                        </div>
+                                        <div className="p-3 md:p-5 text-body text-black/80 space-y-2.5 font-medium leading-relaxed">
+                                            <p>{t("m.payment-historydso")}: {getAttr("payment_history")}</p>
+                                            <p>{t("m.credit-limit")}: <Price amount={getAttr("total_credit_limit")} /></p>
+                                            <p>{t("m.credit-period")}: {getAttr("credit_period")} {t("account.days")}</p>
+                                        </div>
+                                    </div>
+
                                 </div>
                             </div>
-                            {/* 2-col at xl+ (1280+) only — at lg with the account sidebar each card
-                                would be ~352px which is too cramped for the multi-line content. */}
-                            <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 md:gap-6">
-                                {/* SALES DATA */}
-                                <div className={cardBase}>
-                                    <div className={sectionHeader}>
-                                        {t("m.sales-data-qty")}
-                                    </div>
-                                    <div className="p-3 md:p-5 text-body text-black/80 space-y-2.5 font-medium leading-relaxed">
-                                        <p>{t("m.total-sales-qty")}: {getAttr("total_sales_qty", "0")}</p>
-                                        <p>{t("m.order-frequency")}: {getAttr("order_frequency", "0")} {t("account.ordersPerMonth")}</p>
-                                    </div>
-                                </div>
-
-                                {/* CUSTOMER BEHAVIOR */}
-                                <div className={cardBase}>
-                                    <div className={sectionHeader}>
-                                        {t("m.customer-behavior")}
-                                    </div>
-                                    <div className="p-3 md:p-5 text-body text-black/80 space-y-2.5 font-medium leading-relaxed">
-                                        <p>{t("m.payment-historydso")}: {getAttr("payment_history")}</p>
-                                        <p>{t("m.credit-limit")}: <Price amount={getAttr("total_credit_limit")} /></p>
-                                        <p>{t("m.credit-period")}: {getAttr("credit_period")} {t("account.days")}</p>
-                                    </div>
-                                </div>
-                            </div>
-
+      
 
 
 
@@ -228,7 +226,7 @@ export default function MyAccountPage() {
                             {/* ADDRESS BOOK */}
                             <div>
                                 <h2 className="text-body-lg md:text-h3-sm font-bold text-black uppercase mb-3">{t("addressBook.title")}</h2>
-                                <hr className="border-gray-200 mb-6" />
+                                <hr className="border-[#ddd] mb-6" />
 
                                 {/* Address cards stack until xl — each card needs ~400px+ to
                                     comfortably show street + city + zip + country + phone. */}
@@ -273,13 +271,13 @@ export default function MyAccountPage() {
                                                 <p className="text-body text-black/60 italic flex-1">{t("addressBook.noShippingAddress")}</p>
                                             )}
 
-                                            <div className="pt-4 md:pt-8">
+                                            <div className="pt-2">
                                                 {defaultShipping?.id ? (
-                                                    <Link href={lp(`/customer/address-book/edit/${defaultShipping.id}`)} className="w-full md:w-auto text-center bg-primary hover:bg-primaryHover text-black text-body font-bold px-4 md:px-8 py-2.5 uppercase transition-all rounded-none inline-block">
+                                                    <Link href={lp(`/customer/address-book/edit/${defaultShipping.id}`)} className="w-full md:w-auto text-center bg-primary hover:bg-primaryHover text-black text-body font-bold px-4 md:px-8 py-2.5 uppercase transition-all rounded-sm inline-block">
                                                         {t("addressBook.editAddress")}
                                                     </Link>
                                                 ) : (
-                                                    <Link href={lp("/customer/address-book/edit/new")} className="w-full md:w-auto text-center bg-primary hover:bg-primaryHover text-black text-body font-bold px-4 md:px-8 py-2.5 uppercase transition-all rounded-none inline-block">
+                                                    <Link href={lp("/customer/address-book/edit/new")} className="w-full md:w-auto text-center bg-primary hover:bg-primaryHover text-black text-body font-bold px-4 md:px-8 py-2.5 uppercase transition-all rounded-sm inline-block">
                                                         {t("addressBook.addAddress")}
                                                     </Link>
                                                 )}

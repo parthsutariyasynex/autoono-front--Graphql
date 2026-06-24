@@ -215,6 +215,11 @@ const Sidebar = () => {
                     }
                 }
 
+                // Hide My Forecast from sidebar
+                if (itemCode === "my_forecast" || itemCode === "forecast" || itemCode === "viewforcast") {
+                    return false;
+                }
+
                 return true;
             })
             .sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0))
@@ -248,7 +253,7 @@ const Sidebar = () => {
 
         if (cleanPath.includes("/statement")) return "statement";
         if (cleanPath.includes("/favorite") || cleanPath.includes("/favourite") || cleanPath.includes("/wishlist")) return "favourite_products";
-        if (cleanPath.includes("/forecast") || cleanPath.includes("/forcast") || cleanPath.includes("/viewforcast")) return "my_forecast";
+        // if (cleanPath.includes("/forecast") || cleanPath.includes("/forcast") || cleanPath.includes("/viewforcast")) return "my_forecast";
         if (cleanPath.includes("/dashboard")) return "dashboard";
         if (cleanPath.includes("/notification")) return "notifications";
         if (cleanPath.includes("/my-account") || cleanPath.includes("/customer/account")) return "my_account";
@@ -281,7 +286,7 @@ const Sidebar = () => {
 
     if (loading) {
         return (
-            <aside className="w-full lg:w-56 xl:w-64 flex-shrink-0 bg-surfaceMuted border-b lg:border-b-0 ltr:lg:border-r rtl:lg:border-l border-gray-200 z-30 sticky top-[56px] sm:top-[64px] lg:top-[108px] h-auto lg:h-[calc(100vh-108px)] overflow-hidden">
+            <aside className="w-full lg:w-56 xl:w-64 flex-shrink-0 bg-surfaceMuted border-b lg:border-b-0 ltr:lg:border-r rtl:lg:border-l border-gray-200 z-30 sticky top-[56px] sm:top-[64px] lg:top-[108px] h-auto overflow-hidden">
                 <nav className="p-0 lg:p-4">
                     <ul className="flex flex-row lg:flex-col space-y-0 lg:space-y-1">
                         {Array.from({ length: 7 }).map((_, i) => (
@@ -297,7 +302,7 @@ const Sidebar = () => {
 
     if (error || !visibleItems.length) {
         return (
-            <aside className="w-full lg:w-56 xl:w-64 flex-shrink-0 bg-surfaceMuted border-b lg:border-b-0 ltr:lg:border-r rtl:lg:border-l border-gray-200 z-30 sticky top-[56px] sm:top-[64px] lg:top-[108px] h-auto lg:h-[calc(100vh-108px)] p-4">
+            <aside className="w-full lg:w-56 xl:w-64 flex-shrink-0 bg-surfaceMuted border-b lg:border-b-0 ltr:lg:border-r rtl:lg:border-l border-gray-200 z-30 sticky top-[56px] sm:top-[64px] lg:top-[108px] h-auto p-4">
                 <p className="text-body text-black/50 italic text-center py-10">
                     {t("sidebar.error") || "Account menu currently unavailable."}
                 </p>
@@ -306,9 +311,9 @@ const Sidebar = () => {
     }
 
     return (
-        <aside className="w-full lg:w-56 xl:w-64 flex-shrink-0 bg-surfaceMuted border-b lg:border-b-0 ltr:lg:border-r rtl:lg:border-l border-gray-200 z-30 sticky top-[56px] sm:top-[64px] lg:top-[108px] h-auto lg:h-[calc(100vh-108px)] overflow-x-auto lg:overflow-x-hidden lg:overflow-y-auto custom-scrollbar">
+        <aside className="w-full lg:w-56 xl:w-64 flex-shrink-0 bg-surfaceMuted border-b lg:border-b-0 ltr:lg:border-r rtl:lg:border-l border-gray-200 z-30 sticky top-[56px] sm:top-[64px] lg:top-[108px] h-auto overflow-x-auto lg:overflow-x-hidden lg:overflow-y-auto custom-scrollbar">
             <nav className="p-0 lg:p-4">
-                <ul className="flex flex-row lg:flex-col space-y-0 lg:space-y-1">
+                <ul className="flex flex-row lg:flex-col space-y-0 lg:space-y-1 bg-[#f5f5f5]">
                     {visibleItems.map((item) => {
                         const isSignOut =
                             item.code === "sign_out" ||
@@ -336,8 +341,8 @@ const Sidebar = () => {
                             <li key={item.code} className="flex-shrink-0">
                                 <Link
                                     href={item.internalUrl}
-                                    className={`block py-3 px-6 lg:px-4 transition-all duration-200 whitespace-nowrap ltr:text-left rtl:text-right font-bold uppercase text-body-sm ${isActive
-                                        ? "text-black border-b-[3px] lg:border-b-0 ltr:lg:border-l-4 rtl:lg:border-r-4 border-primary bg-white shadow-sm"
+                                    className={`block py-3 px-6 lg:px-4 transition-all duration-200 whitespace-nowrap ltr:text-left rtl:text-right font-semibold uppercase text-body-sm ${isActive
+                                        ? "text-black border-b-[3px] lg:border-b-0 ltr:lg:border-l-4 rtl:lg:border-r-4 border-primary"
                                         : "text-black/70 hover:text-black hover:bg-gray-100 border-b-[3px] lg:border-b-0 ltr:lg:border-l-4 rtl:lg:border-r-4 border-transparent"
                                         }`}
                                 >

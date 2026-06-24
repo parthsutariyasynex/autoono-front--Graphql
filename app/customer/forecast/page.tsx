@@ -221,9 +221,9 @@ export default function MyForecastPage() {
         <div className="flex flex-col lg:flex-row flex-1 min-h-0 w-full bg-[#fcfcfc]">
             <Sidebar />
 
-            <main className="flex-1 w-full px-4 md:px-6 lg:px-8 py-4 md:py-6 lg:py-10 bg-surfacePage min-w-0" dir={isRtl ? "rtl" : "ltr"}>
+            <main className="flex-1 w-full px-4 md:px-6 lg:px-8 py-4 md:py-6 lg:py-5 bg-surfacePage min-w-0" dir={isRtl ? "rtl" : "ltr"}>
                 {/* Header with Refresh */}
-                <div className="flex justify-between items-center mb-6 md:mb-10">
+                <div className="flex justify-between items-center mb-5">
                     <h1 className="text-h3 md:text-[26px] font-bold text-black uppercase tracking-wide">
                         {t("forecast.title")}
                     </h1>

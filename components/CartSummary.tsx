@@ -197,7 +197,7 @@ const CartSummary: React.FC<CartSummaryProps> = ({ subtotal, taxAmount, taxLabel
                             <button
                                 type="submit"
                                 disabled={couponBusy || !couponInput.trim()}
-                                className="px-5 bg-black text-white text-xs font-[900] uppercase tracking-wider hover:bg-gray-800 transition-all cursor-pointer rounded flex items-center justify-center shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
+                                className="px-5 bg-black text-white text-xs font-[700] uppercase tracking-wider hover:bg-gray-800 transition-all cursor-pointer rounded flex items-center justify-center shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                                 {couponBusy ? "..." : (t("m.apply") || "Apply")}
                             </button>

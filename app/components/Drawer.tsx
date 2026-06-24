@@ -39,7 +39,7 @@ export default function Drawer({ isOpen, onClose, children, title, scrollable = 
 
             {/* Header if title exists */}
             {title && (
-                <div className="bg-primary px-5 py-4 flex items-center justify-between flex-shrink-0">
+                <div className="bg-primary px-4 py-4 flex items-center justify-between flex-shrink-0">
                     <h2 className="text-xl font-bold text-black">{title}</h2>
                 </div>
             )}

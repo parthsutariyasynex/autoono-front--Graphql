@@ -78,6 +78,7 @@ export default function PortalDropdown({
                 onClick={handleToggle}
                 className={`flex items-center justify-between gap-2 cursor-pointer transition-all ${buttonClassName || "bg-white border border-gray-200 rounded-md px-3 py-2 text-body font-bold text-black hover:border-gray-300 shadow-sm"} ${isOpen ? "border-primary z-[9999]" : ""}`}
                 style={{ minWidth }}
+                suppressHydrationWarning
             >
                 <span className="truncate flex-1 text-start">{selected ? selected.label : placeholder}</span>
                 <ChevronDown size={13} className={`text-black/50 transition-transform flex-shrink-0 ${isOpen ? "rotate-180" : ""}`} />
@@ -104,7 +105,7 @@ export default function PortalDropdown({
                                 key={opt.value}
                                 type="button"
                                 onClick={() => { onChange(opt.value); setIsOpen(false); }}
-                                className={`w-full text-start px-4 py-3 text-body font-bold cursor-pointer transition-colors border-b last:border-0 border-gray-50 whitespace-nowrap ${String(opt.value) === String(value) ? "bg-primary text-white" : "text-black/80 hover:bg-gray-50 hover:text-primary"}`}
+                                className={`w-full text-start px-4 py-2 text-xs text-body cursor-pointer transition-colors border-b last:border-0 border-gray-50 whitespace-nowrap ${String(opt.value) === String(value) ? "bg-primary text-white" : "text-black/80 hover:bg-primary hover:text-white"}`}
                             >
                                 {opt.label}
                             </button>

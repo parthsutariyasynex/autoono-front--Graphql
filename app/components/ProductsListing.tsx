@@ -628,7 +628,7 @@ export default function ProductsPage({ categoryId: propCategoryId, storeCode: pr
         {!hideFilters && (
           <Drawer isOpen={isMobileFilterOpen} onClose={() => setIsMobileFilterOpen(false)}>
             <div className="flex flex-col h-full">
-              <div className="bg-primary px-5 py-4 flex items-center justify-between flex-shrink-0">
+              <div className="bg-primary px-4 py-4 flex items-center justify-between flex-shrink-0">
                 <h2 className="text-body-lg font-semibold text-black uppercase tracking-tight">{t("m.filter-options")}</h2>
               </div>
               <div className="flex-1 overflow-y-auto">
@@ -851,7 +851,7 @@ export default function ProductsPage({ categoryId: propCategoryId, storeCode: pr
                     </tr>
                   </thead>
                 )}
-                <tbody className="divide-y divide-gray-50">
+                <tbody className="divide-y divide-gray-200">
                   {loading ? <ShimmerRows colCount={totalColumns} /> : serverError ? (
                     <tr>
                       <td colSpan={totalColumns} className="py-24 px-6">
@@ -904,8 +904,8 @@ export default function ProductsPage({ categoryId: propCategoryId, storeCode: pr
       <AddToCartPopup isOpen={isAddedPopupOpen} product={addedProduct} onClose={() => { setIsAddedPopupOpen(false); setAddedProduct(null); }} />
       <Drawer isOpen={isImageModalOpen && !!selectedImage} onClose={() => setIsImageModalOpen(false)}>
         <div className="flex flex-col h-full bg-white">
-          <div className="bg-primary px-4 md:px-8 py-4 md:py-6 flex items-center justify-center flex-shrink-0">
-            <h2 className="text-body-lg md:text-[17px] font-semibold text-black text-center uppercase tracking-tight">
+          <div className="bg-primary px-4 py-4 flex items-center flex-shrink-0">
+            <h2 className="text-body-lg md:text-[17px] font-semibold text-black uppercase tracking-tight">
               {previewProduct ? previewProduct?.name || t("m.preview") : t("m.preview")}
             </h2>
           </div>

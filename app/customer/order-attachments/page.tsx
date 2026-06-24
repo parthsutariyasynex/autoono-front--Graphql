@@ -225,39 +225,41 @@ export default function OrderAttachmentsPage() {
         <div className="flex flex-col lg:flex-row flex-1 min-h-0 w-full bg-[#fcfcfc]">
             <Sidebar />
 
-            <main className="flex-1 w-full px-4 md:px-6 lg:px-8 py-4 md:py-6 lg:py-10 bg-surfacePage min-w-0" dir={isRtl ? "rtl" : "ltr"}>
-                <h1 className="text-h3 md:text-[26px] font-bold text-black mb-6 md:mb-10 uppercase tracking-wide">
+            <main className="flex-1 w-full px-4 md:px-6 lg:px-8 py-4 md:py-6 lg:py-5 bg-surfacePage min-w-0" dir={isRtl ? "rtl" : "ltr"}>
+                <h1 className="text-h3 sm:text-h3 md:text-[26px] font-bold text-black mb-5 uppercase tracking-wide">
                     {t("orderAttachments.title")}
                 </h1>
 
                 {/* Search Section */}
-                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 mb-6 md:mb-8">
-                    <div className="w-full sm:w-[200px]">
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 mb-3">
+                    <div className="w-full sm:w-[344px]">
                         <input
                             type="text"
                             value={searchText}
                             onChange={(e) => setSearchText(e.target.value)}
                             placeholder={t("m.search")}
-                            className="w-full bg-white border border-border rounded-md px-4 py-2.5 text-xs text-black focus:outline-none focus:border-primary placeholder:text-black/50 font-bold shadow-sm"
+                            className="h-[38px] w-full bg-white border border-gray-300 rounded-sm px-4 py-2.5 text-xs text-black focus:outline-none focus:border-primary placeholder:text-black/50"
+                            suppressHydrationWarning
                         />
                     </div>
                     <button
                         onClick={handleSearch}
-                        className="w-full sm:w-auto bg-primary hover:bg-primary text-black font-bold h-[40px] px-4 md:px-6 rounded-md text-xs uppercase tracking-widest transition-all shadow-sm active:scale-95"
+                        className="h-[38px] px-6 bg-primary hover:bg-black text-xs font-bold uppercase tracking-wider transition-all rounded-sm shadow-sm"
+                        suppressHydrationWarning
                     >
                         {t("m.search")}
                     </button>
                 </div>
 
                 {/* Filters Section */}
-                <div className="flex flex-col sm:flex-row gap-4 items-end mb-6 md:mb-10 bg-white p-4 md:p-6 border border-border rounded-md shadow-sm">
+                <div className="flex flex-col sm:flex-row gap-4 items-end mb-3 bg-white p-3 border border-[#ddd] rounded-sm">
                     <div className="w-full sm:w-auto sm:min-w-[200px]">
                         <label className="block text-xs font-bold text-black mb-2 uppercase tracking-wider">{t("m.document-type")}</label>
                         <PortalDropdown
                             value={documentType}
                             onChange={(val) => { setDocumentType(val); setCurrentPage(1); }}
                             options={finalDocTypes}
-                            buttonClassName="w-full h-[40px] bg-white text-black font-bold border border-gray-200 rounded-md px-4 text-xs ltr:text-left rtl:text-right flex items-center justify-between cursor-pointer focus:outline-none focus:border-primary"
+                            buttonClassName="w-full h-[40px] bg-white text-black font-bold border border-gray-300 rounded-sm px-4 text-xs ltr:text-left rtl:text-right flex items-center justify-between cursor-pointer focus:outline-none focus:border-primary"
                         />
                     </div>
 
@@ -267,7 +269,7 @@ export default function OrderAttachmentsPage() {
                             value={invoiceDue}
                             onChange={(val) => { setInvoiceDue(val); setCurrentPage(1); }}
                             options={finalInvoiceDues}
-                            buttonClassName="w-full h-[40px] bg-white text-black font-bold border border-gray-200 rounded-md px-4 text-xs ltr:text-left rtl:text-right flex items-center justify-between cursor-pointer focus:outline-none focus:border-primary"
+                            buttonClassName="w-full h-[40px] bg-white text-black font-bold border border-gray-300 rounded-sm px-4 text-xs ltr:text-left rtl:text-right flex items-center justify-between cursor-pointer focus:outline-none focus:border-primary"
                         />
                     </div>
 
@@ -275,6 +277,7 @@ export default function OrderAttachmentsPage() {
                         <button
                             onClick={handleReset}
                             className="w-full sm:w-auto bg-black hover:bg-gray-800 text-white font-bold h-[40px] px-6 md:px-8 rounded-md text-xs uppercase tracking-widest transition-all shadow-md active:scale-95"
+                            suppressHydrationWarning
                         >
                             {t("m.reset")}
                         </button>
@@ -298,16 +301,16 @@ export default function OrderAttachmentsPage() {
                 ) : attachments.length > 0 ? (
                     <>
                         {/* Desktop Table */}
-                        <div className="hidden md:block overflow-x-auto w-full border border-border rounded-md shadow-sm">
-                            <table className="w-full border-collapse bg-white">
+                        <div className="hidden md:block overflow-x-auto w-full">
+                            <table className="w-full border-collapse bg-white border border-[#ddd]">
                                 <thead className="bg-gray-50 border-b border-border">
-                                    <tr className="h-[50px]">
-                                        <th className="px-6 py-3 font-bold text-xs text-black uppercase tracking-wider text-center">{t("orders.orderId")}</th>
-                                        <th className="px-6 py-3 font-bold text-xs text-black uppercase tracking-wider ltr:text-left rtl:text-right">{t("m.file-name")}</th>
-                                        <th className="px-6 py-3 font-bold text-xs text-black uppercase tracking-wider text-center">{t("m.document-type")}</th>
-                                        <th className="px-6 py-3 font-bold text-xs text-black uppercase tracking-wider ltr:text-left rtl:text-right">{t("m.created-at")}</th>
-                                        <th className="px-6 py-3 font-bold text-xs text-black uppercase tracking-wider ltr:text-left rtl:text-right">{t("m.invoice-due")}</th>
-                                        <th className="px-6 py-3 font-bold text-xs text-black uppercase tracking-wider ltr:text-left rtl:text-right">{t("m.payment")}</th>
+                                    <tr className="bg-primary text-label uppercase font-bold tracking-widest">
+                                        <th className="whitespace-nowrap px-2 xl:px-4 py-2 border border-warning/30 font-bold text-xs text-black uppercase tracking-wider text-center">{t("orders.orderId")}</th>
+                                        <th className="whitespace-nowrap px-2 xl:px-4 py-2 border border-warning/30 font-bold text-xs text-black uppercase tracking-wider ltr:text-left rtl:text-right">{t("m.file-name")}</th>
+                                        <th className="whitespace-nowrap px-2 xl:px-4 py-2 border border-warning/30 font-bold text-xs text-black uppercase tracking-wider text-center">{t("m.document-type")}</th>
+                                        <th className="whitespace-nowrap px-2 xl:px-4 py-2 border border-warning/30 font-bold text-xs text-black uppercase tracking-wider text-center">{t("m.created-at")}</th>
+                                        <th className="whitespace-nowrap px-2 xl:px-4 py-2 border border-warning/30 font-bold text-xs text-black uppercase tracking-wider text-center">{t("m.invoice-due")}</th>
+                                        <th className="whitespace-nowrap px-2 xl:px-4 py-2 border border-warning/30 font-bold text-xs text-black uppercase tracking-wider text-center">{t("m.payment")}</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -323,19 +326,19 @@ export default function OrderAttachmentsPage() {
 
                                         return (
                                             <tr key={attId} className={`${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'} border-b border-border hover:bg-primary/5 transition-colors text-xs`}>
-                                                <td className="px-6 py-4 text-center font-bold">
+                                                <td className="px-2 xl:px-4 py-1.5 border-r border-gray-200 text-black text-body-lg font-medium cursor-pointer text-center">
                                                     <button onClick={() => handleViewOrder(attachment.order_id)} className="text-black hover:text-primary hover:underline transition-all cursor-pointer focus:outline-none">{orderDisplay}</button>
                                                 </td>
-                                                <td className="px-6 py-4 ltr:text-left rtl:text-right font-medium">
+                                                <td className="px-2 xl:px-4 py-1.5 border-r border-gray-200 ltr:text-left rtl:text-right font-medium">
                                                     <div className="flex items-center gap-3">
-                                                        <button onClick={() => { const useUrl = attachment.file_url || attachment.file_path; handleViewFile({ ...attachment, file_url: useUrl, attachment_id: attId }); }} disabled={isOpening} className={`text-black hover:underline inline-block break-all ltr:text-left rtl:text-right focus:outline-none font-bold ${isOpening ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}>{fileName}</button>
+                                                        <button onClick={() => { const useUrl = attachment.file_url || attachment.file_path; handleViewFile({ ...attachment, file_url: useUrl, attachment_id: attId }); }} disabled={isOpening} className={`text-black hover:underline inline-block break-all ltr:text-left rtl:text-right focus:outline-none text-black text-body-lg font-medium cursor-pointer ${isOpening ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}>{fileName}</button>
                                                         
                                                     </div>
                                                 </td>
-                                                <td className="px-6 py-4 text-center font-bold text-black/70 uppercase">{t(`m.${docTypeLabel.toLowerCase()}`) !== `m.${docTypeLabel.toLowerCase()}` ? t(`m.${docTypeLabel.toLowerCase()}`) : (t(`data.${docTypeLabel}`) !== `data.${docTypeLabel}` ? t(`data.${docTypeLabel}`) : docTypeLabel)}</td>
-                                                <td className="px-6 py-4 ltr:text-left rtl:text-right font-bold text-black/60">{createdAt}</td>
-                                                <td className="px-6 py-4 ltr:text-left rtl:text-right font-bold text-black/60">{invoiceDueVal}</td>
-                                                <td className="px-6 py-4 ltr:text-left rtl:text-right">
+                                                <td className="px-2 xl:px-4 py-1.5 border-r border-gray-200 text-center font-bold text-black uppercase">{t(`m.${docTypeLabel.toLowerCase()}`) !== `m.${docTypeLabel.toLowerCase()}` ? t(`m.${docTypeLabel.toLowerCase()}`) : (t(`data.${docTypeLabel}`) !== `data.${docTypeLabel}` ? t(`data.${docTypeLabel}`) : docTypeLabel)}</td>
+                                                <td className="px-2 xl:px-4 py-1.5 border-r border-gray-200 text-center text-body text-black">{createdAt}</td>
+                                                <td className="px-2 xl:px-4 py-1.5 border-r border-gray-200 text-center text-body text-black">{invoiceDueVal}</td>
+                                                <td className="px-2 xl:px-4 py-1.5 border-r border-gray-200 text-center">
                                                     <span className={`px-2 py-1 rounded-md font-bold uppercase text-caption ${paymentStatus.toLowerCase().includes('paid') ? 'bg-green-100 text-green-700' : 'bg-primary text-primary'}`}>{paymentStatus ? (t(`data.${paymentStatus}`) !== `data.${paymentStatus}` ? t(`data.${paymentStatus}`) : paymentStatus) : "-"}</span>
                                                 </td>
                                             </tr>
@@ -358,7 +361,7 @@ export default function OrderAttachmentsPage() {
                                 const paymentStatus = attachment.payment || attachment.payment_status || "";
 
                                 return (
-                                    <div key={attId} className="bg-white border border-border rounded-md p-4 shadow-sm">
+                                    <div key={attId} className="border border-[#ddd] rounded-sm bg-white p-4 space-y-3">
                                         <div className="flex items-start justify-between gap-3 mb-3">
                                             <div className="min-w-0 flex-1">
                                                 <button
@@ -375,7 +378,7 @@ export default function OrderAttachmentsPage() {
                                                 {paymentStatus ? (t(`data.${paymentStatus}`) !== `data.${paymentStatus}` ? t(`data.${paymentStatus}`) : paymentStatus) : "-"}
                                             </span>
                                         </div>
-                                        <div className="flex items-center justify-between text-label text-black/60 font-medium border-t border-gray-100 pt-2.5">
+                                        <div className="flex items-center justify-between text-label text-black font-medium border-t border-[#ddd] pt-2.5">
                                             <div className="flex items-center gap-1">
                                                 <span className="font-bold text-black uppercase text-caption">{t("m.order")}:</span>
                                                 <button onClick={() => handleViewOrder(attachment.order_id)} className="text-black hover:text-primary font-bold">{orderDisplay}</button>

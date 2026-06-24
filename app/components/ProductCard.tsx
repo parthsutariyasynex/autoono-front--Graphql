@@ -71,7 +71,7 @@ function ProductCardImpl({
 
     if (variant === "card") {
         return (
-            <div className="bg-white rounded-lg border border-gray-100 shadow-sm p-2.5 sm:p-3 flex flex-col gap-1.5 hover:border-primary/30 transition-colors">
+            <div className="bg-white rounded-sm border border-[#ddd] shadow-sm p-2.5 sm:p-3 flex flex-col gap-1.5 hover:border-primary/30 transition-colors">
                 <Link href={productPath} className="flex gap-2.5 group/card">
                     <div className="flex-1 min-w-0">
                         <p className="text-caption font-semibold text-black/50 uppercase tracking-wider">{product.brand || "—"}</p>

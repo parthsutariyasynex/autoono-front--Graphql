@@ -194,7 +194,7 @@ export default function MyOrdersPage() {
                             <h1 className="text-xl font-bold text-black uppercase tracking-tight">
                                 {t("nav.myOrders")}
                             </h1>
-                            <div className="h-[2px] flex-1 bg-gradient-to-r from-primary to-transparent"></div>
+                            <div className="h-[2px] flex-1 ltr:bg-gradient-to-r rtl:bg-gradient-to-l from-primary to-transparent"></div>
                             {!isEmpty && (
                                 <button className="hidden sm:flex items-center justify-center gap-2 bg-primary text-black text-label font-bold px-6 py-3 uppercase tracking-widest hover:bg-primaryHover transition-all rounded-lg shadow-sm active:scale-95">
                                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -232,7 +232,7 @@ export default function MyOrdersPage() {
                                     </button>
                                 </div>
                             ) : isEmpty ? (
-                                <div className="py-12 bg-white border border-gray-100 rounded-lg shadow-sm px-4 md:px-10">
+                                <div className="p-3 md:p-5 bg-white border border-[#ddd] rounded-sm shadow-sm">
                                     <div className="mb-4">
                                         <button
                                             onClick={handleReset}

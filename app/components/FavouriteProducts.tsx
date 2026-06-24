@@ -45,7 +45,7 @@ interface Product {
 
 const TABLE_HEADER_KEYS = ['m.brand', 'm.name', 'm.image', 'm.stock', 'm.price', 'm.action'] as const;
 const COL_WIDTHS = ['15%', '30%', '12%', '12%', '14%', '17%'] as const;
-const ROW_HEIGHT = 'h-auto md:h-[48px]';
+const ROW_HEIGHT = 'h-auto';
 
 function TableColGroup() {
     return (
@@ -352,7 +352,7 @@ export default function FavouriteProducts({ title }: { title?: React.ReactNode }
     return (
         <div className="w-full overflow-hidden">
             {/* Centered Page Title */}
-            <div className="text-center mb-8">
+            <div className="mb-5">
                 {typeof title === 'string' ? (
                     <h1 className="text-h3 md:text-h1-sm font-semibold text-black uppercase tracking-tight">
                         {title}
@@ -460,18 +460,18 @@ export default function FavouriteProducts({ title }: { title?: React.ReactNode }
 
             {/* Desktop Table — visible at md+ so tablet-portrait users see the
                 full table (Brand / Name / Image / Stock / Price / Action). */}
-            <div className="hidden md:flex flex-col bg-white border border-gray-200 overflow-hidden rounded-t-lg">
+            <div className="hidden md:flex flex-col bg-white overflow-hidden">
                 <div className="flex-1 overflow-x-auto">
-                    <table className="w-full border-collapse table-fixed min-w-[950px]">
+                    <table className="w-full text-body text-left border-collapse border border-[#ddd]">
                         <colgroup>
                             {COL_WIDTHS.map((w, i) => <col key={i} style={{ width: w }} />)}
                         </colgroup>
                         <thead className="sticky top-0 z-20">
-                            <tr className="bg-gray-50/80 text-black text-label font-semibold uppercase tracking-widest h-[60px] border-b border-gray-200">
+                            <tr className="bg-gray-50/80 text-black text-label font-semibold uppercase tracking-widest border-b border-[#ddd]">
                                 {TABLE_HEADER_KEYS.map(key => {
                                     const sortable = !!HEADER_SORT_FIELDS[key];
                                     return (
-                                        <th key={key} className="px-2 md:px-4 text-center whitespace-nowrap">
+                                        <th key={key} className="px-2 md:px-4 py-2 md:py-3 text-label font-semibold text-black uppercase tracking-widest text-center whitespace-nowrap">
                                             {sortable ? (
                                                 <button
                                                     type="button"
@@ -489,7 +489,7 @@ export default function FavouriteProducts({ title }: { title?: React.ReactNode }
                                 })}
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-gray-50">
+                        <tbody className="divide-y divide-gray-200">
                             {sortedFavProducts.length === 0 ? (
                                 <tr>
                                     <td colSpan={6} className="px-5 py-24 text-center">
@@ -519,8 +519,8 @@ export default function FavouriteProducts({ title }: { title?: React.ReactNode }
 
                                     return (
                                         <tr key={product.product_id} className={`hover:bg-primary/5 transition-colors group ${ROW_HEIGHT}`}>
-                                            <td className="px-2 md:px-4 text-body-sm font-semibold text-black text-center">{t(`data.${brandName}`) !== `data.${brandName}` ? t(`data.${brandName}`) : brandName}</td>
-                                            <td className="px-2 md:px-4 text-body-sm font-semibold text-black text-center">{
+                                            <td className="py-1 px-2 md:px-4 text-body font-normal text-black/80 text-center">{t(`data.${brandName}`) !== `data.${brandName}` ? t(`data.${brandName}`) : brandName}</td>
+                                            <td className="py-1 px-2 md:px-4 text-body font-normal text-black/80 text-center">{
                                                 (() => {
                                                     const name = product.name || "";
                                                     if (brandName && brandName !== "—" && name.toUpperCase().startsWith(brandName.toUpperCase())) {
@@ -529,7 +529,7 @@ export default function FavouriteProducts({ title }: { title?: React.ReactNode }
                                                     return name;
                                                 })()
                                             }</td>
-                                            <td className="px-2 md:px-4 text-center">
+                                            <td className="py-1 px-2 md:px-4 text-center">
                                                 <div className="w-12 h-12 mx-auto">
                                                     {product.image_url ? (
                                                         <div
@@ -556,19 +556,19 @@ export default function FavouriteProducts({ title }: { title?: React.ReactNode }
                                                     )}
                                                 </div>
                                             </td>
-                                            <td className="px-3 py-4 text-center">
+                                            <td className="py-1 px-3 text-center">
                                                 <div className="flex flex-col items-center justify-center text-center gap-1.5">
                                                     <span className={`w-3.5 h-3.5 rounded-full border border-white shadow-sm ${stockColor}`}></span>
                                                     <span className="text-body-sm font-semibold text-black/80 uppercase leading-none tracking-tighter">{stockLabel}</span>
                                                 </div>
                                             </td>
-                                            <td className="px-3 py-4 text-center whitespace-nowrap">
+                                            <td className="py-1 px-3 text-center whitespace-nowrap">
                                                 <Price amount={product.final_price} className="text-body-sm font-semibold text-black" />
                                             </td>
-                                            <td className="px-2 text-center align-middle">
+                                            <td className="py-1 px-2 text-center align-middle">
                                                 <div className="flex items-center justify-center gap-1.5">
                                                     {!isOutOfStock ? (
-                                                        <div className="w-10 h-9 border border-gray-200 rounded-md flex items-center justify-center text-label font-semibold text-black bg-white shadow-sm overflow-hidden">
+                                                        <div className="w-10 h-9 border border-gray-200 rounded-sm focus:border-primary flex items-center justify-center text-label font-semibold text-black bg-white overflow-hidden">
                                                             <input
                                                                 type="number"
                                                                 min="1"
@@ -585,25 +585,25 @@ export default function FavouriteProducts({ title }: { title?: React.ReactNode }
                                                         <button
                                                             onClick={() => onAddToCart(product)}
                                                             disabled={addingToCart === product.sku}
-                                                            className="w-9 h-9 bg-primary hover:bg-primaryHover text-black rounded-md flex items-center justify-center shadow-sm active:scale-95 transition-all disabled:opacity-50"
+                                                            className="w-8 h-8 bg-primary hover:bg-primaryHover text-black rounded-sm flex items-center justify-center shadow-sm transition-all disabled:opacity-50"
                                                         >
-                                                            <ShoppingCart size={16} strokeWidth={2.5} className={addingToCart === product.sku ? "opacity-40" : ""} />
+                                                            <ShoppingCart size={15} strokeWidth={2.5} className={addingToCart === product.sku ? "opacity-40" : ""} />
                                                         </button>
                                                     ) : (
                                                         <button
                                                             onClick={() => { setInquiryProduct(product); setIsInquiryModalOpen(true); }}
-                                                            className="w-9 h-9 bg-primary hover:bg-primaryHover text-black rounded-md flex items-center justify-center shadow-sm active:scale-95 transition-all"
+                                                            className="w-8 h-8 bg-primary hover:bg-primaryHover text-black rounded-sm flex items-center justify-center shadow-sm transition-all"
                                                         >
-                                                            <Info size={16} strokeWidth={2.5} />
+                                                            <Info size={15} strokeWidth={2.5} />
                                                         </button>
                                                     )}
 
                                                     <button
                                                         onClick={() => handleRemove(product)}
                                                         disabled={removing === product.product_id}
-                                                        className={`w-9 h-9 rounded-md flex items-center justify-center active:scale-95 cursor-pointer border transition-colors ${removing === product.product_id ? "bg-gray-100 text-black/50 border-gray-100" : "bg-white text-black/50 border-gray-200 hover:text-red-500 hover:border-red-100"}`}
+                                                        className={`w-8 h-8 border-[#ddd] rounded-sm flex items-center justify-center cursor-pointer border transition-colors ${removing === product.product_id ? "bg-gray-100 text-black/50 border-[#ddd]" : "bg-white text-black/50  hover:text-red-500 hover:border-red-100"}`}
                                                     >
-                                                        <Trash2 size={18} strokeWidth={2.5} className={removing === product.product_id ? "opacity-40" : ""} />
+                                                        <Trash2 size={15} strokeWidth={2.5} className={removing === product.product_id ? "opacity-40" : ""} />
                                                     </button>
                                                 </div>
                                             </td>

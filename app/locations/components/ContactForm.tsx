@@ -137,7 +137,7 @@ const ContactForm: React.FC = () => {
                         rows={6}
                         value={formData.comment}
                         onChange={handleChange}
-                        className={`w-full px-4 pt-1 pb-4 bg-white text-black text-body-lg focus:outline-none resize-none rounded-b-sm`}
+                        className={`w-full px-4 pb-1 pt-3 bg-white text-black text-body-lg focus:outline-none resize-none rounded-b-sm`}
                     ></textarea>
                     {errors.comment && <span className="text-red-500 text-label font-semibold px-4 pb-2 block uppercase">{errors.comment}</span>}
                 </div>
@@ -147,7 +147,7 @@ const ContactForm: React.FC = () => {
                     <button
                         type="submit"
                         disabled={isLoading}
-                        className="bg-primary text-white font-semibold px-12 py-3.5 uppercase tracking-widest hover:bg-primaryHover transition-all duration-300 text-body-lg shadow-sm flex items-center justify-center gap-3 min-w-[200px]"
+                        className="bg-primary text-white rounded-sm font-semibold px-10 py-3.5 uppercase tracking-widest hover:bg-black transition-all duration-300 text-body-lg shadow-sm flex items-center justify-center gap-3 min-w-[200px]"
                     >
                         {isLoading ? (
                             <>

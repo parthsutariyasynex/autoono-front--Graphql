@@ -185,22 +185,22 @@ export default function MyStatementPage() {
                 <Sidebar />
 
                 {/* Right Content */}
-                <main className="flex-1 w-full px-4 md:px-6 lg:px-8 py-4 md:py-6 lg:py-10 bg-surfacePage min-w-0">
-                    <h1 className="text-h3 md:text-[26px] font-bold text-black mb-6 md:mb-10 uppercase tracking-wide">
+                <main className="flex-1 w-full px-4 md:px-6 lg:px-8 py-4 md:py-6 lg:py-5 bg-surfacePage min-w-0">
+                    <h1 className="text-h3 sm:text-h3 md:text-[26px] font-bold text-black mb-5 uppercase tracking-wide">
                         {t("statement.title")}
                     </h1>
 
-                    <div className="max-w-[700px] bg-white border border-gray-200 rounded-sm shadow-sm overflow-hidden">
+                    <div className="max-w-[700px] bg-white border border-gray-200 shadow-sm overflow-hidden">
                         {/* Card Header */}
-                        <div className="bg-surfaceMuted px-6 py-3 border-b border-gray-200">
+                        <div className="bg-surfaceMuted px-4 py-3 border-b border-gray-200">
                             <h2 className="text-body-lg font-bold text-black uppercase tracking-wide">
                                 {t("m.get-your-statement")}
                             </h2>
                         </div>
 
                         {/* Card Body */}
-                        <div className="p-4 md:p-8">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8 mb-4 md:mb-8">
+                        <div className="p-3 md:p-5">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8 mb-4">
                                 {/* Start Date */}
                                 <div>
                                     <label className="block text-body font-bold text-black mb-2">
@@ -210,7 +210,7 @@ export default function MyStatementPage() {
                                         type="date"
                                         value={startDate}
                                         onChange={(e) => setStartDate(e.target.value)}
-                                        className="w-full h-[45px] px-4 border border-gray-200 text-body-lg text-black/80 focus:outline-none focus:border-primary transition-colors"
+                                        className="w-full h-[45px] px-4 rounded-sm cursor-pointer border border-gray-200 text-body-lg text-black/80 focus:outline-none focus:border-primary transition-colors"
                                     />
                                 </div>
 
@@ -223,7 +223,7 @@ export default function MyStatementPage() {
                                         type="date"
                                         value={endDate}
                                         onChange={(e) => setEndDate(e.target.value)}
-                                        className="w-full h-[45px] px-4 border border-gray-200 text-body-lg text-black/80 focus:outline-none focus:border-primary transition-colors"
+                                        className="w-full h-[45px] px-4 border rounded-sm cursor-pointer border-gray-200 text-body-lg text-black/80 focus:outline-none focus:border-primary transition-colors"
                                     />
                                 </div>
                             </div>
@@ -247,7 +247,7 @@ export default function MyStatementPage() {
                                 <button
                                     onClick={handleGetStatement}
                                     disabled={isDownloading}
-                                    className={`w-full sm:w-auto bg-primary text-black px-6 sm:px-10 py-3 md:py-3.5 font-bold text-body-lg uppercase tracking-widest hover:bg-primaryHover transition-all shadow-md flex items-center justify-center gap-3 active:scale-[0.98] ${isDownloading ? 'opacity-70 cursor-not-allowed grayscale' : ''}`}
+                                    className={`w-full sm:w-auto bg-primary  text-black px-6 sm:px-10 py-3 md:py-3.5 font-bold text-body-lg uppercase tracking-widest hover:bg-primaryHover transition-all rounded-sm flex items-center justify-center gap-3 ${isDownloading ? 'opacity-70 cursor-not-allowed grayscale' : ''}`}
                                 >
                                     {isDownloading ? (
                                         <>

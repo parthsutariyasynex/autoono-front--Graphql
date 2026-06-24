@@ -31,15 +31,15 @@ const OrdersTable: React.FC<OrdersTableProps> = ({ orders, onViewOrder, onReorde
                 and up. Action column buttons stack vertically at lg to fit the narrowed
                 column when the account sidebar is on. */}
             <div className="hidden md:block overflow-x-auto">
-                <table className="w-full text-body text-left border-collapse min-w-[640px]">
+                <table className="w-full text-body text-left border-collapse min-w-[640px] border border-[#ddd]">
                     <thead>
                         <tr className="bg-primary text-label uppercase font-bold tracking-widest">
-                            <th className="px-2 xl:px-4 py-4 border border-warning/30">{t("orders.orderId")}</th>
-                            <th className="px-2 xl:px-4 py-4 border border-warning/30 whitespace-nowrap text-center">{t("orders.date")}</th>
-                            <th className="px-2 xl:px-4 py-4 border border-warning/30 whitespace-nowrap text-right">{t("orders.grandTotal")}</th>
-                            <th className="px-2 xl:px-4 py-4 border border-warning/30 text-center">{t("orders.orderedBy")}</th>
-                            <th className="px-2 xl:px-4 py-4 border border-warning/30 text-center">{t("orders.status")}</th>
-                            <th className="px-2 xl:px-4 py-4 border border-warning/30 text-center">{t("orders.action")}</th>
+                            <th className="px-2 xl:px-4 py-2 border border-warning/30">{t("orders.orderId")}</th>
+                            <th className="px-2 xl:px-4 py-2 border border-warning/30 whitespace-nowrap text-center">{t("orders.date")}</th>
+                            <th className="px-2 xl:px-4 py-2 border border-warning/30 whitespace-nowrap text-center">{t("orders.grandTotal")}</th>
+                            <th className="px-2 xl:px-4 py-2 border border-warning/30 text-center">{t("orders.orderedBy")}</th>
+                            <th className="px-2 xl:px-4 py-2 border border-warning/30 text-center">{t("orders.status")}</th>
+                            <th className="px-2 xl:px-4 py-2 border border-warning/30 text-center">{t("orders.action")}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -50,23 +50,23 @@ const OrdersTable: React.FC<OrdersTableProps> = ({ orders, onViewOrder, onReorde
                                     className="border-b border-gray-200 hover:bg-primary/5 transition-colors"
                                 >
                                     <td
-                                        className="px-2 xl:px-4 py-4 border-r border-gray-200 text-black text-body-lg font-bold cursor-pointer"
+                                        className="px-2 xl:px-4 py-1.5 border-r border-gray-200 text-black text-body-lg font-medium cursor-pointer"
                                         onClick={() => onViewOrder(order.entity_id)}
                                     >
                                         {order.id}
                                     </td>
-                                    <td className="px-2 xl:px-4 py-4 border-r border-gray-200 text-black/70 text-body whitespace-nowrap text-center">
+                                    <td className="px-2 xl:px-4 py-1.5 border-r border-gray-200 text-black text-body whitespace-nowrap text-center">
                                         {order.date}
                                     </td>
-                                    <td className="px-2 xl:px-4 py-4 border-r border-gray-200 text-black text-body-lg font-bold whitespace-nowrap text-right price currency-riyal">
+                                    <td className="px-2 xl:px-4 py-1.5 border-r border-gray-200 text-black text-body-lg font-medium whitespace-nowrap text-center">
                                         <Price amount={order.grandTotal} />
                                     </td>
 
-                                    <td className="px-2 xl:px-4 py-4 border-r border-gray-200 text-black/70 text-body text-center">
+                                    <td className="px-2 xl:px-4 py-1.5 border-r border-gray-200 text-black text-body text-center">
                                         {order.orderedBy}
                                     </td>
-                                    <td className="px-2 xl:px-4 py-3 border-r border-gray-200 text-center">
-                                        <span className={`inline-flex px-2 py-1 border rounded-sm text-caption font-bold uppercase tracking-wider bg-white whitespace-nowrap ${order.status?.toLowerCase().includes('pending') ? 'border-borderStrong text-black' :
+                                    <td className="px-2 xl:px-4 py-1.5 border-r border-gray-200 text-center">
+                                        <span className={`inline-flex px-2 py-1 border rounded-sm text-caption font-medium uppercase tracking-wider bg-white whitespace-nowrap ${order.status?.toLowerCase().includes('pending') ? 'border-borderStrong text-black' :
                                             order.status?.toLowerCase().includes('complete') ? 'border-green-200 text-green-700 bg-green-50' :
                                                 order.status?.toLowerCase().includes('cancel') ? 'border-red-200 text-red-700 bg-red-50' :
                                                     'border-gray-200 text-black/80 bg-white'
@@ -74,22 +74,22 @@ const OrdersTable: React.FC<OrdersTableProps> = ({ orders, onViewOrder, onReorde
                                             {t(`data.${order.status}`) !== `data.${order.status}` ? t(`data.${order.status}`) : order.status}
                                         </span>
                                     </td>
-                                    <td className="px-2 xl:px-4 py-4 text-center">
+                                    <td className="px-2 xl:px-4 py-1.5 text-center">
                                         {/* Actions:
                                               md / lg → stack vertically (Action col is too narrow
                                                        to fit "View Order | Reorder | Make Payment" inline)
                                               xl+    → row with separators (plenty of room) */}
-                                        <div className="flex flex-col xl:flex-row items-center justify-center gap-1.5 xl:gap-2.5 text-body-sm font-bold uppercase tracking-wide whitespace-nowrap">
+                                        <div className="flex flex-col xl:flex-row items-center justify-center gap-1.5 xl:gap-2.5 text-body-sm font-medium uppercase tracking-wide whitespace-nowrap">
                                             <button
                                                 onClick={() => onViewOrder(order.entity_id)}
-                                                className="text-black/60 hover:text-black transition-colors"
+                                                className="text-black hover:text-primary transition-colors"
                                             >
                                                 {t("orders.viewOrder")}
                                             </button>
                                             <span className="hidden xl:inline text-black/40 font-normal">|</span>
                                             <button
                                                 onClick={() => onReorder(order)}
-                                                className="text-black/60 hover:text-black transition-colors"
+                                                className="text-black hover:text-primary transition-colors"
                                             >
                                                 {t("orders.reorder")}
                                             </button>
@@ -97,14 +97,14 @@ const OrdersTable: React.FC<OrdersTableProps> = ({ orders, onViewOrder, onReorde
                                             {order.is_paid ? (
                                                 <button
                                                     onClick={() => onViewOrder(order.entity_id)}
-                                                    className="bg-green-600 hover:bg-green-700 text-white px-4 py-1.5 rounded-[2px] font-bold transition-colors shadow-sm"
+                                                    className="bg-green-600 hover:bg-green-700 text-white px-4 py-1.5 rounded-[2px] font-medium transition-colors shadow-sm"
                                                 >
                                                     {t("orders.viewPayment")}
                                                 </button>
                                             ) : (
                                                 <button
                                                     onClick={() => onMakePayment?.(order)}
-                                                    className="bg-primary hover:bg-primaryHover text-white px-4 py-1.5 rounded-[2px] font-bold transition-colors shadow-sm"
+                                                    className="bg-primary hover:bg-primaryHover text-white px-4 py-1.5 rounded-sm font-medium transition-colors shadow-sm"
                                                 >
                                                     {t("orders.makePayment") === "orders.makePayment" ? "Make Payment" : t("orders.makePayment")}
                                                 </button>
@@ -130,7 +130,7 @@ const OrdersTable: React.FC<OrdersTableProps> = ({ orders, onViewOrder, onReorde
                     orders.map((order, idx) => (
                         <div
                             key={order.increment_id + idx}
-                            className="border border-gray-200 rounded-lg bg-white p-4 space-y-3"
+                            className="border border-[#ddd] rounded-sm bg-white p-4 space-y-3"
                         >
                             {/* Order number + Date */}
                             <div className="flex items-center justify-between">
@@ -140,7 +140,7 @@ const OrdersTable: React.FC<OrdersTableProps> = ({ orders, onViewOrder, onReorde
                                 >
                                     #{order.id}
                                 </span>
-                                <span className="text-body-sm text-black/60">{order.date}</span>
+                                <span className="text-body-sm text-black">{order.date}</span>
                             </div>
 
                             {/* Status badge */}
@@ -158,28 +158,28 @@ const OrdersTable: React.FC<OrdersTableProps> = ({ orders, onViewOrder, onReorde
 
                             {/* Ordered By (Ship To) */}
                             <div className="flex justify-between text-body-sm">
-                                <span className="text-black/50">{t("orders.shipTo")}</span>
-                                <span className="text-black/70">{order.orderedBy}</span>
+                                <span className="text-black">{t("orders.shipTo")}</span>
+                                <span className="text-black">{order.orderedBy}</span>
                             </div>
 
                             {/* Order Total */}
                             <div className="flex justify-between text-body-sm">
-                                <span className="text-black/50">{t("orders.orderTotal")}</span>
-                                <span className="text-black font-medium price currency-riyal"><Price amount={order.grandTotal} /></span>
+                                <span className="text-black">{t("orders.orderTotal")}</span>
+                                <span className="text-black font-medium price"><Price amount={order.grandTotal} /></span>
                             </div>
 
                             {/* Actions */}
-                            <div className="flex items-center gap-2.5 pt-2 border-t border-gray-100 text-body-sm">
+                            <div className="flex items-center gap-2.5 pt-2 border-t border-[#ddd] text-body-sm">
                                 <button
                                     onClick={() => onViewOrder(order.entity_id)}
-                                    className="text-black/70 font-medium"
+                                    className="text-black font-medium"
                                 >
                                     {t("orders.viewOrder")}
                                 </button>
                                 <span className="text-black/40">|</span>
                                 <button
                                     onClick={() => onReorder(order)}
-                                    className="text-black/70 font-medium"
+                                    className="text-black font-medium"
                                 >
                                     {t("orders.reorder")}
                                 </button>

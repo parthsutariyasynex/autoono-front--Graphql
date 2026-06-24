@@ -608,7 +608,7 @@ export default function Navbar() {
                 <div className="relative hidden md:block" ref={dropdownRef}>
                   <div
                     onClick={() => setIsProfileOpen(!isProfileOpen)}
-                    className="flex items-center gap-1.5 lg:gap-2 bg-white border border-gray-100 rounded-full px-1.5 lg:px-3 py-1 shadow-[0_2px_8px_-3px_rgba(0,0,0,0.12)] hover:shadow-md transition-shadow group cursor-pointer"
+                    className="flex items-center gap-1.5 lg:gap-2 bg-white border border-[#ddd] rounded-full ltr:pl-1 ltr:pr-3 rtl:pr-1 rtl:pl-3 py-1 shadow-[0_2px_8px_-3px_rgba(0,0,0,0.12)] hover:shadow-md transition-shadow group cursor-pointer"
                   >
                     <div className="w-7 h-7 bg-primary rounded-full flex items-center justify-center flex-shrink-0 transition-transform">
                       <UserCircle size={16} strokeWidth={2.5} className="text-white" />
@@ -764,6 +764,7 @@ export default function Navbar() {
                   onClick={() => { setSearchMounted(true); setIsSearchOpen(true); }}
                   className="flex relative cursor-pointer hover:opacity-70 transition-opacity items-center justify-center -mb-1 focus:outline-none"
                   aria-label="Search"
+                  suppressHydrationWarning
                 >
                   <Search size={22} stroke="black" strokeWidth={1.5} />
                 </button>
@@ -779,10 +780,11 @@ export default function Navbar() {
                   className="flex relative cursor-pointer items-center justify-center"
                   onClick={() => { setNotifMounted(true); setIsNotificationOpen(true); }}
                   aria-label="Notifications"
+                  suppressHydrationWarning
                 >
                   <Bell size={24} fill="black" stroke="black" strokeWidth={1} />
                   {unreadCount > 0 && (
-                    <span className="absolute w-[20px] h-[20px] lg:w-[26px] lg:h-[26px] font-semibold text-micro lg:text-body -top-[10px] lg:-top-[13px] -right-[6px] lg:-right-[14px] bg-primary text-black flex items-center justify-center rounded-full border border-white">
+                    <span className="absolute w-[20px] h-[20px] lg:w-[26px] lg:h-[26px] font-semibold text-micro lg:text-body -top-[10px] lg:-top-[13px] rtl:-left-[6px] ltr:-right-[6px] rtl:lg:-left-[14px] ltr:lg:-right-[14px] bg-primary text-black flex items-center justify-center rounded-full border border-white">
                       {unreadCount}
                     </span>
                   )}
@@ -795,10 +797,11 @@ export default function Navbar() {
                   onClick={() => { setCartMounted(true); setIsCartOpen(true); }}
                   className="relative text-black cursor-pointer pr-2 md:pr-0"
                   aria-label="Shopping Cart"
+                  suppressHydrationWarning
                 >
                   <ShoppingCart size={24} strokeWidth={1.5} />
                   {cartCount > 0 && (
-                    <span className="absolute w-[20px] h-[20px] lg:w-[26px] lg:h-[26px] font-semibold text-micro lg:text-body -top-[10px] lg:-top-[13px] -right-[6px] lg:-right-[14px] bg-primary text-white flex items-center justify-center rounded-full border border-white">
+                    <span className="absolute w-[20px] h-[20px] lg:w-[26px] lg:h-[26px] font-semibold text-micro lg:text-body -top-[10px] lg:-top-[13px] rtl:-left-[6px] ltr:-right-[6px] rtl:lg:-left-[14px] ltr:lg:-right-[14px] bg-primary text-white flex items-center justify-center rounded-full border border-white">
                       {cartCount}
                     </span>
                   )}

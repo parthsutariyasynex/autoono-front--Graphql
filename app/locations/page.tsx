@@ -31,7 +31,7 @@ export default function ContactPage() {
 
                     {/* Address Card */}
                     <div className="lg:col-span-4">
-                        <div className="border border-gray-100 p-6 sm:p-8 shadow-sm">
+                        <div className="border border-[#ddd] p-6 shadow-sm">
                             <h5 className="text-base font-bold uppercase tracking-wide text-black mb-3">
                                 {t("locations.westRegion")}
                             </h5>

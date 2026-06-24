@@ -144,8 +144,8 @@ function EditAccountPageContent() {
     }
 
     const inputClass = "w-full border border-gray-200 px-4 py-2 text-body-lg focus:border-primary outline-none transition-all rounded-sm bg-white font-medium text-black placeholder:text-black/40";
-    const labelClass = "block text-body font-bold text-black mb-1.5";
-    const sectionHeader = "bg-white px-4 md:px-6 py-2.5 md:py-3 border-b border-gray-100 text-black font-bold uppercase text-body md:text-[15px] tracking-tight";
+    const labelClass = "block text-body font-semibold text-black mb-1.5";
+    const sectionHeader = "bg-surfaceHover px-4 py-3 border-b border-[#ddd] text-black font-bold uppercase text-body";
 
     return (
         <div className="flex flex-col lg:flex-row flex-1 min-h-0 min-w-full">
@@ -157,14 +157,14 @@ function EditAccountPageContent() {
                         {t("account.editTitle")}
                     </h1>
 
-                    <div className="space-y-6 md:space-y-10">
+                    <div className="space-y-3 md:space-y-6">
                         {/* ACCOUNT INFORMATION SECTION - MATCHING SCREENSHOT */}
-                        <div className="bg-white border border-gray-200 shadow-sm rounded-sm overflow-hidden">
+                        <div className="border border-[#ddd] bg-white shadow-sm rounded-none">
                             <div className={sectionHeader}>
                                 {t("account.accountInformation")}
                             </div>
 
-                            <div className="p-8 space-y-6">
+                            <div className="p-3 md:p-5 text-body text-black/80 space-y-2.5 font-medium leading-relaxed">
                                 <div className="space-y-2">
                                     <label className={labelClass}>
                                         {t("m.first-name")} <span className="text-red-500">*</span>
@@ -195,11 +195,11 @@ function EditAccountPageContent() {
                                         <label className="flex items-center gap-3 cursor-pointer group">
                                             <input
                                                 type="checkbox"
-                                                className="w-4 h-4 border-gray-300 rounded focus:ring-primary"
+                                                className="w-4 h-4 border-gray-300 rounded cursor-pointer focus:ring-primary"
                                                 checked={changeEmail}
                                                 onChange={(e) => setChangeEmail(e.target.checked)}
                                             />
-                                            <span className="text-body-lg font-bold text-black/80 group-hover:text-black transition-colors select-none">
+                                            <span className="text-body-lg font-semibold text-black/80 group-hover:text-black transition-colors select-none">
                                                 {t("m.change-email")}
                                             </span>
                                         </label>
@@ -210,11 +210,11 @@ function EditAccountPageContent() {
                                         <label className="flex items-center gap-3 cursor-pointer group">
                                             <input
                                                 type="checkbox"
-                                                className="w-4 h-4 border-gray-300 rounded focus:ring-primary"
+                                                className="w-4 h-4 border-gray-300 rounded cursor-pointer focus:ring-primary"
                                                 checked={changePassword}
                                                 onChange={(e) => setChangePassword(e.target.checked)}
                                             />
-                                            <span className="text-body-lg font-bold text-black/80 group-hover:text-black transition-colors select-none">
+                                            <span className="text-body-lg font-semibold text-black/80 group-hover:text-black transition-colors select-none">
                                                 {t("m.change-password")}
                                             </span>
                                         </label>
@@ -225,12 +225,12 @@ function EditAccountPageContent() {
 
                         {/* DEDICATED CHANGE EMAIL SECTION - MATCHING NEW SCREENSHOT */}
                         {changeEmail && (
-                            <div className="bg-white border border-gray-200 shadow-sm rounded-sm overflow-hidden animate-in fade-in slide-in-from-top-4 duration-300">
+                            <div className="bg-white border border-gray-200 shadow-sm  overflow-hidden animate-in fade-in slide-in-from-top-4 duration-300">
                                 <div className={sectionHeader}>
                                     {t("account.changeEmailHeading")}
                                 </div>
 
-                                <div className="p-4 md:p-8 space-y-4 md:space-y-6">
+                                <div className="p-3 md:p-5 text-body text-black/80 space-y-2.5 font-medium leading-relaxed">
                                     <div className="space-y-2">
                                         <label className={labelClass}>
                                             {t("m.email")} <span className="text-red-500">*</span>
@@ -260,12 +260,12 @@ function EditAccountPageContent() {
 
                         {/* DEDICATED CHANGE PASSWORD SECTION - MATCHING NEW SCREENSHOT */}
                         {changePassword && (
-                            <div className="bg-white border border-gray-200 shadow-sm rounded-sm overflow-hidden animate-in fade-in slide-in-from-top-4 duration-300">
+                            <div className="bg-white border border-gray-200 shadow-sm  overflow-hidden animate-in fade-in slide-in-from-top-4 duration-300">
                                 <div className={sectionHeader}>
                                     {t("account.changePasswordHeading")}
                                 </div>
 
-                                <div className="p-4 md:p-8 space-y-4 md:space-y-6">
+                                <div className="p-3 md:p-5 text-body text-black/80 space-y-2.5 font-medium leading-relaxed">
                                     <div className="space-y-2">
                                         <label className={labelClass}>
                                             {t("m.current-password")} <span className="text-red-500">*</span>
@@ -320,11 +320,11 @@ function EditAccountPageContent() {
                         )}
 
                         {/* Save Button */}
-                        <div className="pt-4">
+                        <div className="action-button">
                             <button
                                 onClick={handleSave}
                                 disabled={isSaving}
-                                className="bg-primary hover:bg-black hover:text-white text-black text-body md:text-[15px] font-bold px-8 md:px-12 py-3 md:py-3.5 uppercase transition-all rounded-sm shadow-md tracking-wider active:scale-95 w-full sm:w-auto"
+                                className="md:w-auto text-center bg-primary hover:bg-primaryHover text-black text-body-sm font-bold px-6 py-2 uppercase transition-all rounded-sm whitespace-nowrap w-full sm:w-auto"
                             >
                                 {isSaving ? t("account.saving") : t("common.save")}
                             </button>
