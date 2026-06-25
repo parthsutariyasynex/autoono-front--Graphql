@@ -62,7 +62,7 @@ export async function DELETE(
       return NextResponse.json({ message: "filename is required" }, { status: 400 });
     }
 
-    const store = getLocaleFromRequest(req);
+    const store = req.headers.get("x-store-code") || getLocaleFromRequest(req);
 
     console.log("[po-upload/DELETE] store:", store, "fileName:", fileName);
 

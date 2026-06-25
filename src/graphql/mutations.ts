@@ -21,6 +21,7 @@ export const GENERATE_CUSTOMER_TOKEN_MUTATION = /* GraphQL */ `
   }
 `;
 
+
 export const REVOKE_CUSTOMER_TOKEN_MUTATION = /* GraphQL */ `
   mutation RevokeCustomerToken {
     revokeCustomerToken {

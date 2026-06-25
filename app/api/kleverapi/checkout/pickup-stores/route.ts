@@ -12,7 +12,7 @@ export async function GET(req: Request) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
 
-    const store = getLocaleFromRequest(req);
+    const store = req.headers.get("x-store-code") || getLocaleFromRequest(req);
 
     const data = await graphqlFetch<KleverCheckoutPickupStoresData>({
       query: KLEVER_CHECKOUT_PICKUP_STORES_QUERY,

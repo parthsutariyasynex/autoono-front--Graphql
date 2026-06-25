@@ -256,6 +256,11 @@ export default function ProductsPage({ categoryId: propCategoryId, storeCode: pr
     if (sortBy && sortBy !== "none") next.set("sortBy", sortBy);
     if (searchByTerm) next.set("searchby", searchByTerm);
     if (itemCodeTerm) next.set("item_code", itemCodeTerm);
+    // Preserve categoryId so the SearchPopup (which reads URL params) can
+    // always find the active category — without this it gets stripped on mount.
+    // Read directly from rawSearchParams (already in deps) to avoid stale closure.
+    const activeCategoryId = propCategoryId || rawSearchParams.get("categoryId");
+    if (activeCategoryId) next.set("categoryId", activeCategoryId);
 
     Object.entries(selectedFilters).forEach(([key, values]) => {
       if (Array.isArray(values)) {

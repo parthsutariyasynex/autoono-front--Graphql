@@ -26,7 +26,7 @@ export async function POST(req: Request) {
       );
     }
 
-    const store = getLocaleFromRequest(req);
+    const store = req.headers.get("x-store-code") || getLocaleFromRequest(req);
 
     console.log("[shipping-method] POST store:", store, "carrier:", carrierCode, "method:", methodCode);
 

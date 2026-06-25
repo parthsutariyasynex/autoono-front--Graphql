@@ -15,7 +15,7 @@ export async function GET(req: Request) {
     if (!token) {
       return NextResponse.json({ message: "Unauthorized: Invalid token format" }, { status: 401 });
     }
-    const store = getLocaleFromRequest(req);
+    const store = req.headers.get("x-store-code") || getLocaleFromRequest(req);
     const data = await graphqlFetch<KleverCheckoutPoFilesData>({
       query: KLEVER_CHECKOUT_PO_FILES_QUERY,
       token,
@@ -88,7 +88,7 @@ export async function POST(req: Request) {
       );
     }
 
-    const store = getLocaleFromRequest(req);
+    const store = req.headers.get("x-store-code") || getLocaleFromRequest(req);
 
     console.log("[po-upload] POST store:", store, "fileName:", fileName, "contentLength:", String(fileContent).length);
 

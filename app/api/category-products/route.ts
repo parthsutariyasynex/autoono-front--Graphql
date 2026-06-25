@@ -198,12 +198,73 @@ function buildVariables(searchParams: URLSearchParams) {
   return variables;
 }
 
-// Handle cross-category text searches using a two-phase approach:
-//   Phase 1 — products(search:) Elasticsearch: finds all matching products across
-//             every category and returns sku + url_key.
-//   Phase 2 — kleverCategoryProducts(itemCode:): enriches those SKUs with real B2B
-//             data (brand, final_price, stock_label) using the existing itemCode filter.
-//             item_code == sku for all products in this catalog.
+// Category-scoped text search using pool + client-side substring filter.
+// Klever's server-side searchQuery uses Elasticsearch n-gram indexing, which
+// has a minimum token length (~3 chars) and fails for queries like "a", "ad".
+// Solution: fetch the full product pool for the category/store (with any other
+// active filters like brand or price preserved), then apply case-insensitive
+// .includes() on the relevant product fields so any query length works.
+// The store header is the full warehouse code (e.g. V101_en) so products
+// are correctly scoped to the customer's store — never converted to "en"/"ar".
+async function handleCategorySearch(
+  token: string | null,
+  variables: Record<string, unknown>,
+  store: string | null,
+): Promise<NextResponse> {
+  const searchQuery = String(variables.searchQuery || "");
+  const categoryId = Number(variables.categoryId);
+  const pageSize = Number(variables.pageSize || 20);
+  const currentPage = Number(variables.currentPage || 1);
+  const needle = searchQuery.toLowerCase();
+
+  // Build pool variables: preserve all active filters (brand, minPrice, width, …)
+  // but remove searchQuery (applied client-side) and widen pagination to fetch
+  // a large enough pool.
+  const poolVars: Record<string, unknown> = { ...variables };
+  delete poolVars.searchQuery;
+  poolVars.pageSize = 200;
+  poolVars.currentPage = 1;
+
+  const data = await graphqlFetch<KleverCategoryProductsData>({
+    query: KLEVER_CATEGORY_PRODUCTS_QUERY,
+    variables: poolVars,
+    token,
+    store,
+    revalidate: 30,
+  });
+
+  const allItems = data.kleverCategoryProducts?.products ?? [];
+
+  // Case-insensitive partial match on every searchable text field.
+  const matched = allItems.filter((p) =>
+    (p.sku || "").toLowerCase().includes(needle) ||
+    (p.name || "").toLowerCase().includes(needle) ||
+    (p.brand || "").toLowerCase().includes(needle) ||
+    (p.tyre_size || "").toLowerCase().includes(needle),
+  );
+
+  const start = (currentPage - 1) * pageSize;
+  const page = matched.slice(start, start + pageSize);
+
+  return NextResponse.json(
+    {
+      total_count: matched.length,
+      page_size: pageSize,
+      current_page: currentPage,
+      total_pages: Math.ceil(matched.length / pageSize) || 0,
+      products: page.map((p) => ({ ...p, stock_color: deriveStockColor(p) })),
+      filters: data.kleverCategoryProducts?.filters ?? [],
+    },
+    { status: 200, headers: { "Cache-Control": "private, max-age=30" } },
+  );
+}
+
+// Handle cross-category text searches.
+// Phase 1: Elasticsearch (PRODUCTS_SEARCH_QUERY) — fast, truly cross-category,
+//   uses the base-locale store code (V101_en → "en") because Elasticsearch indexes
+//   only exist on base locale store views.
+// Phase 2: Klever enrichment — fetch B2B data (price, stock, brand) for the SKUs
+//   found by ES using the original warehouse store code for correct customer-group pricing.
 async function handleElasticsearchSearch(
   token: string | null,
   searchQuery: string,
@@ -222,12 +283,12 @@ async function handleElasticsearchSearch(
   };
   const cacheHeaders = { "Cache-Control": "private, max-age=120, stale-while-revalidate=600" };
 
-  // Phase 1: Elasticsearch — find all matching products (cross-category)
+  // Phase 1: Elasticsearch cross-category search.
   const searchData = await graphqlFetch<ProductsSearchData>({
     query: PRODUCTS_SEARCH_QUERY,
     variables: { search: searchQuery, pageSize, currentPage },
     token,
-    store,
+    store: searchLocale,
     revalidate: 30,
   });
 
@@ -236,9 +297,7 @@ async function handleElasticsearchSearch(
     return NextResponse.json(emptyResponse, { status: 200, headers: cacheHeaders });
   }
 
-  // Phase 2: Klever enrichment — get real B2B data for the matched SKUs.
-  // Passes all found SKUs as comma-separated itemCode. The klever extension
-  // returns actual stock_label ("Available", "Limited", etc.), B2B final_price, and brand.
+  // Phase 2: Klever enrichment — get B2B price/stock for the matched SKUs.
   const skus = elasticResult.items.map((p) => p.sku).join(",");
   const kleverData = await graphqlFetch<KleverCategoryProductsData>({
     query: KLEVER_CATEGORY_PRODUCTS_QUERY,
@@ -253,28 +312,23 @@ async function handleElasticsearchSearch(
     revalidate: 30,
   }).catch(() => null);
 
-  // Build SKU → klever product map for O(1) merge
-  const kleverMap = new Map<string, KleverCategoryProductItem>();
-  for (const kp of kleverData?.kleverCategoryProducts?.products ?? []) {
-    kleverMap.set(kp.sku, kp);
-  }
+  const kleverItems = kleverData?.kleverCategoryProducts?.products ?? [];
+  const kleverBySku = new Map(kleverItems.map((p) => [p.sku, p]));
 
-  // Merge: use Elasticsearch for total_count/pagination and url_key;
-  // use klever data (brand, price, stock_label) where available.
-  const products = elasticResult.items.map((ep) => {
-    const kp = kleverMap.get(ep.sku);
+  const products = elasticResult.items.map((esItem) => {
+    const k = kleverBySku.get(esItem.sku);
     return {
-      product_id: ep.id,
-      sku: ep.sku,
-      name: kp?.name ?? ep.name,
-      final_price: kp?.final_price ?? null,
-      image_url: kp?.image_url ?? ep.small_image?.url ?? null,
-      brand: kp?.brand ?? null,
-      tyre_size: kp?.tyre_size ?? null,
-      is_in_stock: kp?.is_in_stock ?? null,
-      stock_label: kp?.stock_label ?? null,
-      stock_color: kp ? deriveStockColor(kp) : "gray",
-      product_url: ep.url_key ? `/${searchLocale}/${ep.url_key}` : null,
+      product_id: esItem.id,
+      sku: esItem.sku,
+      name: esItem.name,
+      final_price: k?.final_price ?? null,
+      image_url: k?.image_url ?? esItem.small_image?.url ?? null,
+      brand: k?.brand ?? null,
+      tyre_size: k?.tyre_size ?? null,
+      is_in_stock: k?.is_in_stock ?? null,
+      stock_label: k?.stock_label ?? null,
+      stock_color: k ? deriveStockColor(k) : "green",
+      product_url: null,
       item_code: null,
       is_action: "Yes",
     };
@@ -283,8 +337,8 @@ async function handleElasticsearchSearch(
   return NextResponse.json(
     {
       total_count: elasticResult.total_count,
-      page_size: elasticResult.page_info.page_size,
-      current_page: elasticResult.page_info.current_page,
+      page_size: pageSize,
+      current_page: currentPage,
       total_pages: elasticResult.page_info.total_pages,
       products,
       filters: [],
@@ -305,48 +359,39 @@ export async function GET(request: NextRequest) {
 
     const variables = buildVariables(searchParams);
 
-    // Business requirement: ALL search queries must use the base locale store so
-    // they hit Magento's Elasticsearch index (which only exists on "en"/"ar").
-    // Warehouse store views (V101_en, V202_en, V301_en, …) have no search index.
-    //
-    // This covers every search entry point:
-    //   searchby / searchBy / search / searchQuery  — free-text search
-    //   item_code / itemCode                        — SKU / item-code lookup
-    //
-    // Category browsing without any search param keeps the original store code
-    // so warehouse-specific data (stock, price) is preserved where relevant.
-    const isSearchRequest =
-      searchParams.has("searchby") ||
-      searchParams.has("searchBy") ||
-      searchParams.has("search") ||
-      searchParams.has("searchQuery") ||
-      searchParams.has("item_code") ||
-      searchParams.has("itemCode");
-    const effectiveStoreCode = (isSearchRequest ? toSearchStore(storeCode) : storeCode) || storeCode;
+    // Warehouse store codes (V101_en, V202_en) are used for Klever requests.
+    // Elasticsearch only has indexes for base locale store views ("en", "ar"),
+    // so text searches use toSearchStore() to strip the warehouse prefix.
+    const effectiveStoreCode = storeCode;
+    const searchLocale = toSearchStore(storeCode) ?? "en";
 
-    // When no categoryId is in the URL, the frontend is doing a cross-category
-    // text search (e.g. user typed "adnoc" with no category selected).
-    // Route through Elasticsearch (products(search:)) so the search is not
-    // restricted to a single category's product pool. This bypasses the
-    // category cache below since it's a different query path.
+    // When no categoryId is in the URL, the user is doing a cross-category
+    // text search (e.g. typed "adnoc" with no category selected).
+    // Route through Elasticsearch so the search is truly cross-category.
     const searchQuery =
       searchParams.get("searchby") ||
       searchParams.get("searchBy") ||
       searchParams.get("search") ||
       searchParams.get("searchQuery") ||
       null;
-    const isElasticsearchSearch = !!searchQuery && !searchParams.has("categoryId");
-    if (isElasticsearchSearch) {
+    const isCrossSearchRequest = !!searchQuery && !searchParams.has("categoryId");
+    if (isCrossSearchRequest) {
       const pageSize = Number(searchParams.get("pageSize") || "20");
       const currentPage = Number(
         searchParams.get("page") || searchParams.get("currentPage") || "1",
       );
-      const searchLocale = effectiveStoreCode ?? "en";
       return handleElasticsearchSearch(token, searchQuery, pageSize, currentPage, searchLocale, effectiveStoreCode);
     }
 
-    // Key the cache on the EFFECTIVE store so search (base-locale) and warehouse
-    // browsing never collide, and different users/stores/filters stay separate.
+    // Category-scoped text search (categoryId present + searchQuery present).
+    // Use pool + client-side substring so any query length ("a", "ad", "adnoc") works.
+    // The full warehouse store code is used — no conversion to "en"/"ar".
+    if (variables.searchQuery && variables.categoryId) {
+      return handleCategorySearch(token, variables, effectiveStoreCode);
+    }
+
+    // Key the cache on the EFFECTIVE store so different users/stores/filters
+    // stay separate.
     const cacheKey = buildCacheKey(hashToken(token), effectiveStoreCode, variables);
 
     // 1) Serve from cache when fresh — the typical hit path.

@@ -18,7 +18,7 @@ export async function GET(req: Request) {
       return NextResponse.json({ message: "Unauthorized: Invalid token format" }, { status: 401 });
     }
 
-    const store = getLocaleFromRequest(req);
+    const store = req.headers.get("x-store-code") || getLocaleFromRequest(req);
 
     const { searchParams } = new URL(req.url);
     let cartId: string | null = searchParams.get("cart_id");

@@ -34,7 +34,7 @@ export async function GET(req: Request) {
     if (!token) {
       return NextResponse.json({ message: "Unauthorized: Invalid token format" }, { status: 401 });
     }
-    const store = getLocaleFromRequest(req);
+    const store = req.headers.get("x-store-code") || getLocaleFromRequest(req);
     const { searchParams } = new URL(req.url);
     const cartId = await resolveCartId(token, store, searchParams.get("cart_id"));
     if (!cartId) {
@@ -80,7 +80,7 @@ export async function POST(req: Request) {
       );
     }
 
-    const store = getLocaleFromRequest(req);
+    const store = req.headers.get("x-store-code") || getLocaleFromRequest(req);
 
     // Resolve cartId and validate cart is not empty before calling the mutation.
     // Magento rejects setShippingMethodsOnCart with a 422 if total_quantity === 0.

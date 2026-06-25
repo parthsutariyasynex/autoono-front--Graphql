@@ -173,6 +173,10 @@ const SearchPopup: React.FC<SearchPopupProps> = ({ isOpen, onClose }) => {
                 params.set("light", "1");
                 const store = searchParams?.get("store") || getClientStoreCode();
                 if (store) params.set("store", store);
+                // Pass the active category so the API searches within the correct
+                // category scope instead of a hardcoded default.
+                const categoryId = searchParams?.get("categoryId");
+                if (categoryId) params.set("categoryId", categoryId);
 
                 const res = await fetch(`/api/kleverapi/product-search?${params.toString()}`, {
                     headers: {
