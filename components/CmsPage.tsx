@@ -52,34 +52,55 @@ function decodeHtmlEntities(html: string): string {
 }
 
 /**
- * Remove a leading heading element from HTML content when its text matches the
- * page title. The CmsPage template already renders the title as <h1>, so any
- * <h1-6> or <p><strong> block at the top of the CMS HTML that duplicates it
- * should be stripped before rendering via dangerouslySetInnerHTML.
+ * Normalize a string for loose title comparison: strip HTML tags, uppercase,
+ * collapse non-alphanumeric characters to a single space.
+ * "Returns & Exchange Policy" → "RETURNS EXCHANGE POLICY"
+ * "RETURN EXCHANGE POLICY"   → "RETURN EXCHANGE POLICY"
+ * These still differ by the final "S", but punctuation/symbol differences
+ * (& vs AND, hyphens, extra spaces) are absorbed.
+ */
+function normalizeForMatch(s: string): string {
+    return s
+        .replace(/<[^>]+>/g, "")          // strip tags
+        .toUpperCase()
+        .replace(/[^A-Z0-9؀-ۿ]/g, " ") // non-alphanumeric → space
+        .replace(/\s+/g, " ")
+        .trim();
+}
+
+/**
+ * Remove the page-title heading from CMS HTML so it doesn't duplicate the
+ * <h1> that CmsPage renders from `title`. Handles:
+ *   - Heading as the very first element (anchored match)
+ *   - Heading wrapped inside container <div>s (non-anchored h1 search)
+ *   - <p><strong> title pattern used by some CMS editors
+ * Comparison is normalised so "&", "-", extra spaces, etc. don't break it.
  */
 function stripLeadingTitleFromHtml(html: string, title: string | undefined): string {
     if (!title || !html) return html;
-    const normalTitle = title.toUpperCase().trim();
+    const normTitle = normalizeForMatch(title);
     const trimmed = html.trim();
 
-    // Match: <h1-6 ...>  optional inner tags  TITLE TEXT  </h1-6>
+    // 1. Heading is the very first element (fast path, covers most pages)
     const headingRe = /^(<h[1-6][^>]*>)([\s\S]*?)(<\/h[1-6]>)/i;
     const hMatch = trimmed.match(headingRe);
-    if (hMatch) {
-        const headingText = hMatch[2].replace(/<[^>]+>/g, "").trim().toUpperCase();
-        if (headingText === normalTitle) {
-            return trimmed.slice(hMatch[0].length).trim();
-        }
+    if (hMatch && normalizeForMatch(hMatch[2]) === normTitle) {
+        return trimmed.slice(hMatch[0].length).trim();
     }
 
-    // Match: <p ...><strong ...>TITLE TEXT</strong></p>  (some CMS editors use this)
+    // 2. Bold paragraph is the very first element (some CMS editors use this)
     const boldRe = /^(<p[^>]*>)\s*(<strong[^>]*>)([\s\S]*?)(<\/strong>)\s*(<\/p>)/i;
     const bMatch = trimmed.match(boldRe);
-    if (bMatch) {
-        const boldText = bMatch[3].replace(/<[^>]+>/g, "").trim().toUpperCase();
-        if (boldText === normalTitle) {
-            return trimmed.slice(bMatch[0].length).trim();
-        }
+    if (bMatch && normalizeForMatch(bMatch[3]) === normTitle) {
+        return trimmed.slice(bMatch[0].length).trim();
+    }
+
+    // 3. First <h1> anywhere in the document — handles Magento wrapping the
+    // title heading inside container divs (e.g. <div data-content-type="..."><h1>…</h1>)
+    const firstH1Re = /<h1[^>]*>([\s\S]*?)<\/h1>/i;
+    const h1Match = trimmed.match(firstH1Re);
+    if (h1Match && normalizeForMatch(h1Match[1]) === normTitle) {
+        return trimmed.replace(h1Match[0], "").trim();
     }
 
     return html;
@@ -197,9 +218,9 @@ function parseWithExplicitHeadings(
     let text = rawContent.replace(/\s+/g, " ").trim();
 
     if (knownTitle) {
-        const upperTitle = knownTitle.toUpperCase().trim();
-        if (text.toUpperCase().startsWith(upperTitle)) {
-            text = text.slice(upperTitle.length).trim();
+        const normTitle = normalizeForMatch(knownTitle);
+        if (normalizeForMatch(text).startsWith(normTitle)) {
+            text = text.slice(knownTitle.trim().length).trim();
         }
     }
 
@@ -243,12 +264,16 @@ function parseCmsContent(rawContent: string, knownTitle?: string): Block[] {
 
     let text = rawContent.replace(/\s+/g, " ").trim();
 
-    // Strip leading document title (e.g., "PRIVACY POLICY ...")
+    // Strip leading document title (e.g., "PRIVACY POLICY …").
+    // Uses normalised comparison so punctuation differences (& vs AND, hyphens,
+    // extra spaces) don't prevent the match.
     if (knownTitle) {
-        const upperTitle = knownTitle.toUpperCase().trim();
-        const upperText = text.toUpperCase();
-        if (upperText.startsWith(upperTitle)) {
-            text = text.slice(upperTitle.length).trim();
+        const normTitle = normalizeForMatch(knownTitle);
+        const normText  = normalizeForMatch(text);
+        if (normText.startsWith(normTitle)) {
+            // Slice by the raw title length as an approximation; any leading
+            // whitespace left over is removed by the subsequent .trim().
+            text = text.slice(knownTitle.trim().length).trim();
         }
     }
 
@@ -377,9 +402,11 @@ export default function CmsPage({ identifier, fallbackTitleKey, arabicHeadings }
                 dir={isRtl ? "rtl" : "ltr"}
             >
                 {/* Title */}
-                {/* <h1 className="text-h3 sm:text-h2 md:text-h1-sm lg:text-h1 font-bold text-black uppercase tracking-tight mb-8 sm:mb-10 md:mb-12 text-center">
-                    {title}
-                </h1> */}
+                {title && (
+                    <h1 className="text-2xl sm:text-3xl font-black text-black uppercase tracking-tight mb-8 sm:mb-10 text-center">
+                        {title}
+                    </h1>
+                )}
 
                 {/* Body */}
                 {hasError ? (
@@ -388,12 +415,13 @@ export default function CmsPage({ identifier, fallbackTitleKey, arabicHeadings }
                     </div>
                 ) : isHtml ? (
                     <div
-                        className={`text-body sm:text-body-lg md:text-[15px] leading-[1.8] sm:leading-[1.9] text-black/80 font-medium ${isRtl ? "text-right" : "text-left"} prose prose-sm sm:prose max-w-none`}
+                        className="cms-content"
+                        dir={isRtl ? "rtl" : "ltr"}
                         dangerouslySetInnerHTML={{ __html: processedHtml }}
                     />
                 ) : (
                     <div
-                        className={`text-body sm:text-body-lg md:text-[15px] leading-[1.8] sm:leading-[1.9] text-black/80 font-medium ${isRtl ? "text-right" : "text-left"}`}
+                        className={`text-[15px] leading-[1.8] sm:leading-[1.9] text-black/80 font-medium ${isRtl ? "text-right" : "text-left"}`}
                     >
                         {blocks.map((b, i) => {
                             if (b.type === "h2") {

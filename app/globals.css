@@ -290,6 +290,10 @@
   width: 100%;
 }
 
+@keyframes global-spin {
+  to { transform: rotate(360deg); }
+}
+
 @keyframes shimmer {
   0% {
     transform: translateX(-100%);
@@ -414,7 +418,9 @@
 .cms-content h1,
 .cms-content h2,
 .cms-content h3,
-.cms-content h4 {
+.cms-content h4,
+.cms-content h5,
+.cms-content h6 {
   font-weight: 800;
   color: #111;
   margin-top: 2em;
@@ -425,6 +431,9 @@
 .cms-content h1 { font-size: 1.5rem; }
 .cms-content h2 { font-size: 1.2rem; }
 .cms-content h3 { font-size: 1.05rem; }
+.cms-content h4 { font-size: 0.95rem; }
+.cms-content h5 { font-size: 0.875rem; }
+.cms-content h6 { font-size: 0.8rem; }
 .cms-content p  { margin-bottom: 1.2em; }
 .cms-content ul,
 .cms-content ol { padding-left: 1.5em; margin-bottom: 1.2em; }

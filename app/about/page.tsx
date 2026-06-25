@@ -565,94 +565,13 @@ import React, { useEffect, useState } from "react";
 import Image from "next/image";
 import { useTranslation } from "@/hooks/useTranslation";
 import { useLocale } from "@/lib/i18n/client";
+import { AboutSkeleton } from "@/components/skeletons";
 
 
 interface CmsPage {
     title?: string;
     content?: string;
     content_heading?: string;
-}
-
-function Skeleton() {
-    // Mirrors the real /about content structure inside the same parent wrapper
-    // so the API-driven swap-in causes minimal layout shift. Pulse heights are
-    // computed from real text rendered heights:
-    //   • Title  h1 text-2xl sm:text-3xl md:text-[2rem] → ~28/36/40px
-    //   • Body p text-[15px] leading-[1.9] → 15 × 1.9 ≈ 29px per line
-    //   • H2     text-base font-black uppercase ≈ 24px
-    //   • H3     ≈ 29px (inherits 15px × 1.9)
-    const line = "h-7 bg-gray-200 rounded";
-
-    const Paragraph = ({ lines = 3 }: { lines?: number }) => (
-        <div className="space-y-3">
-            {Array.from({ length: lines }).map((_, i) => (
-                <div
-                    key={i}
-                    className={`${line} ${i === lines - 1 ? "w-3/4" : "w-full"}`}
-                />
-            ))}
-        </div>
-    );
-
-    const SectionHeader = ({ w = "w-1/3" }: { w?: string }) => (
-        <div className={`h-6 bg-gray-200 rounded ${w} mt-4 mb-2`} />
-    );
-
-    const ListItems = ({ items = 5 }: { items?: number }) => {
-        const widths = ["w-3/5", "w-2/3", "w-3/4", "w-1/2", "w-7/12", "w-2/3"];
-        return (
-            <ul className="pl-5 space-y-2">
-                {Array.from({ length: items }).map((_, i) => (
-                    <li key={i} className={`${line} ${widths[i % widths.length]}`} />
-                ))}
-            </ul>
-        );
-    };
-
-    return (
-        <div className="space-y-6 animate-pulse">
-            {/* Title — centered, uppercase. Real h1: text-2xl sm:text-3xl md:text-[2rem]
-                × ~1.5 line-height ≈ 36/45/48px, so the swap-in causes no vertical jump. */}
-            <div className="flex justify-center mb-10 sm:mb-14">
-                <div className="h-9 sm:h-[45px] md:h-12 bg-gray-200 rounded w-56 sm:w-64 md:w-72" />
-            </div>
-
-            {/* Intro paragraphs */}
-            <Paragraph lines={3} />
-            <Paragraph lines={3} />
-
-            {/* Vision & Mission */}
-            <SectionHeader w="w-2/5" />
-            <div className="space-y-2">
-                <div className="h-5 bg-gray-200 rounded w-24" />
-                <Paragraph lines={2} />
-            </div>
-            <div className="space-y-2">
-                <div className="h-5 bg-gray-200 rounded w-24" />
-                <Paragraph lines={2} />
-            </div>
-
-            {/* Our Products list */}
-            <SectionHeader w="w-1/4" />
-            <ListItems items={6} />
-
-            {/* Brands */}
-            <SectionHeader w="w-1/3" />
-            <Paragraph lines={2} />
-
-            {/* Core Values list */}
-            <SectionHeader w="w-1/3" />
-            <ListItems items={5} />
-
-            {/* Branch Network */}
-            <SectionHeader w="w-1/3" />
-            <Paragraph lines={3} />
-
-            {/* Closing */}
-            <SectionHeader w="w-1/4" />
-            <Paragraph lines={2} />
-        </div>
-    );
 }
 
 /**
@@ -1065,7 +984,7 @@ export default function AboutPage() {
                 dir={isRtl ? "rtl" : "ltr"}
             >
                 {isLoading ? (
-                    <Skeleton />
+                    <AboutSkeleton hero={false} />
                 ) : hasError || !content ? (
                     <p className="text-center text-gray-400 py-12 text-sm">
                         Page content unavailable.

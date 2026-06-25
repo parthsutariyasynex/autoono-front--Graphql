@@ -19,6 +19,7 @@ import Pagination, { PageSizeSelect } from "@/components/Pagination";
 import { useCart } from "@/modules/cart/context/CartContext";
 import { useSession } from "next-auth/react";
 import PortalDropdown from "@/components/PortalDropdown";
+import { useGlobalLoading } from "@/components/GlobalLoadingOverlay";
 // import { FavouriteProductsSkeleton } from "@/components/skeletons";
 
 interface Product {
@@ -60,6 +61,7 @@ export default function FavouriteProducts({ title }: { title?: React.ReactNode }
     const { t } = useTranslation();
     const { data: session } = useSession();
     const { refetchCart } = useCart();
+    const { register: registerOverlay, unregister: unregisterOverlay } = useGlobalLoading();
 
     const [favProducts, setFavProducts] = useState<Product[]>([]);
     const [totalCount, setTotalCount] = useState(0);
@@ -221,6 +223,7 @@ export default function FavouriteProducts({ title }: { title?: React.ReactNode }
 
     const handleRemove = async (product: Product) => {
         setRemoving(product.product_id);
+        registerOverlay("fav-remove");
         const toastId = toast.loading(t("favorites.remove"));
         try {
             const deleteId = product.favorite_id || product.product_id;
@@ -251,12 +254,14 @@ export default function FavouriteProducts({ title }: { title?: React.ReactNode }
             toast.error(t("favorites.removeFailed"), { id: toastId });
         } finally {
             setRemoving(null);
+            unregisterOverlay("fav-remove");
         }
     };
 
     const onAddToCart = async (product: Product) => {
         const qty = quantities[product.product_id] || 1;
         setAddingToCart(product.sku);
+        registerOverlay("fav-add-to-cart");
         try {
             await api.post("/kleverapi/cart/add", { sku: product.sku, qty });
             await refetchCart();
@@ -269,6 +274,7 @@ export default function FavouriteProducts({ title }: { title?: React.ReactNode }
             toast.error(t("cart.updateFailed"));
         } finally {
             setAddingToCart(null);
+            unregisterOverlay("fav-add-to-cart");
         }
     };
 

@@ -21,6 +21,7 @@ import { ProductCard, StockBadge } from "../components/ProductCard";
 import { toast } from "react-hot-toast";
 import { useTranslation } from "@/hooks/useTranslation";
 import { useLocalePath } from "@/hooks/useLocalePath";
+import { useGlobalLoading } from "@/components/GlobalLoadingOverlay";
 import { useLocale } from "@/lib/i18n/client";
 
 const PAGE_SIZE = 20;
@@ -105,6 +106,7 @@ export default function ProductsPage({ categoryId: propCategoryId, storeCode: pr
   // Direct hook call — component is inside <Suspense> in the page file so this is safe.
   const rawSearchParams = useSearchParams();
   const { cart, addToCart } = useCart();
+  const { register: registerOverlay, unregister: unregisterOverlay } = useGlobalLoading();
   const [addingToCart, setAddingToCart] = useState<string | null>(null);
   const [justAdded, setJustAdded] = useState<string | null>(null);
   const [isAddedPopupOpen, setIsAddedPopupOpen] = useState(false);
@@ -479,9 +481,11 @@ export default function ProductsPage({ categoryId: propCategoryId, storeCode: pr
   };
 
   const handleAddToCart = useCallback(async (product: any) => {
+    if (addingToCart) return;
+    const qty = productQtys[product.sku] || 1;
+    setAddingToCart(product.sku);
+    registerOverlay("products-add-to-cart");
     try {
-      const qty = productQtys[product.sku] || 1;
-      setAddingToCart(product.sku);
       await addToCart(product.sku, qty);
       setAddedProduct(product);
       setIsAddedPopupOpen(true);
@@ -491,12 +495,14 @@ export default function ProductsPage({ categoryId: propCategoryId, storeCode: pr
       if (err instanceof Error && err.message === "401") {
         localStorage.removeItem("token");
         router.replace(lp("/login"));
+      } else {
+        toast.error(t("favorites.cartAddFailed"));
       }
-      else toast.error(t("favorites.cartAddFailed"));
     } finally {
       setAddingToCart(null);
+      unregisterOverlay("products-add-to-cart");
     }
-  }, [addToCart, router, productQtys]);
+  }, [addToCart, router, productQtys, addingToCart, registerOverlay, unregisterOverlay]);
 
   // Stock tier: 0 = available, 1 = limited, 2 = out of stock.
   const stockTier = (p: any): number => {

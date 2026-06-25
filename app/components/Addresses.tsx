@@ -8,6 +8,7 @@ import { api } from "@/lib/api/api-client";
 import { useTranslation } from "@/hooks/useTranslation";
 import { useLocalePath } from "@/hooks/useLocalePath";
 import { RootState } from "@/store/store";
+import { useAction } from "@/lib/hooks/useAction";
 
 interface AddressFormProps {
   mode?: "new" | "edit";
@@ -55,7 +56,7 @@ function AddressFormContent({ mode = "new", addressId, title }: AddressFormProps
 
   const isEditMode = mode === "edit" && addressId !== "new";
   const [loading, setLoading] = useState(isEditMode);
-  const [saving, setSaving] = useState(false);
+  const { loading: saving, run: runSave } = useAction("save-address");
   const [addressData, setAddressData] = useState<any>(null);
 
   const [formData, setFormData] = useState({
@@ -175,59 +176,58 @@ function AddressFormContent({ mode = "new", addressId, title }: AddressFormProps
     e.preventDefault();
     if (!validate()) return;
 
-    setSaving(true);
-    try {
-      if (isEditMode) {
-        await api.put(`/kleverapi/addresses/${addressId}`, {
-          address: {
-            ...addressData,
-            firstname: formData.firstname.trim(),
-            lastname: formData.lastname.trim(),
-            company: formData.company.trim(),
-            telephone: formData.telephone.trim(),
-            fax: formData.fax.trim(),
-            street: [formData.street.trim()],
-            city: formData.city.trim(),
-            postcode: formData.postcode.trim() || addressData?.postcode || "00000",
-            country_id: formData.country_id || "SA",
-            region: formData.region.trim() || undefined,
-          },
-        });
-        toast.success(t("addressBook.addressUpdated"));
-      } else {
-        await api.post("/kleverapi/addresses", {
-          address: {
-            firstname: formData.firstname.trim(),
-            lastname: formData.lastname.trim(),
-            company: formData.company.trim(),
-            telephone: formData.telephone.trim(),
-            fax: formData.fax.trim(),
-            street: [formData.street.trim()],
-            city: formData.city.trim(),
-            postcode: formData.postcode.trim() || "00000",
-            country_id: formData.country_id || "SA",
-            region: formData.region.trim() || undefined,
-            default_shipping: true,
-            default_billing: true,
-          },
-        });
-        toast.success(t("addressBook.addressAdded"));
-      }
+    await runSave(async () => {
+      try {
+        if (isEditMode) {
+          await api.put(`/kleverapi/addresses/${addressId}`, {
+            address: {
+              ...addressData,
+              firstname: formData.firstname.trim(),
+              lastname: formData.lastname.trim(),
+              company: formData.company.trim(),
+              telephone: formData.telephone.trim(),
+              fax: formData.fax.trim(),
+              street: [formData.street.trim()],
+              city: formData.city.trim(),
+              postcode: formData.postcode.trim() || addressData?.postcode || "00000",
+              country_id: formData.country_id || "SA",
+              region: formData.region.trim() || undefined,
+            },
+          });
+          toast.success(t("addressBook.addressUpdated"));
+        } else {
+          await api.post("/kleverapi/addresses", {
+            address: {
+              firstname: formData.firstname.trim(),
+              lastname: formData.lastname.trim(),
+              company: formData.company.trim(),
+              telephone: formData.telephone.trim(),
+              fax: formData.fax.trim(),
+              street: [formData.street.trim()],
+              city: formData.city.trim(),
+              postcode: formData.postcode.trim() || "00000",
+              country_id: formData.country_id || "SA",
+              region: formData.region.trim() || undefined,
+              default_shipping: true,
+              default_billing: true,
+            },
+          });
+          toast.success(t("addressBook.addressAdded"));
+        }
 
-      const redirectUrl =
-        searchParams.get("redirect") || lp("/customer/address-book");
-      router.push(redirectUrl);
-    } catch (err: any) {
-      console.error("[Addresses] Save error:", err);
-      toast.error(
-        err?.message ||
-        (isEditMode
-          ? t("addressBook.addressUpdateFailed")
-          : t("addressBook.addressAddFailed"))
-      );
-    } finally {
-      setSaving(false);
-    }
+        const redirectUrl =
+          searchParams.get("redirect") || lp("/customer/address-book");
+        router.push(redirectUrl);
+      } catch (err: any) {
+        console.error("[Addresses] Save error:", err);
+        toast.error(
+          err?.message ||
+          (isEditMode
+            ? t("addressBook.addressUpdateFailed")
+            : t("addressBook.addressAddFailed"))
+        );
+      }
+    });
   };
 
   const field = (

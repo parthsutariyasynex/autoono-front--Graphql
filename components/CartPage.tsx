@@ -15,6 +15,7 @@ import { useTranslation } from "@/hooks/useTranslation";
 import { useLocalePath } from "@/hooks/useLocalePath";
 import { useGift } from "@/modules/cart/context/GiftContext";
 import { CartPageSkeleton } from "@/components/skeletons";
+import { useAction } from "@/lib/hooks/useAction";
 
 const CartPage: React.FC = () => {
     const router = useRouter();
@@ -23,7 +24,8 @@ const CartPage: React.FC = () => {
     const { openGiftModal, availableGifts, hasGifts, isAllGiftsSelected, fetchDiscountPopup } = useGift();
     const { cart, isLoading, isCartSyncing, error, removeFromCart, updateCartItem, clearCart, refetchCart } = useCart();
     const [pendingQtys, setPendingQtys] = React.useState<Record<number, number>>({});
-    const [isClearingCart, setIsClearingCart] = React.useState(false);
+    const { loading: isClearingCart, run: runClearCart } = useAction("clear-cart");
+    const { loading: isUpdatingCart, run: runUpdateCart } = useAction("update-cart");
 
     // Always fetch fresh cart data when the cart page mounts
     React.useEffect(() => {
@@ -56,47 +58,41 @@ const CartPage: React.FC = () => {
         const updateIds = Object.keys(pendingQtys);
         if (updateIds.length === 0) {
             await refetchCart();
-            // Re-evaluate gifts even when no qty changes — ensures fresh popup state
             fetchDiscountPopup();
             toast.success(t("cart.updated") || "Cart updated");
             return;
         }
 
-        const toastId = toast.loading(t("cart.updating"));
-        try {
-            // Process all qty changes sequentially to avoid cart lock issues
-            for (const id of updateIds) {
-                await updateCartItem(Number(id), pendingQtys[Number(id)]);
+        await runUpdateCart(async () => {
+            const toastId = toast.loading(t("cart.updating"));
+            try {
+                for (const id of updateIds) {
+                    await updateCartItem(Number(id), pendingQtys[Number(id)]);
+                }
+                setPendingQtys({});
+                await refetchCart();
+                await fetchDiscountPopup();
+                toast.success(t("cart.updated") || "Cart updated", { id: toastId });
+            } catch (err: any) {
+                const msg = err instanceof Error ? err.message : t("cart.updateFailed");
+                toast.error(msg, { id: toastId });
+                refetchCart();
             }
-            setPendingQtys({});
-            // Single refetch at the end to get accurate totals from server, then
-            // re-evaluate gift eligibility (items_count may be unchanged even though
-            // an individual SKU's qty crossed the gift threshold).
-            await refetchCart();
-            await fetchDiscountPopup();
-            toast.success(t("cart.updated") || "Cart updated", { id: toastId });
-        } catch (err: any) {
-            const msg = err instanceof Error ? err.message : t("cart.updateFailed");
-            toast.error(msg, { id: toastId });
-            // Refetch even on error so UI shows the real server state
-            refetchCart();
-        }
+        });
     };
 
 
     const handleClearCart = async () => {
-        // if (!window.confirm(t("cart.confirmClear") || "Clear all items from your cart?")) return;
         const toastId = toast.loading(t("cart.clearing") || "Clearing cart...");
-        setIsClearingCart(true);
-        try {
-            await clearCart();
-            toast.success(t("cart.cartCleared") || "Cart cleared", { id: toastId });
-        } catch (err: any) {
-            const msg = err instanceof Error ? err.message : t("cart.clearFailed");
-            toast.error(msg, { id: toastId });
-        } finally {
-            setIsClearingCart(false);
-        }
+        await runClearCart(async () => {
+            try {
+                await clearCart();
+                toast.success(t("cart.cartCleared") || "Cart cleared", { id: toastId });
+            } catch (err: any) {
+                const msg = err instanceof Error ? err.message : t("cart.clearFailed");
+                toast.error(msg, { id: toastId });
+            }
+        });
     };
 
     // Show skeleton while loading, syncing (warehouse switch in progress), or before
@@ -232,6 +228,7 @@ const CartPage: React.FC = () => {
                                         onClearCart={handleClearCart}
                                         onUpdateCart={handleUpdateCart}
                                         isClearingCart={isClearingCart}
+                                        isUpdatingCart={isUpdatingCart}
                                     />
 
                                 </div>

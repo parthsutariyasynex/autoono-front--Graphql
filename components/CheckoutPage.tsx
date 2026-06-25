@@ -34,8 +34,9 @@ import toast from "react-hot-toast";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import DatePicker from "react-datepicker";
-import "react-datepicker/dist/react-datepicker.css"; 
+import "react-datepicker/dist/react-datepicker.css";
 import Price from "@/app/components/Price";
+import { useGlobalLoading, ButtonSpinner } from "@/components/GlobalLoadingOverlay";
 
 
 // --- Sub-components ---
@@ -101,6 +102,7 @@ const CheckoutPageUI: React.FC = () => {
     const [isAddressSetOnBackend, setIsAddressSetOnBackend] = useState(false);
     const [paymentMethod, setPaymentMethod] = useState("checkmo");
     const [isPlacingOrder, setIsPlacingOrder] = useState(false);
+    const { register: registerOverlay, unregister: unregisterOverlay } = useGlobalLoading();
     const [isPoUploadOpen, setIsPoUploadOpen] = useState(false);
     const [uploadedPOs, setUploadedPOs] = useState<{ fileName: string; backendRef: string }[]>([]);
     const [isUploading, setIsUploading] = useState(false);
@@ -749,120 +751,116 @@ const CheckoutPageUI: React.FC = () => {
     };
 
     const handlePlaceOrder = async () => {
-        // 0. Cart sync guard — don't proceed while warehouse switch is in progress
-        if (isCartSyncing) {
-            toast.error(t("checkout.cartSyncingPleaseWait") || "Your cart is syncing. Please wait a moment and try again.");
-            return;
-        }
+        setIsPlacingOrder(true);
+        registerOverlay("place-order");
+        try {
+            // 0. Cart sync guard — don't proceed while warehouse switch is in progress
+            if (isCartSyncing) {
+                toast.error(t("checkout.cartSyncingPleaseWait") || "Your cart is syncing. Please wait a moment and try again.");
+                return;
+            }
 
+            // 0. Cart Validation — empty cart or no valid quote ID
+            if (!cart || cart.items.length === 0 || !cart.cart_id) {
+                toast.error(t("checkout.emptyCartMessage") || "Your cart is empty. Please add items before checkout.");
+                router.push(lp("/cart"));
+                return;
+            }
 
-        // 0. Cart Validation — empty cart or no valid quote ID
-        if (!cart || cart.items.length === 0 || !cart.cart_id) {
-            toast.error(t("checkout.emptyCartMessage") || "Your cart is empty. Please add items before checkout.");
-            router.push(lp("/cart"));
-            return;
-        }
+            // 0b. Shipping address required — bounce to the address book if none exists.
+            if (addresses.length === 0) {
+                toast.error(t("checkout.addShippingAddressFirst"));
+                router.push(`${lp("/customer/address-book")}?redirect=/checkout`);
+                return;
+            }
 
-        // 0b. Shipping address required — bounce to the address book if none exists.
-        // Defensive: the page-load guard already redirects address-less customers,
-        // but this prevents placing an order with no address in any edge case.
-        if (addresses.length === 0) {
-            toast.error(t("checkout.addShippingAddressFirst"));
-            router.push(`${lp("/customer/address-book")}?redirect=/checkout`);
-            return;
-        }
+            // 1. Validations with Auto-Repair
+            if (!selectedAddressId || !isAddressSetOnBackend) {
+                const idToSet = selectedAddressId || (addresses.length > 0 ? (addresses.find(a => a.isDefault)?.id || addresses[0].id) : "");
 
-        // 1. Validations with Auto-Repair
-        if (!selectedAddressId || !isAddressSetOnBackend) {
-            const idToSet = selectedAddressId || (addresses.length > 0 ? (addresses.find(a => a.isDefault)?.id || addresses[0].id) : "");
+                if (idToSet) {
+                    try {
+                        console.log("Syncing address to backend before order placement:", idToSet);
+                        await setShippingAddress(idToSet);
+                        setSelectedAddressId(idToSet);
+                        setIsAddressSetOnBackend(true);
+                        toast.success(t("checkout.saveBillingInfo"));
+                    } catch (err) {
+                        const msg = err instanceof Error ? err.message : t("checkout.syncAddressFailed");
+                        if (msg === "Not authenticated") {
+                            router.push(lp("/login?callback=/checkout"));
+                            return;
+                        }
+                        console.warn("Address sync failed, continuing to place order:", msg);
+                        setSelectedAddressId(idToSet);
+                    }
+                } else {
+                    toast.error(t("checkout.selectShippingAddress"));
+                    document.getElementById('step-1')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    return;
+                }
+            }
 
-            if (idToSet) {
-                try {
-                    console.log("Syncing address to backend before order placement:", idToSet);
-                    await setShippingAddress(idToSet);
-                    setSelectedAddressId(idToSet);
-                    setIsAddressSetOnBackend(true);
-                    toast.success(t("checkout.saveBillingInfo"));
-                } catch (err) {
-                    const msg = err instanceof Error ? err.message : t("checkout.syncAddressFailed");
-                    if (msg === "Not authenticated") {
-                        router.push(lp("/login?callback=/checkout"));
+            // 2. Ensure Shipping Method is selected and SYNCED
+            if (!selectedShippingMethodCode) {
+                if (shippingMethods.length > 0) {
+                    const method = shippingMethods.find(m =>
+                        shippingType === "pickup" ? m.code.includes("pickup") : !m.code.includes("pickup")
+                    ) || shippingMethods[0];
+                    setSelectedShippingMethodCode(method.code);
+                    try {
+                        await setShippingMethod(method.carrierCode, method.methodCode);
+                    } catch (err: any) {
+                        const msg = err?.message || t("checkout.shippingMethodUpdateFailed");
+                        console.error("Auto-repair shipping method failed:", msg);
+                        toast.error(msg);
+                        document.getElementById('step-3')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
                         return;
                     }
-                    // Server-side error (e.g. API permission issue) — log and continue;
-                    // placeOrder will surface the real error if the order also fails.
-                    console.warn("Address sync failed, continuing to place order:", msg);
-                    setSelectedAddressId(idToSet);
-                }
-            } else {
-                toast.error(t("checkout.selectShippingAddress"));
-                document.getElementById('step-1')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                return;
-            }
-        }
-
-        // 2. Ensure Shipping Method is selected and SYNCED
-        if (!selectedShippingMethodCode) {
-            if (shippingMethods.length > 0) {
-                const method = shippingMethods.find(m =>
-                    shippingType === "pickup" ? m.code.includes("pickup") : !m.code.includes("pickup")
-                ) || shippingMethods[0];
-                setSelectedShippingMethodCode(method.code);
-                try {
-                    await setShippingMethod(method.carrierCode, method.methodCode);
-                } catch (err: any) {
-                    const msg = err?.message || t("checkout.shippingMethodUpdateFailed");
-                    console.error("Auto-repair shipping method failed:", msg);
-                    toast.error(msg);
+                    toast.success(t("checkout.selectedShipping").replace("{0}", method.title));
+                } else {
+                    toast.error(t("checkout.selectShippingMethod"));
                     document.getElementById('step-3')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
                     return;
                 }
-                toast.success(t("checkout.selectedShipping").replace("{0}", method.title));
             } else {
-                toast.error(t("checkout.selectShippingMethod"));
-                document.getElementById('step-3')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                return;
+                // Re-sync to backend before placing order.
+                const method = shippingMethods.find(m => m.code === selectedShippingMethodCode);
+                if (method) {
+                    try {
+                        console.log("[handlePlaceOrder] syncing shipping method:", method.code);
+                        await setShippingMethod(method.carrierCode, method.methodCode);
+                    } catch (err: any) {
+                        const msg = err?.message || t("checkout.shippingMethodUpdateFailed");
+                        console.error("[handlePlaceOrder] shipping method sync failed:", msg);
+                        toast.error(msg);
+                        document.getElementById('step-3')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        return;
+                    }
+                }
             }
-        } else {
-            // Re-sync to backend before placing order.
-            const method = shippingMethods.find(m => m.code === selectedShippingMethodCode);
-            if (method) {
-                try {
-                    console.log("[handlePlaceOrder] syncing shipping method:", method.code);
-                    await setShippingMethod(method.carrierCode, method.methodCode);
-                } catch (err: any) {
-                    const msg = err?.message || t("checkout.shippingMethodUpdateFailed");
-                    console.error("[handlePlaceOrder] shipping method sync failed:", msg);
-                    toast.error(msg);
-                    document.getElementById('step-3')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+            if (shippingType === "pickup") {
+                if (!selectedWarehouseId) {
+                    toast.error(t("checkout.selectWarehouse"));
+                    document.getElementById('step-pickup')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    return;
+                }
+                if (!pickupName || !pickupId || !pickupMobile || !pickupDate || !pickupTime) {
+                    toast.error(t("checkout.fillPickupDetails"));
+                    setIsPickupFormOpen(true);
                     return;
                 }
             }
-        }
 
-        if (shippingType === "pickup") {
-            if (!selectedWarehouseId) {
-                toast.error(t("checkout.selectWarehouse"));
-                document.getElementById('step-pickup')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            if (uploadedPOs.length > 0 && !poNumber) {
+                toast.error(t("checkout.poNumberRequired"));
+                const element = document.getElementById('step-2');
+                element?.scrollIntoView({ behavior: 'smooth' });
                 return;
             }
-            if (!pickupName || !pickupId || !pickupMobile || !pickupDate || !pickupTime) {
-                toast.error(t("checkout.fillPickupDetails"));
-                setIsPickupFormOpen(true);
-                return;
-            }
-        }
 
-        if (uploadedPOs.length > 0 && !poNumber) {
-            toast.error(t("checkout.poNumberRequired"));
-            const element = document.getElementById('step-2');
-            element?.scrollIntoView({ behavior: 'smooth' });
-            return;
-        }
-
-        setIsPlacingOrder(true);
-        try {
-            // 2. Call Shipping Extras if Pickup
+            // 3. Call Shipping Extras if Pickup
             if (shippingType === "pickup") {
                 const year = pickupDate!.getFullYear();
                 const month = String(pickupDate!.getMonth() + 1).padStart(2, '0');
@@ -879,10 +877,7 @@ const CheckoutPageUI: React.FC = () => {
                 });
             }
 
-
-            // Commit PO number to Magento before placing order — the blur handler
-            // only fires if the user tabs/clicks away; placing order without blurring
-            // would otherwise silently drop the PO number.
+            // Commit PO number to Magento before placing order
             if (poNumber) {
                 try { await savePoNumber(poNumber); } catch { /* error already surfaced by the hook */ }
             }
@@ -897,10 +892,9 @@ const CheckoutPageUI: React.FC = () => {
                 comment: comment
             });
 
-            // 4. Handle Success
+            // Handle Success
             toast.success(t("common.success"));
 
-            // Normalize: API may return a plain value or an object with various field names
             const orderId = typeof result === 'object' && result !== null
                 ? (result.order_id ?? result.entity_id ?? result.increment_id ?? result)
                 : result;
@@ -917,13 +911,9 @@ const CheckoutPageUI: React.FC = () => {
             };
 
             localStorage.setItem('last_order_summary', JSON.stringify(orderSummary));
-            // Order placed — clear upload type-markers so the next checkout starts clean.
             try { localStorage.removeItem('checkout_pc_file_names'); } catch { /* ignore */ }
 
-            // Set flag so the empty-cart guard does not redirect to /cart while we navigate to success
             isCompletingOrderRef.current = true;
-
-            // Clear cart after successful order
             try { await clearCart(); } catch { /* cart will refresh on next visit */ }
 
             router.push(lp(`/checkout/success?order_id=${orderId}`));
@@ -932,6 +922,7 @@ const CheckoutPageUI: React.FC = () => {
             toast.error(error.message || t("checkout.placeOrderFailed"));
         } finally {
             setIsPlacingOrder(false);
+            unregisterOverlay("place-order");
         }
     };
 
@@ -1146,6 +1137,7 @@ const CheckoutPageUI: React.FC = () => {
     const handleAddNewAddress = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsAddingAddress(true);
+        registerOverlay("add-address");
         try {
             const addressData: any = {
                 firstname: newAddress.firstname,
@@ -1175,7 +1167,6 @@ const CheckoutPageUI: React.FC = () => {
                 region_ship_to_party: "",
                 store_view: "",
             });
-            // Automatically select the new address
             if (result && result.id) {
                 handleAddressSelect(result.id.toString());
             }
@@ -1183,6 +1174,7 @@ const CheckoutPageUI: React.FC = () => {
             toast.error(error.message || t("addressBook.addAddressFailed"));
         } finally {
             setIsAddingAddress(false);
+            unregisterOverlay("add-address");
         }
     };
     // Include `cart === null` so the initial mount (before the cart fetch
@@ -1249,8 +1241,8 @@ const CheckoutPageUI: React.FC = () => {
     const dtGrand = (dtGrandFromApi != null && dtGrandFromApi > 0)
         ? dtGrandFromApi
         : dtSubtotal > 0
-        ? dtSubtotal + dtTax + dtShipping - dtDiscount
-        : cartGrandTotal;
+            ? dtSubtotal + dtTax + dtShipping - dtDiscount
+            : cartGrandTotal;
 
     const displayTotals = {
         subtotal: dtSubtotal,
@@ -1581,88 +1573,91 @@ const CheckoutPageUI: React.FC = () => {
                         <div className="bg-white border border-[#ddd] rounded-sm transition-all duration-300">
                             <SectionHeader title={t("m.po-number")} step={2} />
                             <div className="p-4">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 items-end">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 items-end">
 
-                                <div className="space-y-0">
-                                    <label className="text-label font-bold text-black/90 uppercase tracking-widest mb-2 block">{t("m.po-number")}</label>
-                                    <input
-                                        type="text"
-                                        className="w-full px-4 py-2.5 text-sm font-medium text-black bg-white border border-gray-200 rounded focus:border-primary focus:outline-none transition-all placeholder:text-black/40 placeholder:font-normal"
-                                        value={poNumber}
-                                        onChange={(e) => setPoNumber(e.target.value)}
-                                        onBlur={handlePoNumberBlur}
-                                        placeholder={t("m.po-number")}
-                                    />
-                                    {uploadedPOs.length > 0 && (
-                                        <div className="flex flex-wrap gap-2">
-                                            {/* We will hide these as they are now shown in the Upload PO section as per image */}
-                                        </div>
-                                    )}
-                                </div>
-
-                                <div className="border border-gray-200 rounded focus:border-primary relative">
-                                    <div
-                                        className="px-4 py-2.5 flex items-center justify-between cursor-pointer hover:bg-white transition-colors"
-                                        onClick={() => setIsPoUploadOpen(!isPoUploadOpen)}
-                                    >
-                                        <span className="text-body-lg font-semibold text-black capitalize select-none">{t("m.upload-file")}</span>
-                                        <ChevronDown
-                                            size={18}
-                                            className={`text-black/50 transition-transform duration-300 ${isPoUploadOpen ? "rotate-180" : ""}`}
+                                    <div className="space-y-0">
+                                        <label className="text-label font-bold text-black/90 uppercase tracking-widest mb-2 block">{t("m.po-number")}</label>
+                                        <input
+                                            type="text"
+                                            className="w-full px-4 py-2.5 text-sm font-medium text-black bg-white border border-gray-200 rounded focus:border-primary focus:outline-none transition-all placeholder:text-black/40 placeholder:font-normal"
+                                            value={poNumber}
+                                            onChange={(e) => setPoNumber(e.target.value)}
+                                            onBlur={handlePoNumberBlur}
+                                            placeholder={t("m.po-number")}
                                         />
+                                        {uploadedPOs.length > 0 && (
+                                            <div className="flex flex-wrap gap-2">
+                                                {/* We will hide these as they are now shown in the Upload PO section as per image */}
+                                            </div>
+                                        )}
                                     </div>
-                                    {isPoUploadOpen && (
-                                        <div className="p-2 md:p-4 bg-white space-y-3 absolute left-0 top-full w-full border border-[#ddd] rounded-b-lg select-none z-[10]">
-                                            {/* Drop Area */}
-                                            <div
-                                                ref={poDropZoneRef}
-                                                className={`relative group p-4 md:p-8 border-2 border-dashed rounded-sm transition-all duration-300 flex flex-col items-center justify-center gap-2 md:gap-4 cursor-pointer
-                                                    ${dragActive ? "border-primary bg-primary/30 scale-[1.01]" : "border-border bg-gray-50/30 hover:bg-white hover:border-gray-300"}`}
-                                                onClick={() => poUploadRef.current?.click()}
-                                            >
-                                                <p className="text-sm md:text-lg text-black font-medium text-center">{t("m.drop-files-here")}</p>
-                                                <p className="text-xs text-black/60 text-center break-all leading-relaxed">
-                                                    {t("m.allowed-file-types")} : jpg, jpeg, png, zip, rar, docx, doc, pdf, xls, xlsx, csv, msg
-                                                </p>
-                                                <input
-                                                    type="file"
-                                                    className="hidden"
-                                                    ref={poUploadRef}
-                                                    onChange={handleFileUpload}
-                                                    accept=".jpg,.jpeg,.png,.zip,.rar,.docx,.doc,.pdf,.xls,.xlsx,.csv,.msg"
-                                                    multiple
-                                                />
-                                            </div>
 
-                                            {/* Files List */}
-                                            <div className="flex flex-col gap-2">
-                                                {uploadedPOs.map((po, idx) => (
-                                                    <div key={idx} className="flex w-full border border-border rounded-sm overflow-hidden shadow-sm bg-white">
-                                                        <div className="px-3 md:px-5 py-2.5 flex-1 flex items-center min-w-0">
-                                                            <span className="text-sm font-semibold text-black truncate">
-                                                                {po.fileName}
-                                                            </span>
-                                                        </div>
-                                                        <button
-                                                            onClick={() => handleDeletePo(po.fileName, po.backendRef)}
-                                                            className="bg-red-50 text-red-600 px-3 md:px-5 py-2.5 text-xs font-bold uppercase tracking-wider transition-all hover:bg-red-600 hover:text-white border-l border-border active:scale-95 flex-shrink-0"
-                                                            disabled={isUploading}
-                                                        >
-                                                            {t("m.remove")}
-                                                        </button>
-                                                    </div>
-                                                ))}
-                                            </div>
+                                    <div className="border border-gray-200 rounded focus:border-primary relative">
+                                        <div
+                                            className="px-4 py-2.5 flex items-center justify-between cursor-pointer hover:bg-white transition-colors"
+                                            onClick={() => setIsPoUploadOpen(!isPoUploadOpen)}
+                                        >
+                                            <span className="text-body-lg font-semibold text-black capitalize select-none">{t("m.upload-file")}</span>
+                                            <ChevronDown
+                                                size={18}
+                                                className={`text-black/50 transition-transform duration-300 ${isPoUploadOpen ? "rotate-180" : ""}`}
+                                            />
                                         </div>
-                                    )}
-                                </div>
+                                        {isPoUploadOpen && (
+                                            <div className="p-2 md:p-4 bg-white space-y-4 absolute left-0 top-full w-full border border-[#ddd] rounded-b-lg select-none z-[10]">
+                                                {/* Drop Area */}
+                                                <div
+                                                    className={`relative group p-8 border-2 border-dashed rounded-sm transition-all duration-300 flex flex-col items-center justify-center gap-4 cursor-pointer
+                                                    ${dragActive ? "border-primary bg-primary/30 scale-[1.01]" : "border-border bg-gray-50/30 hover:bg-white hover:border-gray-300"}`}
+                                                    onDragEnter={handleDrag}
+                                                    onDragLeave={handleDrag}
+                                                    onDragOver={handleDrag}
+                                                    onDrop={handleDrop}
+                                                    onClick={() => poUploadRef.current?.click()}
+                                                >
+                                                    <p className="text-[18px] text-black font-medium mb-4">{t("m.drop-files-here")}</p>
+                                                    <p className="text-xs md:text-body-lg text-black">
+                                                        {t("m.allowed-file-types")} : <span className="text-black">jpg,jpeg,png,zip,rar,docx,doc,pdf,xls,xlsx,csv,msg</span>
+                                                    </p>
+                                                    <input
+                                                        type="file"
+                                                        className="hidden"
+                                                        ref={poUploadRef}
+                                                        onChange={handleFileUpload}
+                                                        accept=".jpg,.jpeg,.png,.zip,.rar,.docx,.doc,.pdf,.xls,.xlsx,.csv,.msg"
+                                                        multiple
+                                                    />
+                                                </div>
+
+                                                {/* Files List - Image Style */}
+                                                <div className="flex flex-wrap gap-x-4 gap-y-3">
+                                                    {uploadedPOs.map((po, idx) => (
+                                                        <div key={idx} className="flex border border-border rounded-sm overflow-hidden group shadow-sm bg-white">
+                                                            <div className="px-6 py-3 flex-1 flex items-center min-w-0">
+                                                                <span className="text-body font-bold text-black truncate ltr:mr-2 rtl:ml-2">
+                                                                    {po.fileName}
+                                                                </span>
+                                                            </div>
+                                                            <button
+                                                                onClick={() => handleDeletePo(po.fileName, po.backendRef)}
+                                                                className="bg-red-50 text-red-600 px-6 py-3 text-label font-bold uppercase tracking-widest transition-all hover:bg-red-600 hover:text-white border-l border-border active:scale-95"
+                                                                disabled={isUploading}
+                                                            >
+                                                                {t("m.remove")}
+                                                            </button>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
 
 
                             </div>
                         </div>
 
-                   
+
 
                         <div className="bg-white border border-[#ddd] rounded-sm overflow-hidden" id="step-3">
                             <SectionHeader title={t("checkout.shippingMethod")} step={3} />
@@ -2013,7 +2008,7 @@ const CheckoutPageUI: React.FC = () => {
                                 </div>
                             </div>
                         </div>
-                        
+
                     </div>
 
                     {/* ═══════════ Right Column (Order Summary) ═══════════ */}
@@ -2064,22 +2059,22 @@ const CheckoutPageUI: React.FC = () => {
                                                         {item.name}
                                                     </h4>
                                                     <div className="flex items-center gap-3">
-                                                    <div className="flex items-center gap-1 text-body">
-                                                        <span className="font-semibold text-black">{t("m.qty")} :</span>
-                                                        <input
-                                                            type="number"
-                                                            min="1"
-                                                            value={item.qty}
-                                                            onChange={(e) => {
-                                                                const val = parseInt(e.target.value);
-                                                                if (val > 0) updateCartItem(item.item_id, val);
-                                                            }}
-                                                            className="w-10 h-7 border border-[#ddd] rounded-sm text-center text-body-sm font-bold focus:outline-none focus:border-primary ml-1 bg-gray-50/50"
-                                                        />
-                                                    </div>
-                                                    <div className="text-sm font-semibold text-black price">
-                                                        <Price amount={item.row_total} />
-                                                    </div>
+                                                        <div className="flex items-center gap-1 text-body">
+                                                            <span className="font-semibold text-black">{t("m.qty")} :</span>
+                                                            <input
+                                                                type="number"
+                                                                min="1"
+                                                                value={item.qty}
+                                                                onChange={(e) => {
+                                                                    const val = parseInt(e.target.value);
+                                                                    if (val > 0) updateCartItem(item.item_id, val);
+                                                                }}
+                                                                className="w-10 h-7 border border-[#ddd] rounded-sm text-center text-body-sm font-bold focus:outline-none focus:border-primary ml-1 bg-gray-50/50"
+                                                            />
+                                                        </div>
+                                                        <div className="text-sm font-semibold text-black price">
+                                                            <Price amount={item.row_total} />
+                                                        </div>
                                                     </div>
 
                                                 </div>
@@ -2159,13 +2154,14 @@ const CheckoutPageUI: React.FC = () => {
                                             }`}
                                     >
                                         {isPlacingOrder ? (
-                                            <>
-                                                <span className="animate-pulse opacity-70">{t("common.placeOrder")}</span>
-                                            </>
+                                            <span className="flex items-center justify-center gap-2">
+                                                <ButtonSpinner size={16} />
+                                                <span className="opacity-70">{t("common.placeOrder")}</span>
+                                            </span>
                                         ) : (
                                             <>
                                                 {t("common.placeOrder")}
-                                               <span className="hidden xl:inline"> »</span>
+                                                <span className="hidden xl:inline"> »</span>
                                             </>
                                         )}
                                     </button>

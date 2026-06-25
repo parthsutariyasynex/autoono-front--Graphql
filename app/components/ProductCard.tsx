@@ -6,6 +6,7 @@ import Link from "next/link";
 import { ShoppingCart, Star, Info, Check } from "lucide-react";
 import Price from "./Price";
 import { useTranslation } from "@/hooks/useTranslation";
+import { ButtonSpinner } from "@/components/GlobalLoadingOverlay";
 
 export function stockColorClass(color?: string) {
     const c = (color || "").toLowerCase();
@@ -113,7 +114,9 @@ function ProductCardImpl({
                                 >
                                     {isJustAdded
                                         ? <><Check size={14} strokeWidth={3} />{t("favorites.cartAdded")}</>
-                                        : <ShoppingCart size={14} strokeWidth={2.5} className={isAdding ? "opacity-40" : ""} />}
+                                        : isAdding
+                                            ? <ButtonSpinner size={14} />
+                                            : <ShoppingCart size={14} strokeWidth={2.5} />}
                                 </button>
                             ) : (
                                 <button
@@ -193,7 +196,9 @@ function ProductCardImpl({
                                 <button onClick={() => onAddToCart(product)} disabled={isAdding} className={`w-8 h-8 rounded-sm flex items-center justify-center shadow-md transition-all cursor-pointer ${isJustAdded ? "bg-green-500 text-white" : "bg-primary text-black"}`}>
                                     {isJustAdded
                                         ? <Check size={15} strokeWidth={3} />
-                                        : <ShoppingCart size={15} strokeWidth={2.5} className={isAdding ? "opacity-40" : ""} />}
+                                        : isAdding
+                                            ? <ButtonSpinner size={15} />
+                                            : <ShoppingCart size={15} strokeWidth={2.5} />}
                                 </button>
                             ) : (
                                 <button onClick={() => onInquiry(product)} className="w-8 h-8 bg-primary text-black rounded-sm flex items-center justify-center shadow-md active:scale-95 cursor-pointer">

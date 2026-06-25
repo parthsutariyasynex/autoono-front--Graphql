@@ -13,6 +13,7 @@ import { NextAuthProvider } from "@/components/providers/NextAuthProvider";
 import { getServerSession } from "@/lib/getServerSession";
 import DirectionSync from "@/app/components/DirectionSync";
 import PriceIconObserver from "@/app/components/PriceIconObserver";
+import { GlobalLoadingProvider } from "@/components/GlobalLoadingOverlay";
 import {
   localeDirection,
   isValidLocale,
@@ -101,6 +102,7 @@ export default async function RootLayout({
               <NextAuthProvider session={session}>
                 <CartProvider>
                   <GiftProvider>
+                    <GlobalLoadingProvider>
                     <DirectionSync />
                     <PriceIconObserver />
                     {/* <Toaster position="top-right" reverseOrder={false} /> */}
@@ -113,6 +115,7 @@ export default async function RootLayout({
                     <ProtectedLayout>
                       {children}
                     </ProtectedLayout>
+                    </GlobalLoadingProvider>
                   </GiftProvider>
                 </CartProvider>
               </NextAuthProvider>

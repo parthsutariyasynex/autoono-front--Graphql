@@ -10,6 +10,7 @@ import { toast } from "react-hot-toast";
 import Price from "../components/Price";
 import { redirectToLogin } from "@/utils/helpers";
 import { api, getClientStoreCode } from "@/lib/api/api-client";
+import { useGlobalLoading } from "@/components/GlobalLoadingOverlay";
 
 interface QuickOrderItem {
     sku: string;
@@ -24,6 +25,7 @@ export default function QuickOrderPage() {
     const { t, isRtl } = useTranslation();
     const lp = useLocalePath();
     const { addToCart, refetchCart } = useCart();
+    const { register: registerOverlay, unregister: unregisterOverlay } = useGlobalLoading();
     const [loading, setLoading] = useState(false);
     const [searchTerm, setSearchTerm] = useState("");
     const [searchResults, setSearchResults] = useState<any[]>([]);
@@ -300,6 +302,7 @@ export default function QuickOrderPage() {
             return;
         }
 
+        registerOverlay("quick-order");
         setLoading(true);
         const toastId = toast.loading(`${t("quickOrder.processing")} ${file.name}...`);
 
@@ -355,6 +358,7 @@ export default function QuickOrderPage() {
             toast.error(err || t("quickOrder.uploadError"), { id: toastId });
         } finally {
             setLoading(false);
+            unregisterOverlay("quick-order");
         }
     };
 
@@ -364,6 +368,7 @@ export default function QuickOrderPage() {
             return;
         }
 
+        registerOverlay("quick-order");
         setLoading(true);
         const toastId = toast.loading(t("quickOrder.addingToCart"));
 
@@ -384,6 +389,7 @@ export default function QuickOrderPage() {
             router.push(lp("/cart"));
         } finally {
             setLoading(false);
+            unregisterOverlay("quick-order");
         }
     };
 
@@ -393,6 +399,7 @@ export default function QuickOrderPage() {
             return;
         }
 
+        registerOverlay("quick-order");
         setLoading(true);
         const toastId = toast.loading(t("quickOrder.preparingCheckout"));
         try {
@@ -412,6 +419,7 @@ export default function QuickOrderPage() {
             toast.error(err || t("quickOrder.checkoutFailed"), { id: toastId });
         } finally {
             setLoading(false);
+            unregisterOverlay("quick-order");
         }
     };
 

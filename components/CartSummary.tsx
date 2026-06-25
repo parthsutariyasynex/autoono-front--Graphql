@@ -9,6 +9,8 @@ import { X } from "lucide-react";
 import Price from "@/app/components/Price";
 import { useGift } from "@/modules/cart/context/GiftContext";
 import { useCart } from "@/modules/cart/hooks/useCart";
+import { useAction } from "@/lib/hooks/useAction";
+import { ButtonSpinner } from "@/components/GlobalLoadingOverlay";
 
 interface CartSummaryProps {
     subtotal: number;
@@ -32,13 +34,12 @@ const CartSummary: React.FC<CartSummaryProps> = ({ subtotal, taxAmount, taxLabel
     const activeCoupons = appliedCoupons ?? [];
 
     const [couponInput, setCouponInput] = useState("");
-    const [couponBusy, setCouponBusy] = useState(false);
+    const { loading: couponBusy, run: runCoupon } = useAction("coupon");
 
     const applyCoupon = async () => {
         const code = couponInput.trim();
         if (!code) return;
-        setCouponBusy(true);
-        try {
+        await runCoupon(async () => {
             const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
             const res = await fetch("/api/kleverapi/cart/apply-coupon", {
                 method: "POST",
@@ -56,16 +57,11 @@ const CartSummary: React.FC<CartSummaryProps> = ({ subtotal, taxAmount, taxLabel
             toast.success(t("m.coupon-applied") || "Coupon applied");
             setCouponInput("");
             await refetchCart();
-        } catch {
-            toast.error(t("m.coupon-apply-failed") || "Coupon could not be applied");
-        } finally {
-            setCouponBusy(false);
-        }
+        });
     };
 
     const removeCoupon = async () => {
-        setCouponBusy(true);
-        try {
+        await runCoupon(async () => {
             const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
             const res = await fetch("/api/kleverapi/cart/remove-coupon", {
                 method: "POST",
@@ -82,11 +78,7 @@ const CartSummary: React.FC<CartSummaryProps> = ({ subtotal, taxAmount, taxLabel
             }
             toast.success(t("m.coupon-removed") || "Coupon removed");
             await refetchCart();
-        } catch {
-            toast.error(t("m.coupon-remove-failed") || "Could not remove coupon");
-        } finally {
-            setCouponBusy(false);
-        }
+        });
     };
 
     return (
@@ -199,7 +191,7 @@ const CartSummary: React.FC<CartSummaryProps> = ({ subtotal, taxAmount, taxLabel
                                 disabled={couponBusy || !couponInput.trim()}
                                 className="px-5 bg-black text-white text-xs font-[700] uppercase tracking-wider hover:bg-gray-800 transition-all cursor-pointer rounded flex items-center justify-center shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
                             >
-                                {couponBusy ? "..." : (t("m.apply") || "Apply")}
+                                {couponBusy ? <ButtonSpinner size={12} /> : (t("m.apply") || "Apply")}
                             </button>
                         </form>
                     )}

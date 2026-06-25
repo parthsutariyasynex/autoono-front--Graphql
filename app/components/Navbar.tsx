@@ -962,10 +962,13 @@ export default function Navbar() {
           </div>
         </nav>
 
-        {/* ── MOBILE DRAWER — only below md, hamburger is hidden at md+ ── */}
-        {/* Fixed positioning + backdrop + own scroll so the page content below
-            isn't visible through the menu and the page doesn't scroll behind it. */}
-        {isMenuOpen && (
+      </div>
+
+      {/* ── MOBILE DRAWER — rendered outside .main-header so that the sticky
+          header's CSS animation (fadeInDown transform) does not make .main-header
+          the containing block for these fixed children, which would break their
+          top/bottom offsets relative to the viewport. ── */}
+      {isMenuOpen && (
           <>
             <div
               className="md:hidden fixed inset-0 top-[56px] sm:top-[64px] bg-black/40 z-30 animate-in fade-in duration-200"
@@ -1123,7 +1126,6 @@ export default function Navbar() {
           </>
         )}
 
-      </div>
       {cartMounted && <CartDrawer isOpen={isCartOpen} onClose={() => setIsCartOpen(false)} />}
       {notifMounted && <NotificationDrawer isOpen={isNotificationOpen} onClose={() => setIsNotificationOpen(false)} />}
       {searchMounted && <SearchPopup isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} />}

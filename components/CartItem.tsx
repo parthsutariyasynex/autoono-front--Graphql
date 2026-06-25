@@ -5,10 +5,10 @@ import { X, Minus, Plus } from "lucide-react";
 import Link from "next/link";
 import { CartItem as CartItemType } from "@/modules/cart/hooks/useCart";
 import Price from "@/app/components/Price";
-
-
 import toast from "react-hot-toast";
 import { useTranslation } from "@/hooks/useTranslation";
+import { useAction } from "@/lib/hooks/useAction";
+import { ButtonSpinner } from "@/components/GlobalLoadingOverlay";
 
 interface CartItemProps {
     item: CartItemType;
@@ -21,6 +21,7 @@ interface CartItemProps {
 const CartItem: React.FC<CartItemProps> = ({ item, currencyCode, onUpdateQty, onRemove, onEnter }) => {
     const { t } = useTranslation();
     const [localQty, setLocalQty] = useState(item.qty);
+    const { loading: isRemoving, run: runRemove } = useAction(`remove-item-${item.item_id}`);
 
     const handleQtyChange = (newQty: number) => {
         if (newQty < 1) return;
@@ -37,14 +38,19 @@ const CartItem: React.FC<CartItemProps> = ({ item, currencyCode, onUpdateQty, on
         <div className="relative bg-white border border-[#ddd] rounded-sm hover:shadow-xl hover:shadow-gray-100/50 transition-all duration-500 group/item">
             {/* Remove Button */}
             <button
-                onClick={() => {
-                    onRemove(item.item_id);
-                }}
-                className="absolute top-0 ltr:right-0 rtl:left-0 w-6 h-6 flex items-center justify-center bg-gray-50 text-black/60 rounded-full transition-all z-10 cursor-pointer hover:bg-dangerBright hover:text-black hover:scale-110 active:scale-95 opacity-100 lg:opacity-0 lg:group-hover/item:opacity-100 shadow-sm border border-gray-100"
+                onClick={() => runRemove(async () => { onRemove(item.item_id); })}
+                disabled={isRemoving}
+                className="absolute top-0 ltr:right-0 rtl:left-0 w-6 h-6 flex items-center justify-center bg-gray-50 text-black/60 rounded-full transition-all z-10 cursor-pointer hover:bg-dangerBright hover:text-black hover:scale-110 active:scale-95 opacity-100 lg:opacity-0 lg:group-hover/item:opacity-100 shadow-sm border border-gray-100 disabled:opacity-50"
                 title={t("m.remove-item")}
             >
-                <X size={12} strokeWidth={3.5} className="lg:hidden" />
-                <X size={10} strokeWidth={4} className="hidden lg:block" />
+                {isRemoving ? (
+                    <ButtonSpinner size={10} />
+                ) : (
+                    <>
+                        <X size={12} strokeWidth={3.5} className="lg:hidden" />
+                        <X size={10} strokeWidth={4} className="hidden lg:block" />
+                    </>
+                )}
             </button>
 
             {/* Mobile + tablet card layout — below lg (matches CartPage's lg grid switch) */}

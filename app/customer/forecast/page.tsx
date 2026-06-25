@@ -11,6 +11,7 @@ import Sidebar from "@/components/Sidebar";
 import { useSession } from "next-auth/react";
 import { redirectToLogin } from "@/utils/helpers";
 import PortalDropdown from "@/components/PortalDropdown";
+import { useAction } from "@/lib/hooks/useAction";
 
 /**
  * Proper data structures for the Forecast API
@@ -51,7 +52,7 @@ export default function MyForecastPage() {
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
     const [forecasts, setForecasts] = useState<ForecastFile[]>([]);
     const [loadingForecasts, setLoadingForecasts] = useState(true);
-    const [uploading, setUploading] = useState(false);
+    const { loading: uploading, run: runUpload } = useAction("forecast-upload");
 
     // Pagination states
     const [currentPage, setCurrentPage] = useState(1);
@@ -151,30 +152,29 @@ export default function MyForecastPage() {
             return;
         }
 
-        try {
-            setUploading(true);
-            const formData = new FormData();
-            formData.append('file', selectedFile);
+        await runUpload(async () => {
+            try {
+                const formData = new FormData();
+                formData.append('file', selectedFile);
 
-            const response = await fetch('/api/kleverapi/forecast', {
-                method: 'POST',
-                headers: { 'Authorization': `Bearer ${token}` },
-                body: formData
-            });
+                const response = await fetch('/api/kleverapi/forecast', {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}` },
+                    body: formData
+                });
 
-            if (response.ok) {
-                alert(t("forecast.uploadSuccess"));
-                setSelectedFile(null);
-                pullForecasts(currentPage, pageSize);
-            } else {
-                alert(t("forecast.uploadFailed"));
+                if (response.ok) {
+                    alert(t("forecast.uploadSuccess"));
+                    setSelectedFile(null);
+                    pullForecasts(currentPage, pageSize);
+                } else {
+                    alert(t("forecast.uploadFailed"));
+                }
+            } catch (err) {
+                console.error("[Forecast Upload Error]:", err);
+                alert(t("forecast.uploadError"));
             }
-        } catch (err) {
-            console.error("[Forecast Upload Error]:", err);
-            alert(t("forecast.uploadError"));
-        } finally {
-            setUploading(false);
-        }
+        });
     };
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {

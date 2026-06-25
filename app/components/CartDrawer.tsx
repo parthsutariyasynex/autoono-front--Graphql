@@ -8,11 +8,11 @@ import { formatPrice } from "@/utils/helpers";
 import Price from "./Price";
 import { useTranslation } from "@/hooks/useTranslation";
 import { useLocalePath } from "@/hooks/useLocalePath";
-
-
 import Drawer from "./Drawer";
 import Popup from "./Popup";
 import toast from "react-hot-toast";
+import { useAction } from "@/lib/hooks/useAction";
+import { ButtonSpinner } from "@/components/GlobalLoadingOverlay";
 
 interface CartDrawerProps {
     isOpen: boolean;
@@ -26,7 +26,7 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
 
     // Confirmation State
     const [confirmId, setConfirmId] = useState<number | null>(null);
-    const [isRemoving, setIsRemoving] = useState(false);
+    const { loading: isRemoving, run: runRemove } = useAction("cart-drawer-remove");
 
     // Sync with cart-updated events
     useEffect(() => {
@@ -37,16 +37,15 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
 
     const handleConfirmDelete = async () => {
         if (!confirmId) return;
-        setIsRemoving(true);
-        try {
-            await removeFromCart(confirmId);
-            toast.success(t("cart.itemRemoved"));
-            setConfirmId(null);
-        } catch (error) {
-            toast.error(t("cart.error"));
-        } finally {
-            setIsRemoving(false);
-        }
+        await runRemove(async () => {
+            try {
+                await removeFromCart(confirmId);
+                toast.success(t("cart.itemRemoved"));
+                setConfirmId(null);
+            } catch {
+                toast.error(t("cart.error"));
+            }
+        });
     };
 
     const itemToDelete = cart?.items.find(i => i.item_id === confirmId);
@@ -215,9 +214,9 @@ export default function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
                         <button
                             onClick={handleConfirmDelete}
                             disabled={isRemoving}
-                            className="px-10 py-2.5 bg-primary text-black font-semibold uppercase tracking-widest text-body-sm hover:bg-primaryHover transition-all rounded-sm min-w-[100px] flex items-center justify-center gap-2"
+                            className="px-10 py-2.5 bg-primary text-black font-semibold uppercase tracking-widest text-body-sm hover:bg-primaryHover transition-all rounded-sm min-w-[100px] flex items-center justify-center gap-2 disabled:opacity-60"
                         >
-                            {t("common.ok")}
+                            {isRemoving ? <ButtonSpinner size={14} /> : t("common.ok")}
                         </button>
                     </div>
                 </div>

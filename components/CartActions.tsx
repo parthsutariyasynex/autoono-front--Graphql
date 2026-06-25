@@ -4,6 +4,7 @@ import { useTranslation } from "@/hooks/useTranslation";
 
 import React from "react";
 import Link from "next/link";
+import { ButtonSpinner } from "@/components/GlobalLoadingOverlay";
 
 
 interface CartActionsProps {
@@ -11,9 +12,10 @@ interface CartActionsProps {
     onClearCart: () => void;
     onUpdateCart: () => void;
     isClearingCart?: boolean;
+    isUpdatingCart?: boolean;
 }
 
-const CartActions: React.FC<CartActionsProps> = ({ itemsCount, onClearCart, onUpdateCart, isClearingCart }) => {
+const CartActions: React.FC<CartActionsProps> = ({ itemsCount, onClearCart, onUpdateCart, isClearingCart, isUpdatingCart }) => {
     const lp = useLocalePath();
     const { t } = useTranslation();
     return (
@@ -30,14 +32,14 @@ const CartActions: React.FC<CartActionsProps> = ({ itemsCount, onClearCart, onUp
                     disabled={isClearingCart}
                     className="flex-1 md:flex-none whitespace-pre px-4 py-2 bg-white text-black text-[12px] font-bold uppercase tracking-[0.2em] hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-all border border-[#ddd] cursor-pointer rounded-sm shadow-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
-
-                    {t("cart.clearCart")}
+                    {isClearingCart ? <ButtonSpinner size={12} /> : t("cart.clearCart")}
                 </button>
                 <button
                     onClick={onUpdateCart}
-                    className="flex-1 md:flex-none whitespace-pre px-4 py-2 bg-primary text-[12px] font-bold uppercase tracking-[0.2em] hover:bg-black transition-all cursor-pointer rounded-sm shadow-md shadow-black/5"
+                    disabled={isUpdatingCart}
+                    className="flex-1 md:flex-none whitespace-pre px-4 py-2 bg-primary text-[12px] font-bold uppercase tracking-[0.2em] hover:bg-black transition-all cursor-pointer rounded-sm shadow-md shadow-black/5 disabled:opacity-60 flex items-center justify-center gap-2"
                 >
-                    {t("cart.updateCart")}
+                    {isUpdatingCart ? <ButtonSpinner size={12} /> : t("cart.updateCart")}
                 </button>
             </div>
 
