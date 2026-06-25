@@ -91,9 +91,14 @@ export default function Navbar() {
   useEffect(() => {
     setStoreCookie(document.cookie.match(/NEXT_STORE=([^;]+)/)?.[1] || "");
   }, [pathname]);
-  const currentStore = (STORE_CODE_RE.test(pathnameFirstSeg) || isValidLocale(pathnameFirstSeg))
-    ? pathnameFirstSeg
-    : (searchParams?.get("store") || (STORE_CODE_RE.test(storeCookie) ? storeCookie : "") || "");
+  // Scan ALL path segments for a warehouse store code — the URL may have a locale
+  // prefix (/en/ or /ar/) before the actual store code (/en/V101_en/lubricants).
+  // Reading only the first segment causes locale ("en"/"ar") to be mistaken for the store.
+  const warehousePathSeg = pathname?.split("/").filter(seg => STORE_CODE_RE.test(seg))[0] || "";
+  const currentStore = warehousePathSeg
+    || searchParams?.get("store")
+    || (STORE_CODE_RE.test(storeCookie) ? storeCookie : "")
+    || "";
 
   // Strip locale or store-code prefix from a path for prefix-agnostic comparison.
   const stripPrefix = (path: string) => {
@@ -1093,7 +1098,11 @@ export default function Navbar() {
                     </div> */}
                     {/* Show selected store/warehouse name; fall back to language
                       name if no store is active. Click still toggles locale. */}
-                    {(currentStore && (storeName || currentStore)) || (locale === "en" ? "Arabic" : "English")}
+                    {currentStore
+                      ? (storeName && storeName !== currentStore
+                          ? storeName
+                          : currentStore.replace(/_(en|ar)$/i, ""))
+                      : (locale === "en" ? "Arabic" : "English")}
                   </Link>
 
                   {/* Search / Notifications / My Account moved to the mobile header
