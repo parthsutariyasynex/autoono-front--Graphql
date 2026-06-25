@@ -240,11 +240,13 @@ export default function QuickOrderPage() {
 
         try {
             const token = localStorage.getItem("token");
+            const storeCode = getClientStoreCode();
             const res = await fetch(`/api/kleverapi/quick-order/validate`, {
                 method: "POST",
                 headers: {
                     "Authorization": `Bearer ${token}`,
-                    "Content-Type": "application/json"
+                    "Content-Type": "application/json",
+                    ...(storeCode && { "x-store-code": storeCode }),
                 },
                 body: JSON.stringify({ items: validateItems })
             });
@@ -366,9 +368,10 @@ export default function QuickOrderPage() {
         const toastId = toast.loading(t("quickOrder.addingToCart"));
 
         try {
+            const storeCode = getClientStoreCode();
             const data = await api.post("/kleverapi/quick-order/add-to-cart", {
                 items: items.map(item => ({ sku: item.sku, qty: item.qty }))
-            });
+            }, { headers: storeCode ? { "x-store-code": storeCode } : {} });
 
             await refetchCart();
             toast.success(data?.message || t("quickOrder.addedToCart"), { id: toastId });
@@ -393,12 +396,13 @@ export default function QuickOrderPage() {
         setLoading(true);
         const toastId = toast.loading(t("quickOrder.preparingCheckout"));
         try {
+            const storeCode = getClientStoreCode();
             await api.post("/kleverapi/quick-order/checkout", {
                 items: items.map(item => ({
                     sku: item.sku,
                     qty: item.qty
                 }))
-            });
+            }, { headers: storeCode ? { "x-store-code": storeCode } : {} });
 
             await refetchCart();
             setItems([]);

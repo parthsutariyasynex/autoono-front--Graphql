@@ -30,10 +30,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "items[] is required" }, { status: 400 });
     }
 
+    const store = request.headers.get("x-store-code") || null;
+
     const data = await graphqlFetch<KleverQuickOrderCheckoutData>({
       query: KLEVER_QUICK_ORDER_CHECKOUT_MUTATION,
       variables: { items },
       token,
+      store,
       cache: "no-store",
     });
 

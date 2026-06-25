@@ -852,134 +852,134 @@ export default function AboutPage() {
 
     // Get Intro Paragraphs
     const getIntroParagraphs = () => {
-            if (!parsed?.intro) return [];
-            const cleanIntro = parsed?.intro
-                .replace(/^About Autoono\s+/i, "")
-                .replace(/^المقدمة عن الشركة\s+/, "")
-                .trim();
+        if (!parsed?.intro) return [];
+        const cleanIntro = parsed?.intro
+            .replace(/^About Autoono\s+/i, "")
+            .replace(/^المقدمة عن الشركة\s+/, "")
+            .trim();
 
-            // Magento sometimes drops the period at a logical paragraph boundary
-            // (e.g. "...energy production in 2022 Our commitment is to..."). Insert
-            // a paragraph break when a 4-digit year is followed by a capital word
-            // so the downstream block-split picks it up.
-            const preProcessed = cleanIntro.replace(
-                /(\d{4})\s+([A-Z][a-z])/g,
-                "$1\n\n$2"
-            );
+        // Magento sometimes drops the period at a logical paragraph boundary
+        // (e.g. "...energy production in 2022 Our commitment is to..."). Insert
+        // a paragraph break when a 4-digit year is followed by a capital word
+        // so the downstream block-split picks it up.
+        const preProcessed = cleanIntro.replace(
+            /(\d{4})\s+([A-Z][a-z])/g,
+            "$1\n\n$2"
+        );
 
-            // Split on blank-line paragraph breaks (real ones in source + inserted).
-            const blocks = preProcessed
-                .split(/\n\s*\n+/)
-                .map(p => p.replace(/\s+/g, " ").trim())
+        // Split on blank-line paragraph breaks (real ones in source + inserted).
+        const blocks = preProcessed
+            .split(/\n\s*\n+/)
+            .map(p => p.replace(/\s+/g, " ").trim())
+            .filter(Boolean);
+
+        // For English, within each block apply the live page's grouping:
+        //   para 1 = sentence 0
+        //   para 2 = sentences 1 + 2 combined
+        //   para 3+ = remaining sentences, one per paragraph
+        // For Arabic and short blocks, return one paragraph per sentence.
+        const result: string[] = [];
+        for (const block of blocks) {
+            const sentences = block
+                .split(/(?<=[.!?])\s+/)
+                .map(s => s.trim())
                 .filter(Boolean);
-
-            // For English, within each block apply the live page's grouping:
-            //   para 1 = sentence 0
-            //   para 2 = sentences 1 + 2 combined
-            //   para 3+ = remaining sentences, one per paragraph
-            // For Arabic and short blocks, return one paragraph per sentence.
-            const result: string[] = [];
-            for (const block of blocks) {
-                const sentences = block
-                    .split(/(?<=[.!?])\s+/)
-                    .map(s => s.trim())
-                    .filter(Boolean);
-                if (!isRtl && sentences.length >= 4) {
-                    result.push(sentences[0]);
-                    result.push(sentences.slice(1, 3).join(" "));
-                    result.push(...sentences.slice(3));
-                } else {
-                    result.push(...sentences);
-                }
+            if (!isRtl && sentences.length >= 4) {
+                result.push(sentences[0]);
+                result.push(sentences.slice(1, 3).join(" "));
+                result.push(...sentences.slice(3));
+            } else {
+                result.push(...sentences);
             }
-            return result;
-        };
+        }
+        return result;
+    };
 
     // Get Vision Items (paragraphs) — matches live grouping:
     //   sentences 0+1 combined, then each remaining sentence is its own paragraph.
     const getVisionItems = () => {
-            if (!parsed?.vision) return [];
-            const sentences = parsed?.vision
-                .split(/(?<=[.!?])\s+/)
-                .map(s => s.trim())
-                .filter(Boolean);
-            if (!isRtl && sentences.length >= 3) {
-                return [
-                    sentences[0] + " " + sentences[1],
-                    ...sentences.slice(2),
-                ];
-            }
-            return sentences;
-        };
+        if (!parsed?.vision) return [];
+        const sentences = parsed?.vision
+            .split(/(?<=[.!?])\s+/)
+            .map(s => s.trim())
+            .filter(Boolean);
+        if (!isRtl && sentences.length >= 3) {
+            return [
+                sentences[0] + " " + sentences[1],
+                ...sentences.slice(2),
+            ];
+        }
+        return sentences;
+    };
 
     // Get Product Items
     const getProductsList = () => {
-            if (!parsed?.products) return [];
-            if (isRtl) {
-                return parsed?.products.split(/(?<=\.)\s+/).map(s => s.replace(/\.$/, "").trim()).filter(Boolean);
-            } else {
-                const knownProducts = [
-                    "Automotive Lubricants",
-                    "Industrial Lubricants",
-                    "Marine Lubricants",
-                    "Greases",
-                    "Brake Fluids",
-                    "Coolants"
-                ];
-                const found: string[] = [];
-                knownProducts.forEach(kp => {
-                    if (parsed?.products.toLowerCase().includes(kp.toLowerCase())) {
-                        found.push(kp);
-                    }
-                });
-                if (found.length > 0) return found;
-                return parsed?.products.split(/(?=[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)/).map(s => s.trim()).filter(Boolean);
-            }
-        };
+        if (!parsed?.products) return [];
+        if (isRtl) {
+            return parsed?.products.split(/(?<=\.)\s+/).map(s => s.replace(/\.$/, "").trim()).filter(Boolean);
+        } else {
+            const knownProducts = [
+                "Automotive Lubricants",
+                "Industrial Lubricants",
+                "Marine Lubricants",
+                "Greases",
+                "Brake Fluids",
+                "Coolants"
+            ];
+            const found: string[] = [];
+            knownProducts.forEach(kp => {
+                if (parsed?.products.toLowerCase().includes(kp.toLowerCase())) {
+                    found.push(kp);
+                }
+            });
+            if (found.length > 0) return found;
+            return parsed?.products.split(/(?=[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)/).map(s => s.trim()).filter(Boolean);
+        }
+    };
 
     // Get Values List
     const getValuesList = () => {
-            if (!parsed?.values) return [];
-            if (isRtl) {
-                return parsed?.values.split(".").map(s => s.trim()).filter(Boolean);
-            } else {
-                const knownValues = [
-                    "Quality",
-                    "Service",
-                    "Trust",
-                    "Efficiency with continuous improvement",
-                    "Customer Centric"
-                ];
-                const found: string[] = [];
-                knownValues.forEach(kv => {
-                    if (parsed?.values.toLowerCase().includes(kv.toLowerCase())) {
-                        found.push(kv);
-                    }
-                });
-                if (found.length > 0) return found;
-                return parsed?.values.split(/\s{2,}/).map(s => s.trim()).filter(Boolean);
-            }
-        };
+        if (!parsed?.values) return [];
+        if (isRtl) {
+            return parsed?.values.split(".").map(s => s.trim()).filter(Boolean);
+        } else {
+            const knownValues = [
+                "Quality",
+                "Service",
+                "Trust",
+                "Efficiency with continuous improvement",
+                "Customer Centric"
+            ];
+            const found: string[] = [];
+            knownValues.forEach(kv => {
+                if (parsed?.values.toLowerCase().includes(kv.toLowerCase())) {
+                    found.push(kv);
+                }
+            });
+            if (found.length > 0) return found;
+            return parsed?.values.split(/\s{2,}/).map(s => s.trim()).filter(Boolean);
+        }
+    };
 
     // Get Branch Network Paragraphs — matches live grouping:
     //   para 1 = sentence 0
     //   para 2 = sentences 1 + 2 combined
     //   para 3+ = remaining sentences, one per paragraph
     const getNetworkParagraphs = () => {
-            if (!parsed?.network) return [];
-            const sentences = parsed?.network
-                .split(/(?<=[.!?])\s+/)
-                .map(s => s.trim())
-                .filter(Boolean);
-            if (!isRtl && sentences.length >= 3) {
-                return [
-                    sentences[0],
-                    sentences.slice(1, 3).join(" "),
-                    ...sentences.slice(3),
-                ];
-            }
-            return sentences;
-        };
+        if (!parsed?.network) return [];
+        const sentences = parsed?.network
+            .split(/(?<=[.!?])\s+/)
+            .map(s => s.trim())
+            .filter(Boolean);
+        if (!isRtl && sentences.length >= 3) {
+            return [
+                sentences[0],
+                sentences.slice(1, 3).join(" "),
+                ...sentences.slice(3),
+            ];
+        }
+        return sentences;
+    };
 
     const introParagraphs = getIntroParagraphs();
     const visionItems = getVisionItems();
@@ -1061,7 +1061,7 @@ export default function AboutPage() {
             </div>
 
             <div
-                className="max-w-[1170px] mx-auto px-3 py-10 sm:py-12 md:py-14"
+                className="max-w-[1170px] mx-auto"
                 dir={isRtl ? "rtl" : "ltr"}
             >
                 {isLoading ? (

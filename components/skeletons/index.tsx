@@ -587,7 +587,7 @@ export function OrderDetailSkeleton() {
       <div className="bg-white overflow-hidden">
         <div className="border-b border-gray-100">
           <Pulse className="h-5 w-24 rounded mb-2" />
-           <hr className="border-[#ddd] mb-3"/>
+          <hr className="border-[#ddd] mb-3" />
         </div>
         {Array.from({ length: 4 }).map((_, i) => (
           <CartItemSkeleton key={i} />
@@ -641,7 +641,7 @@ export function DashboardSkeleton() {
             <section key={sectionIdx}>
               <div className="flex flex-col">
                 <Pulse className="h-6 w-48 mb-3" />
-                <hr className="border-[#ddd] mb-6"/>
+                <hr className="border-[#ddd] mb-6" />
               </div>
               <div className="w-full xl:w-3/4 grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-6">
                 {Array.from({ length: 3 }).map((_, i) => (
@@ -1432,25 +1432,25 @@ export function AccountSkeleton() {
                 </div>
               </div>
             </div>
-          {/* SALES + BEHAVIOR row — xl:grid-cols-2 to match real my-account page */}
-          {Array.from({ length: 2 }).map((_, i) => (
-            <div key={i} className={card}>
-              <div className="bg-surfaceHover px-4 py-3 border-b border-gray-200">
-                <Pulse className="h-4 w-36 rounded" />
+            {/* SALES + BEHAVIOR row — xl:grid-cols-2 to match real my-account page */}
+            {Array.from({ length: 2 }).map((_, i) => (
+              <div key={i} className={card}>
+                <div className="bg-surfaceHover px-4 py-3 border-b border-gray-200">
+                  <Pulse className="h-4 w-36 rounded" />
+                </div>
+                <div className="p-3 md:p-5 space-y-2.5">
+                  <Pulse className="h-3.5 w-3/4 rounded" />
+                  <Pulse className="h-3.5 w-2/3 rounded" />
+                  <Pulse className="h-3.5 w-1/2 rounded" />
+                </div>
               </div>
-              <div className="p-3 md:p-5 space-y-2.5">
-                <Pulse className="h-3.5 w-3/4 rounded" />
-                <Pulse className="h-3.5 w-2/3 rounded" />
-                <Pulse className="h-3.5 w-1/2 rounded" />
-              </div>
-            </div>
-          ))}
+            ))}
 
           </div>
         </div>
 
-        
- 
+
+
 
         {/* CREDIT LIMIT */}
         <div className={card}>
@@ -1867,7 +1867,7 @@ export function AboutSkeleton({ hero = true }: { hero?: boolean } = {}) {
   const Body = (
     <div className="space-y-3 md:space-y-6 animate-pulse">
       {/* Title — centered, uppercase */}
-      <div className="flex justify-center mb-10 sm:mb-14">
+      <div className="flex justify-center my-10 sm:my-14">
         <div className="h-9 sm:h-[45px] md:h-12 bg-gray-200 rounded w-56 sm:w-64 md:w-72" />
       </div>
 

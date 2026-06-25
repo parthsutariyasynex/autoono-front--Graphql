@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getRequestToken } from "@/lib/api/auth-helper";
+import { getLocaleFromRequest } from "@/lib/api/magento-url";
 import { KLEVER_QUICK_ORDER_VALIDATE_MUTATION } from "@/src/graphql/mutations";
 import type { KleverQuickOrderValidateData } from "@/src/graphql/types";
 import { graphqlFetch, isGraphQLRequestError } from "@/src/lib/graphqlFetch";
@@ -30,10 +31,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "items[] is required" }, { status: 400 });
     }
 
+    const store = request.headers.get("x-store-code") || getLocaleFromRequest(request);
+
     const data = await graphqlFetch<KleverQuickOrderValidateData>({
       query: KLEVER_QUICK_ORDER_VALIDATE_MUTATION,
       variables: { items },
       token,
+      store,
       cache: "no-store",
     });
 

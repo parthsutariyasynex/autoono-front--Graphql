@@ -30,19 +30,26 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "items[] is required" }, { status: 400 });
     }
 
+    const store = request.headers.get("x-store-code") || null;
+    console.log("[quick-order/add-to-cart] store:", store, "items:", items.length);
+
     const data = await graphqlFetch<KleverQuickOrderAddToCartData>({
       query: KLEVER_QUICK_ORDER_ADD_TO_CART_MUTATION,
       variables: { items },
       token,
+      store,
       cache: "no-store",
     });
 
+    console.log("[quick-order/add-to-cart] result:", JSON.stringify(data.kleverQuickOrderAddToCart));
     return NextResponse.json(data.kleverQuickOrderAddToCart);
   } catch (error) {
+    console.error("[quick-order/add-to-cart] error:", error);
     if (isGraphQLRequestError(error)) {
+      console.error("[quick-order/add-to-cart] GraphQL errors:", JSON.stringify((error as any).errors));
       return NextResponse.json(
-        { message: error.message, errors: error.errors },
-        { status: error.status >= 400 ? error.status : 500 },
+        { message: (error as any).message, errors: (error as any).errors },
+        { status: (error as any).status >= 400 ? (error as any).status : 500 },
       );
     }
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });

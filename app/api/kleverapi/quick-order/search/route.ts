@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getRequestToken } from "@/lib/api/auth-helper";
+import { getLocaleFromRequest } from "@/lib/api/magento-url";
 import { KLEVER_QUICK_ORDER_SEARCH_QUERY } from "@/src/graphql/queries";
 import type { KleverQuickOrderSearchData } from "@/src/graphql/types";
 import { graphqlFetch, isGraphQLRequestError } from "@/src/lib/graphqlFetch";
@@ -19,10 +20,13 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ items: [], total_count: 0 });
     }
 
+    const store = request.headers.get("x-store-code") || getLocaleFromRequest(request);
+
     const data = await graphqlFetch<KleverQuickOrderSearchData>({
       query: KLEVER_QUICK_ORDER_SEARCH_QUERY,
       variables: { query, pageSize },
       token,
+      store,
       cache: "no-store",
     });
 
