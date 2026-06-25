@@ -425,10 +425,11 @@ const CheckoutPageUI: React.FC = () => {
 
     const handlePaymentCommitmentUpload = async (e: React.ChangeEvent<HTMLInputElement> | React.DragEvent) => {
         let files: File[] = [];
-        if ("files" in e.target && e.target.files) {
-            files = Array.from(e.target.files);
-        } else if ("dataTransfer" in e && e.dataTransfer.files) {
-            files = Array.from(e.dataTransfer.files);
+        const anyE = e as any;
+        if (anyE.dataTransfer?.files?.length > 0) {
+            files = Array.from(anyE.dataTransfer.files as FileList);
+        } else if (anyE.target?.files?.length > 0) {
+            files = Array.from(anyE.target.files as FileList);
         }
         if (files.length === 0) return;
         const validFiles = files.filter(validateFile);
@@ -972,10 +973,11 @@ const CheckoutPageUI: React.FC = () => {
 
     const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement> | React.DragEvent) => {
         let files: File[] = [];
-        if ("files" in e.target && e.target.files) {
-            files = Array.from(e.target.files);
-        } else if ("dataTransfer" in e && e.dataTransfer.files) {
-            files = Array.from(e.dataTransfer.files);
+        const anyE = e as any;
+        if (anyE.dataTransfer?.files?.length > 0) {
+            files = Array.from(anyE.dataTransfer.files as FileList);
+        } else if (anyE.target?.files?.length > 0) {
+            files = Array.from(anyE.target.files as FileList);
         }
 
         if (files.length === 0) return;
@@ -1588,7 +1590,7 @@ const CheckoutPageUI: React.FC = () => {
                                                 />
                                             </div>
                                             {isPoUploadOpen && (
-                                                <div className="p-2 md:p-4 bg-white space-y-3 absolute left-0 top-full w-full border border-[#ddd] rounded-b-lg select-none z-[10]">
+                                                <div className="p-2 md:p-4 bg-white space-y-3 border border-t-0 border-[#ddd] rounded-b-sm select-none">
                                                     <div
                                                         ref={poDropZoneRef}
                                                         className={`relative group p-4 md:p-8 border-2 border-dashed rounded-sm transition-all duration-300 flex flex-col items-center justify-center gap-2 md:gap-4 cursor-pointer
@@ -1935,7 +1937,7 @@ const CheckoutPageUI: React.FC = () => {
                                                             </div>
 
                                                             {isPaymentCommitmentOpen && (
-                                                                <div className="p-2 md:p-4 bg-white space-y-3 absolute left-0 top-full w-full border border-[#ddd] rounded-b-lg select-none z-[10]">
+                                                                <div className="p-2 md:p-4 bg-white space-y-3 border border-t-0 border-[#ddd] rounded-b-sm select-none">
                                                                     <div
                                                                         ref={pcDropZoneRef}
                                                                         className={`w-full py-6 md:py-10 border-2 border-dashed border-gray-300 bg-gray-50/50 flex flex-col items-center justify-center gap-2 cursor-pointer transition-all duration-300 hover:border-black hover:bg-white rounded-xl ${dragActivePC ? "border-black bg-white" : ""} ${isPaymentCommitmentUploading ? "opacity-60 pointer-events-none" : ""}`}
