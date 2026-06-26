@@ -135,6 +135,20 @@ const CheckoutPageUI: React.FC = () => {
     // or a user click). Prevents background API refreshes from overriding the choice.
     const paymentMethodSetRef = useRef(false);
 
+    // Local display values for qty inputs — lets user type freely before committing.
+    const [qtyValues, setQtyValues] = useState<Record<number, string>>({});
+    useEffect(() => {
+        if (!cart?.items) return;
+        setQtyValues(prev => {
+            const next: Record<number, string> = {};
+            cart.items.forEach(item => {
+                // Preserve any in-progress typed value; otherwise seed from cart.
+                next[item.item_id] = prev[item.item_id] ?? String(item.qty);
+            });
+            return next;
+        });
+    }, [cart?.items]);
+
     // New Address Form State
     const [showNewAddressForm, setShowNewAddressForm] = useState(false);
     const [newAddress, setNewAddress] = useState({
@@ -269,8 +283,8 @@ const CheckoutPageUI: React.FC = () => {
     // current version of handleFileUpload / handlePaymentCommitmentUpload with
     // their latest closures (state, toasts, etc.). Using refs avoids stale
     // closures without re-registering DOM listeners on every render.
-    const poDropHandlerRef = useRef<(e: DragEvent) => void>(() => {});
-    const pcDropHandlerRef = useRef<(e: DragEvent) => void>(() => {});
+    const poDropHandlerRef = useRef<(e: DragEvent) => void>(() => { });
+    const pcDropHandlerRef = useRef<(e: DragEvent) => void>(() => { });
 
     // Native drag-and-drop for the PO upload drop zone.
     // All four events are handled natively so preventDefault/stopPropagation
@@ -282,7 +296,7 @@ const CheckoutPageUI: React.FC = () => {
         const el = poDropZoneRef.current;
         if (!el) return;
         const onDragEnter = (e: DragEvent) => { e.preventDefault(); e.stopPropagation(); setDragActive(true); };
-        const onDragOver  = (e: DragEvent) => { e.preventDefault(); e.stopPropagation(); };
+        const onDragOver = (e: DragEvent) => { e.preventDefault(); e.stopPropagation(); };
         const onDragLeave = (e: DragEvent) => { e.preventDefault(); e.stopPropagation(); setDragActive(false); };
         const onDrop = (e: DragEvent) => {
             e.preventDefault();
@@ -291,14 +305,14 @@ const CheckoutPageUI: React.FC = () => {
             poDropHandlerRef.current(e);
         };
         el.addEventListener("dragenter", onDragEnter);
-        el.addEventListener("dragover",  onDragOver);
+        el.addEventListener("dragover", onDragOver);
         el.addEventListener("dragleave", onDragLeave);
-        el.addEventListener("drop",      onDrop);
+        el.addEventListener("drop", onDrop);
         return () => {
             el.removeEventListener("dragenter", onDragEnter);
-            el.removeEventListener("dragover",  onDragOver);
+            el.removeEventListener("dragover", onDragOver);
             el.removeEventListener("dragleave", onDragLeave);
-            el.removeEventListener("drop",      onDrop);
+            el.removeEventListener("drop", onDrop);
         };
     }, [isPoUploadOpen]);
 
@@ -307,7 +321,7 @@ const CheckoutPageUI: React.FC = () => {
         const el = pcDropZoneRef.current;
         if (!el) return;
         const onDragEnter = (e: DragEvent) => { e.preventDefault(); e.stopPropagation(); setDragActivePC(true); };
-        const onDragOver  = (e: DragEvent) => { e.preventDefault(); e.stopPropagation(); };
+        const onDragOver = (e: DragEvent) => { e.preventDefault(); e.stopPropagation(); };
         const onDragLeave = (e: DragEvent) => { e.preventDefault(); e.stopPropagation(); setDragActivePC(false); };
         const onDrop = (e: DragEvent) => {
             e.preventDefault();
@@ -316,14 +330,14 @@ const CheckoutPageUI: React.FC = () => {
             pcDropHandlerRef.current(e);
         };
         el.addEventListener("dragenter", onDragEnter);
-        el.addEventListener("dragover",  onDragOver);
+        el.addEventListener("dragover", onDragOver);
         el.addEventListener("dragleave", onDragLeave);
-        el.addEventListener("drop",      onDrop);
+        el.addEventListener("drop", onDrop);
         return () => {
             el.removeEventListener("dragenter", onDragEnter);
-            el.removeEventListener("dragover",  onDragOver);
+            el.removeEventListener("dragover", onDragOver);
             el.removeEventListener("dragleave", onDragLeave);
-            el.removeEventListener("drop",      onDrop);
+            el.removeEventListener("drop", onDrop);
         };
     }, [isPaymentCommitmentOpen]);
 
@@ -333,10 +347,10 @@ const CheckoutPageUI: React.FC = () => {
         if (!isPoUploadOpen && !isPaymentCommitmentOpen) return;
         const prevent = (e: DragEvent) => { e.preventDefault(); e.stopPropagation(); };
         window.addEventListener("dragover", prevent);
-        window.addEventListener("drop",     prevent);
+        window.addEventListener("drop", prevent);
         return () => {
             window.removeEventListener("dragover", prevent);
-            window.removeEventListener("drop",     prevent);
+            window.removeEventListener("drop", prevent);
         };
     }, [isPoUploadOpen, isPaymentCommitmentOpen]);
 
@@ -436,6 +450,7 @@ const CheckoutPageUI: React.FC = () => {
         if (validFiles.length === 0) return;
 
         setIsPaymentCommitmentUploading(true);
+        registerOverlay("pc-upload");
         const justUploadedFileNames = new Set<string>();
         try {
             for (const file of validFiles) {
@@ -558,6 +573,7 @@ const CheckoutPageUI: React.FC = () => {
             toast.error(error.message || t("checkout.uploadFailed"));
         } finally {
             setIsPaymentCommitmentUploading(false);
+            unregisterOverlay("pc-upload");
             if (paymentCommitmentRef.current) paymentCommitmentRef.current.value = "";
         }
     };
@@ -986,6 +1002,7 @@ const CheckoutPageUI: React.FC = () => {
         if (validFiles.length === 0) return;
 
         setIsUploading(true);
+        registerOverlay("po-upload");
         // Track only the files uploaded in this batch so the Magento refresh
         // never replaces uploadedPOs with the full Magento list — payment
         // commitment files live in the same kleverCheckoutPoFiles field and
@@ -1076,6 +1093,7 @@ const CheckoutPageUI: React.FC = () => {
             toast.error(error.message || t("checkout.uploadFailed"));
         } finally {
             setIsUploading(false);
+            unregisterOverlay("po-upload");
             if (poUploadRef.current) poUploadRef.current.value = "";
         }
     };
@@ -1590,17 +1608,27 @@ const CheckoutPageUI: React.FC = () => {
                                                 />
                                             </div>
                                             {isPoUploadOpen && (
-                                                <div className="p-2 md:p-4 bg-white space-y-3 border border-t-0 border-[#ddd] rounded-b-sm select-none">
+                                                <div className="p-2 md:p-4 bg-white space-y-3 absolute left-0 top-full w-full border border-[#ddd] rounded-b-lg select-none z-[10]">
+                                                    {/* Drop Area */}
                                                     <div
                                                         ref={poDropZoneRef}
                                                         className={`relative group p-4 md:p-8 border-2 border-dashed rounded-sm transition-all duration-300 flex flex-col items-center justify-center gap-2 md:gap-4 cursor-pointer
-                                                        ${dragActive ? "border-primary bg-primary/30 scale-[1.01]" : "border-border bg-gray-50/30 hover:bg-white hover:border-gray-300"}`}
-                                                        onClick={() => poUploadRef.current?.click()}
+                                                    ${isUploading ? "opacity-60 pointer-events-none" : dragActive ? "border-primary bg-primary/30 scale-[1.01]" : "border-border bg-gray-50/30 hover:bg-white hover:border-gray-300"}`}
+                                                        onClick={() => !isUploading && poUploadRef.current?.click()}
                                                     >
-                                                        <p className="text-sm md:text-lg text-black font-medium text-center">{t("m.drop-files-here")}</p>
-                                                        <p className="text-xs text-black/60 text-center break-all leading-relaxed">
-                                                            {t("m.allowed-file-types")} : jpg, jpeg, png, zip, rar, docx, doc, pdf, xls, xlsx, csv, msg
-                                                        </p>
+                                                        {isUploading ? (
+                                                            <div className="flex flex-col items-center gap-2">
+                                                                <ButtonSpinner size={28} />
+                                                                <p className="text-sm text-black/60 font-medium">{t("Uploading…") || "Uploading…"}</p>
+                                                            </div>
+                                                        ) : (
+                                                            <>
+                                                                <p className="text-sm md:text-lg text-black font-medium text-center">{t("m.drop-files-here")}</p>
+                                                                <p className="text-xs text-black/60 text-center break-all leading-relaxed">
+                                                                    {t("m.allowed-file-types")} : jpg, jpeg, png, zip, rar, docx, doc, pdf, xls, xlsx, csv, msg
+                                                                </p>
+                                                            </>
+                                                        )}
                                                         <input
                                                             type="file"
                                                             className="hidden"
@@ -1610,28 +1638,29 @@ const CheckoutPageUI: React.FC = () => {
                                                             multiple
                                                         />
                                                     </div>
+
+                                                    {/* Files List */}
+                                                    <div className="flex flex-col gap-2">
+                                                        {uploadedPOs.map((po, idx) => (
+                                                            <div key={idx} className="flex w-full border border-border rounded-sm overflow-hidden shadow-sm bg-white">
+                                                                <div className="px-3 md:px-5 py-2.5 flex-1 flex items-center min-w-0">
+                                                                    <span className="text-sm font-semibold text-black truncate">
+                                                                        {po.fileName}
+                                                                    </span>
+                                                                </div>
+                                                                <button
+                                                                    onClick={() => handleDeletePo(po.fileName, po.backendRef)}
+                                                                    className="bg-red-50 text-red-600 px-3 md:px-5 py-2.5 text-xs font-bold uppercase tracking-wider transition-all hover:bg-red-600 hover:text-white border-l border-border active:scale-95 flex-shrink-0"
+                                                                    disabled={isUploading}
+                                                                >
+                                                                    {t("m.remove")}
+                                                                </button>
+                                                            </div>
+                                                        ))}
+                                                    </div>
                                                 </div>
                                             )}
                                         </div>
-
-                                        {/* Uploaded files — always visible in document flow (not inside the absolute dropdown)
-                                            so files are shown on all screen sizes after both click-select and drag-drop */}
-                                        {uploadedPOs.map((po, idx) => (
-                                            <div key={idx} className="flex w-full border border-border rounded-sm overflow-hidden shadow-sm bg-white">
-                                                <div className="px-3 py-2.5 flex-1 flex items-center min-w-0">
-                                                    <span className="text-sm font-semibold text-black break-all leading-tight">
-                                                        {po.fileName}
-                                                    </span>
-                                                </div>
-                                                <button
-                                                    onClick={() => handleDeletePo(po.fileName, po.backendRef)}
-                                                    className="bg-red-50 text-red-600 px-3 py-2.5 text-xs font-bold uppercase tracking-wider transition-all hover:bg-red-600 hover:text-white border-l border-border active:scale-95 flex-shrink-0"
-                                                    disabled={isUploading}
-                                                >
-                                                    {t("m.remove")}
-                                                </button>
-                                            </div>
-                                        ))}
                                     </div>
                                 </div>
 
@@ -1919,30 +1948,35 @@ const CheckoutPageUI: React.FC = () => {
                                                 </label>
 
                                                 {isSelected && needsUpload && (
-                                                    <div className="mt-3 flex flex-col gap-2">
-                                                        <div className="relative">
-                                                            <div
-                                                                className="w-full px-4 py-2.5 text-sm font-medium text-black bg-white border border-gray-200 rounded focus:border-primary focus:outline-none transition-all placeholder:text-black/40 placeholder:font-normal flex items-center justify-between cursor-pointer select-none"
-                                                                onClick={() => setIsPaymentCommitmentOpen(!isPaymentCommitmentOpen)}
-                                                            >
-                                                                <span className="text-body font-bold transition-colors text-black">
-                                                                    {t("m.payment-commitment-upload") !== "m.payment-commitment-upload"
-                                                                        ? t("m.payment-commitment-upload")
-                                                                        : t("multi.paymentCommitment")}
-                                                                </span>
-                                                                <ChevronDown
-                                                                    size={20}
-                                                                    className={`text-black/60 transition-transform duration-300 ${isPaymentCommitmentOpen ? "rotate-180" : ""}`}
-                                                                />
-                                                            </div>
+                                                    <div className="mt-3 relative">
+                                                        <div
+                                                            className="w-full px-4 py-2.5 text-sm font-medium text-black bg-white border border-gray-200 rounded focus:border-primary focus:outline-none transition-all placeholder:text-black/40 placeholder:font-normal flex items-center justify-between cursor-pointer select-none"
+                                                            onClick={() => setIsPaymentCommitmentOpen(!isPaymentCommitmentOpen)}
+                                                        >
+                                                            <span className="text-body font-bold transition-colors text-black">
+                                                                {t("m.payment-commitment-upload") !== "m.payment-commitment-upload"
+                                                                    ? t("m.payment-commitment-upload")
+                                                                    : t("multi.paymentCommitment")}
+                                                            </span>
+                                                            <ChevronDown
+                                                                size={20}
+                                                                className={`text-black/60 transition-transform duration-300 ${isPaymentCommitmentOpen ? "rotate-180" : ""}`}
+                                                            />
+                                                        </div>
 
-                                                            {isPaymentCommitmentOpen && (
-                                                                <div className="p-2 md:p-4 bg-white space-y-3 border border-t-0 border-[#ddd] rounded-b-sm select-none">
-                                                                    <div
-                                                                        ref={pcDropZoneRef}
-                                                                        className={`w-full py-6 md:py-10 border-2 border-dashed border-gray-300 bg-gray-50/50 flex flex-col items-center justify-center gap-2 cursor-pointer transition-all duration-300 hover:border-black hover:bg-white rounded-xl ${dragActivePC ? "border-black bg-white" : ""} ${isPaymentCommitmentUploading ? "opacity-60 pointer-events-none" : ""}`}
-                                                                        onClick={() => !isPaymentCommitmentUploading && paymentCommitmentRef.current?.click()}
-                                                                    >
+                                                        {isPaymentCommitmentOpen && (
+                                                            <div className="p-2 md:p-4 bg-white space-y-3 absolute left-0 top-full w-full border border-[#ddd] rounded-b-lg select-none z-[10]">
+                                                                <div
+                                                                    ref={pcDropZoneRef}
+                                                                    className={`w-full py-6 md:py-10 border-2 border-dashed border-gray-300 bg-gray-50/50 flex flex-col items-center justify-center gap-2 cursor-pointer transition-all duration-300 hover:border-black hover:bg-white rounded-xl ${isPaymentCommitmentUploading ? "opacity-60 pointer-events-none" : dragActivePC ? "border-black bg-white" : ""}`}
+                                                                    onClick={() => !isPaymentCommitmentUploading && paymentCommitmentRef.current?.click()}
+                                                                >
+                                                                    {isPaymentCommitmentUploading ? (
+                                                                        <div className="flex flex-col items-center gap-2">
+                                                                            <ButtonSpinner size={28} />
+                                                                            <p className="text-sm text-black/60 font-medium">{t("Uploading…") || "Uploading…"}</p>
+                                                                        </div>
+                                                                    ) : (
                                                                         <div className="text-center px-3 md:px-6">
                                                                             <p className="text-sm md:text-lg text-black font-bold mb-1 md:mb-2 tracking-tight">
                                                                                 {t("m.drop-files-here")}
@@ -1951,37 +1985,39 @@ const CheckoutPageUI: React.FC = () => {
                                                                                 {t("m.allowed-file-types")} : jpg, jpeg, png, zip, rar, docx, doc, pdf, xls, xlsx, csv, msg
                                                                             </p>
                                                                         </div>
-                                                                        <input
-                                                                            type="file"
-                                                                            className="hidden"
-                                                                            ref={paymentCommitmentRef}
-                                                                            onChange={handlePaymentCommitmentUpload}
-                                                                            accept=".jpg,.jpeg,.png,.zip,.rar,.docx,.doc,.pdf,.xls,.xlsx,.csv,.msg"
-                                                                            multiple
-                                                                        />
-                                                                    </div>
+                                                                    )}
+                                                                    <input
+                                                                        type="file"
+                                                                        className="hidden"
+                                                                        ref={paymentCommitmentRef}
+                                                                        onChange={handlePaymentCommitmentUpload}
+                                                                        accept=".jpg,.jpeg,.png,.zip,.rar,.docx,.doc,.pdf,.xls,.xlsx,.csv,.msg"
+                                                                        multiple
+                                                                    />
                                                                 </div>
-                                                            )}
-                                                        </div>
 
-                                                        {/* Uploaded files — always visible in document flow so files show
-                                                            on all screen sizes after both click-select and drag-drop */}
-                                                        {uploadedPaymentCommitments.map((pc, idx) => (
-                                                            <div key={idx} className="flex w-full border border-border rounded-sm overflow-hidden shadow-sm bg-white">
-                                                                <div className="px-3 py-2.5 flex-1 flex items-center min-w-0">
-                                                                    <span className="text-sm font-semibold text-black break-all leading-tight">
-                                                                        {pc.fileName}
-                                                                    </span>
-                                                                </div>
-                                                                <button
-                                                                    onClick={() => removePaymentCommitment(pc.backendRef)}
-                                                                    disabled={isPaymentCommitmentUploading}
-                                                                    className="bg-red-50 text-red-600 px-3 py-2.5 text-xs font-bold uppercase tracking-wider transition-all hover:bg-red-600 hover:text-white border-l border-border active:scale-95 disabled:opacity-50 flex-shrink-0"
-                                                                >
-                                                                    {t("m.remove")}
-                                                                </button>
+                                                                {uploadedPaymentCommitments.length > 0 && (
+                                                                    <div className="flex flex-col gap-2">
+                                                                        {uploadedPaymentCommitments.map((pc, idx) => (
+                                                                            <div key={idx} className="flex w-full border border-border rounded-lg overflow-hidden shadow-sm bg-white">
+                                                                                <div className="px-3 md:px-5 py-2.5 flex-1 flex items-center min-w-0">
+                                                                                    <span className="text-sm font-semibold text-black truncate">
+                                                                                        {pc.fileName}
+                                                                                    </span>
+                                                                                </div>
+                                                                                <button
+                                                                                    onClick={() => removePaymentCommitment(pc.backendRef)}
+                                                                                    disabled={isPaymentCommitmentUploading}
+                                                                                    className="bg-red-50 text-red-600 px-3 md:px-5 py-2.5 text-xs font-bold uppercase tracking-wider transition-all hover:bg-red-600 hover:text-white border-l border-border active:scale-95 disabled:opacity-50 flex-shrink-0"
+                                                                                >
+                                                                                    {t("m.remove")}
+                                                                                </button>
+                                                                            </div>
+                                                                        ))}
+                                                                    </div>
+                                                                )}
                                                             </div>
-                                                        ))}
+                                                        )}
                                                     </div>
                                                 )}
                                             </div>
@@ -2044,12 +2080,20 @@ const CheckoutPageUI: React.FC = () => {
                                                         <div className="flex items-center gap-1 text-body">
                                                             <span className="font-semibold text-black">{t("m.qty")} :</span>
                                                             <input
-                                                                type="number"
-                                                                min="1"
-                                                                value={item.qty}
+                                                                type="text"
+                                                                value={qtyValues[item.item_id] ?? String(item.qty)}
                                                                 onChange={(e) => {
-                                                                    const val = parseInt(e.target.value);
-                                                                    if (val > 0) updateCartItem(item.item_id, val);
+                                                                    const raw = e.target.value.replace(/\D/g, "");
+                                                                    setQtyValues(prev => ({ ...prev, [item.item_id]: raw }));
+                                                                }}
+                                                                onBlur={() => {
+                                                                    const val = parseInt(qtyValues[item.item_id] ?? "") || 0;
+                                                                    updateCartItem(item.item_id, val);
+                                                                    // Sync display back to whatever cart settles on
+                                                                    setQtyValues(prev => ({ ...prev, [item.item_id]: String(val === 0 ? 0 : val) }));
+                                                                }}
+                                                                onKeyDown={(e) => {
+                                                                    if (e.key === "Enter") (e.target as HTMLInputElement).blur();
                                                                 }}
                                                                 className="w-10 h-7 border border-[#ddd] rounded-sm text-center text-body-sm font-bold focus:outline-none focus:border-primary ml-1 bg-gray-50/50"
                                                             />

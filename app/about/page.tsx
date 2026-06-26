@@ -954,7 +954,7 @@ export default function AboutPage() {
                   • onLoad fade-in → swap from "loader" placeholder to real image
                   • aspect-custom + relative reserves space (no CLS)              */}
             <div
-                className={`image-wrap picture pb-[68%] md:pb-[17.7%] ${!loaded ? "loader" : ""}`}
+                className={`image-wrap picture pb-[55%] sm:pb-[40%] md:pb-[17.7%] ${!loaded ? "loader" : ""}`}
             >
                 <Image
                     src="/images/about-tyresonline-uae.jpg"
@@ -980,7 +980,7 @@ export default function AboutPage() {
             </div>
 
             <div
-                className="max-w-[1170px] mx-auto"
+                className="max-w-[1170px] mx-auto px-4 sm:px-6 md:px-10 lg:px-12 py-6 sm:py-10 md:py-14 pb-16 sm:pb-20"
                 dir={isRtl ? "rtl" : "ltr"}
             >
                 {isLoading ? (
@@ -1000,7 +1000,7 @@ export default function AboutPage() {
                     />
                 ) : (
                     /* Plain text — parse sections and render cleanly exactly as in image */
-                    <div className={`space-y-3 text-[16px] text-black font-normal text-left ${isRtl ? "text-right" : "text-left"}`}>
+                    <div className={`space-y-4 text-[15px] sm:text-[16px] leading-[1.8] text-black font-normal ${isRtl ? "text-right" : "text-left"}`}>
 
 
                         {title && (

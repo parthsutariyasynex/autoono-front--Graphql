@@ -327,7 +327,7 @@ const Sidebar = () => {
                                 <li key={item.code} className="flex-shrink-0">
                                     <button
                                         onClick={() =>
-                                            signOut({ callbackUrl: `${window.location.origin}${lp("/login")}` })
+                                            signOut({ callbackUrl: lp("/login") })
                                         }
                                         className="block w-full ltr:text-left rtl:text-right py-3 px-6 lg:px-4 text-black/70 hover:text-black hover:bg-gray-100 transition-all duration-200 border-b-[3px] lg:border-b-0 ltr:lg:border-l-4 rtl:lg:border-r-4 border-transparent whitespace-nowrap font-bold uppercase text-body-sm"
                                     >

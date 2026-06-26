@@ -18,6 +18,17 @@ export interface FilterGroupData {
     options: FilterOption[];
 }
 
+const FILTER_CODE_ALIASES: Record<string, string> = {
+    oilType: "oil_type",
+    oilGrade: "grade",
+    itemCode: "item_code",
+    productGroup: "product_group",
+    warrantyPeriod: "warranty_period",
+    newArrivals: "new_arrivals",
+    partsCategory: "parts_category",
+    oemMarking: "oem_marking",
+};
+
 const FilterItem = memo(({
     option,
     groupCode,
@@ -75,7 +86,14 @@ const FilterGroup = memo(({
     const { t, isRtl } = useTranslation();
     const [searchTerm, setSearchTerm] = useState("");
 
-    const translatedLabel = t(`filter.${group.code}`) !== `filter.${group.code}` ? t(`filter.${group.code}`) : group.label;
+    const _directKey = `filter.${group.code}`;
+    const _directVal = t(_directKey);
+    const _aliasCode = FILTER_CODE_ALIASES[group.code];
+    const _aliasKey = _aliasCode ? `filter.${_aliasCode}` : "";
+    const _aliasVal = _aliasKey ? t(_aliasKey) : "";
+    const translatedLabel = _directVal !== _directKey ? _directVal
+        : (_aliasVal && _aliasVal !== _aliasKey) ? _aliasVal
+        : group.label;
 
     const filteredOptions = useMemo(() =>
         group.options.filter(opt =>

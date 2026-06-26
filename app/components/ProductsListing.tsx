@@ -29,7 +29,7 @@ const PAGE_SIZE = 20;
 // Base headers/widths — Action column added dynamically only when products need it.
 const BASE_HEADER_KEYS = ['m.brand', 'm.name', 'm.image', 'm.stock', 'm.price'] as const;
 const BASE_COL_WIDTHS = ['10%', '40%', '10%', '12%', '18%'] as const;
-const ACTION_COL_WIDTH = '120px';
+const ACTION_COL_WIDTH = '160px';
 const SHIMMER_ROWS = 10;
 const ROW_HEIGHT = 'h-auto md:h-[52px]';
 
@@ -662,7 +662,7 @@ export default function ProductsPage({ categoryId: propCategoryId, storeCode: pr
         <div className="flex-1 flex flex-col w-full">
 
           {/* ── MOBILE CONTROLS ── */}
-          <div className="xl:hidden flex flex-col gap-2 mb-3 mt-2">
+          <div className="lg:hidden flex flex-col gap-2 mb-3 mt-2">
             {/* Controls: 2 cols for SKU lookup (no filters), 3 cols otherwise.
                 At lg+ the Filter button is hidden (sidebar replaces it), so the
                 grid drops to 2 cols to fill the row evenly with Favorites + Sort. */}
@@ -736,8 +736,7 @@ export default function ProductsPage({ categoryId: propCategoryId, storeCode: pr
           </div>
 
           {/* ── MOBILE/TABLET CARD LIST ── */}
-          {/* lg:grid-cols-2 keeps cards comfortable next to the 300px sidebar at 1024-1279px. */}
-          <div className="xl:hidden flex-1 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-2 gap-2.5 overflow-y-auto px-3">
+          <div className="lg:hidden flex-1 grid grid-cols-1 sm:grid-cols-2 gap-2.5 overflow-y-auto px-3">
             {loading ? <MobileCardShimmer /> : serverError ? (
               <div className="flex-1 flex items-center justify-center py-10 px-4 col-span-full">
                 <div className="bg-red-50 border border-red-100 text-red-700 px-5 py-4 rounded-xl flex flex-col items-center gap-3 w-full shadow-sm text-center">
@@ -770,11 +769,11 @@ export default function ProductsPage({ categoryId: propCategoryId, storeCode: pr
               />
             ))}
           </div>
-          <div className="xl:hidden">{renderPagination(true)}</div>
+          <div className="lg:hidden">{renderPagination(true)}</div>
 
           {/* ── DESKTOP CONTROLS + TABLE ── */}
           {/* For search results or empty results the sidebar is gone → full rounding; otherwise right-rounded only */}
-          <div className={`hidden xl:flex flex-col bg-white shadow-sm border border-gray-200 overflow-hidden ${hideFilters || (!loading && products.length === 0) ? "" : "border-l-0"}`}>
+          <div className={`hidden lg:flex flex-col bg-white shadow-sm border border-gray-200 overflow-hidden ${hideFilters || (!loading && products.length === 0) ? "" : "border-l-0"}`}>
             {/* Desktop header */}
             {(loading || products.length > 0) && (
               <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center gap-4 min-h-[60px]">

@@ -17,11 +17,15 @@ export function stockColorClass(color?: string) {
 }
 
 export function StockBadge({ product }: { product: any }) {
+    const { t } = useTranslation();
+    const rawLabel = product.stock_label || "";
+    const _tKey = `data.${rawLabel}`;
+    const displayLabel = rawLabel && t(_tKey) !== _tKey ? t(_tKey) : rawLabel;
     return (
         <div className="flex flex-col items-center justify-center text-center gap-1">
             <span className={`w-4 h-4 rounded-full border border-gray-100 shadow-sm ${stockColorClass(product.stock_color)}`} />
             <span className="text-caption font-semibold text-black/80 uppercase leading-none">
-                {product.stock_label || ""}
+                {displayLabel}
             </span>
         </div>
     );
@@ -69,6 +73,8 @@ function ProductCardImpl({
     const showOldPrice = product.show_old_price !== false && product.original_price > product.final_price;
     const isOutOfStock = product.is_in_stock === false || product.stock_label === "Not Available";
     const productPath = resolveProductPath(product);
+    const _slKey = `data.${product.stock_label || ""}`;
+    const translatedStockLabel = product.stock_label && t(_slKey) !== _slKey ? t(_slKey) : (product.stock_label || "");
 
     if (variant === "card") {
         return (
@@ -82,7 +88,7 @@ function ProductCardImpl({
                         )}
                         <div className="flex items-center gap-1.5 mt-1.5">
                             <span className={`w-2 h-2 rounded-full ${stockColorClass(product.stock_color)}`} />
-                            <span className="text-caption font-semibold text-black/70 uppercase">{product.stock_label || ""}</span>
+                            <span className="text-caption font-semibold text-black/70 uppercase">{translatedStockLabel}</span>
                         </div>
                     </div>
                     <div className="w-12 h-12 sm:w-14 sm:h-14 flex-shrink-0 rounded-lg border border-gray-100 overflow-hidden bg-gray-50 flex items-center justify-center group-hover/card:border-primary/20 transition-colors relative">
@@ -107,30 +113,44 @@ function ProductCardImpl({
                     {showActions && (
                         <div className="flex items-center gap-1 flex-shrink-0">
                             {!isOutOfStock ? (
-                                <button
-                                    onClick={() => onAddToCart(product)}
-                                    disabled={isAdding}
-                                    className={`h-9 px-2.5 rounded-lg flex items-center gap-1.5 text-label font-semibold uppercase shadow-sm active:scale-95 cursor-pointer flex-shrink-0 ${isJustAdded ? "bg-green-500 text-white" : "bg-primary text-black"}`}
-                                >
-                                    {isJustAdded
-                                        ? <><Check size={14} strokeWidth={3} />{t("favorites.cartAdded")}</>
-                                        : isAdding
-                                            ? <ButtonSpinner size={14} />
-                                            : <ShoppingCart size={14} strokeWidth={2.5} />}
-                                </button>
+                                <>
+                                    <input
+                                        type="text"
+                                        value={qty || 1}
+                                        onChange={(e) => {
+                                            const val = e.target.value.replace(/\D/g, "");
+                                            onQtyChange(product.sku, parseInt(val) || 0);
+                                        }}
+                                        className="w-9 h-8 flex-shrink-0 border border-gray-300 rounded-sm text-label font-semibold text-black bg-white shadow-sm text-center outline-none focus:border-primary transition-colors"
+                                        onFocus={(e) => { const inp = e.target; setTimeout(() => inp.select(), 0); }}
+                                        onClick={(e) => (e.target as HTMLInputElement).select()}
+                                        onKeyDown={(e) => { if (e.key === "Enter") onAddToCart(product); }}
+                                    />
+                                    <button
+                                        onClick={() => onAddToCart(product)}
+                                        disabled={isAdding}
+                                        className={`w-8 h-8 flex-shrink-0 rounded-sm flex items-center justify-center shadow-sm active:scale-95 cursor-pointer ${isJustAdded ? "bg-green-500 text-white" : "bg-primary text-black"}`}
+                                    >
+                                        {isJustAdded
+                                            ? <Check size={14} strokeWidth={3} />
+                                            : isAdding
+                                                ? <ButtonSpinner size={14} />
+                                                : <ShoppingCart size={14} strokeWidth={2.5} />}
+                                    </button>
+                                </>
                             ) : (
                                 <button
                                     onClick={() => onInquiry(product)}
-                                    className="h-9 px-2.5 bg-primary text-black rounded-lg flex items-center gap-1.5 text-label font-semibold uppercase shadow-sm active:scale-95 cursor-pointer flex-shrink-0"
+                                    className="w-8 h-8 flex-shrink-0 bg-primary text-black rounded-sm flex items-center justify-center shadow-sm active:scale-95 cursor-pointer"
                                 >
                                     <Info size={14} strokeWidth={2.5} />
                                 </button>
                             )}
                             <button
                                 onClick={() => onToggleFavorite(product)}
-                                className={`w-9 h-9 rounded-lg flex items-center justify-center active:scale-95 cursor-pointer flex-shrink-0 ${isFavorite ? "bg-primary text-black" : "bg-gray-100 text-black/50"}`}
+                                className={`w-8 h-8 flex-shrink-0 rounded-sm flex items-center justify-center active:scale-95 cursor-pointer ${isFavorite ? "bg-primary text-black" : "bg-gray-100 text-black/50"}`}
                             >
-                                <Star size={16} fill={isFavorite ? "currentColor" : "none"} strokeWidth={2.5} />
+                                <Star size={15} fill={isFavorite ? "currentColor" : "none"} strokeWidth={2.5} />
                             </button>
                         </div>
                     )}
@@ -174,9 +194,9 @@ function ProductCardImpl({
                 </div>
             </td>
             {showActionColumn && (
-                <td className="px-1 text-center align-middle">
+                <td className="px-2 text-center align-middle min-w-[150px] whitespace-nowrap">
                     {showActions && (
-                        <div className="inline-grid grid-cols-3 gap-1 items-center">
+                        <div className="flex flex-row items-center justify-center gap-1.5">
                             {!isOutOfStock ? (
                                 <input
                                     type="text"
@@ -185,15 +205,15 @@ function ProductCardImpl({
                                         const val = e.target.value.replace(/\D/g, "");
                                         onQtyChange(product.sku, parseInt(val) || 0);
                                     }}
-                                    className="w-8 h-8 border-1 border-gray-300 rounded-sm flex items-center justify-center text-label font-semibold text-black bg-white shadow-sm text-center outline-none focus:border-primary transition-colors"
+                                    className="w-10 h-8 flex-shrink-0 border border-gray-300 rounded-sm text-label font-semibold text-black bg-white shadow-sm text-center outline-none focus:border-primary transition-colors"
                                     onFocus={(e) => { const t = e.target; setTimeout(() => t.select(), 0); }}
                                     onClick={(e) => (e.target as HTMLInputElement).select()}
                                     onKeyDown={(e) => { if (e.key === "Enter") onAddToCart(product); }}
                                 />
-                            ) : <div className="w-8 h-8" />}
+                            ) : <div className="w-10 h-8 flex-shrink-0" />}
 
                             {!isOutOfStock ? (
-                                <button onClick={() => onAddToCart(product)} disabled={isAdding} className={`w-8 h-8 rounded-sm flex items-center justify-center shadow-md transition-all cursor-pointer ${isJustAdded ? "bg-green-500 text-white" : "bg-primary text-black"}`}>
+                                <button onClick={() => onAddToCart(product)} disabled={isAdding} className={`w-9 h-8 flex-shrink-0 rounded-sm flex items-center justify-center shadow-md transition-all cursor-pointer ${isJustAdded ? "bg-green-500 text-white" : "bg-primary text-black"}`}>
                                     {isJustAdded
                                         ? <Check size={15} strokeWidth={3} />
                                         : isAdding
@@ -201,12 +221,12 @@ function ProductCardImpl({
                                             : <ShoppingCart size={15} strokeWidth={2.5} />}
                                 </button>
                             ) : (
-                                <button onClick={() => onInquiry(product)} className="w-8 h-8 bg-primary text-black rounded-sm flex items-center justify-center shadow-md active:scale-95 cursor-pointer">
+                                <button onClick={() => onInquiry(product)} className="w-9 h-8 flex-shrink-0 bg-primary text-black rounded-sm flex items-center justify-center shadow-md active:scale-95 cursor-pointer">
                                     <Info size={15} strokeWidth={2.5} />
                                 </button>
                             )}
 
-                            <button onClick={() => onToggleFavorite(product)} className={`w-8 h-8 rounded-sm flex items-center justify-center shadow-md cursor-pointer ${isFavorite ? "bg-primary text-black" : "bg-white text-black/50 border border-[#ddd]"}`}>
+                            <button onClick={() => onToggleFavorite(product)} className={`w-9 h-8 flex-shrink-0 rounded-sm flex items-center justify-center shadow-md cursor-pointer ${isFavorite ? "bg-primary text-black" : "bg-white text-black/50 border border-[#ddd]"}`}>
                                 <Star size={15} fill={isFavorite ? "currentColor" : "none"} strokeWidth={2.5} />
                             </button>
                         </div>

@@ -853,9 +853,15 @@ export default function Navbar() {
             ) : (
               navLinks.map((item) => {
                 const isWarehouse = isWarehouseCategory(item);
-                // Strip prefix/extension, rebuild as /{storeOrLocale}/{path}.html
-                const cleanItemPath = stripPrefix(item.href.split("?")[0] || "/").replace(/\.html$/, "") || "/";
-                const seoItemPath = cleanItemPath === "/" ? cleanItemPath : `${cleanItemPath}.html`;
+                // Strip prefix/extension. Only re-add .html for URLs that originally
+                // had it (Magento category/CMS SEO URLs). Next.js app routes like
+                // /about, /locations never carry .html and must not have it added.
+                const rawHref = item.href.split("?")[0] || "/";
+                const hadHtml = /\.html$/i.test(rawHref);
+                const cleanItemPath = stripPrefix(rawHref).replace(/\.html$/, "") || "/";
+                const seoItemPath = cleanItemPath === "/" ? cleanItemPath
+                    : hadHtml ? `${cleanItemPath}.html`
+                    : cleanItemPath;
 
                 // On locale-only pages (e.g. /en/my-account), currentStore is "en"/"ar".
                 // We use the current store or fall back to the locale.
