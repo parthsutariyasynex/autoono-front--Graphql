@@ -246,12 +246,18 @@ export interface KleverDashboardData {
   } | null;
 }
 
+type DashboardSummaryItem = { year: number | null; period: string | null; qty: number | null; amount: number | null };
+
 export interface KleverCustomerTargetDashboardData {
   kleverCustomerTargetDashboard: {
     customer_name: string | null;
     current_year: number | null;
     available_years: number[] | null;
-    yearly_summary: Array<{ year: number | null; period: string | null; qty: number | null; amount: number | null }>;
+    yearly_summary: DashboardSummaryItem[];
+    quarterly_summary: DashboardSummaryItem[] | null;
+    monthly_summary: DashboardSummaryItem[] | null;
+    compare_quarterly: DashboardSummaryItem[] | null;
+    compare_monthly: DashboardSummaryItem[] | null;
     product_groups: Array<{ product_group: string | null; qty: number | null }>;
     tyre_sizes: Array<{ size_pattern: string | null; qty: number | null }>;
   } | null;

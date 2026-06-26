@@ -144,6 +144,30 @@ export const KLEVER_CUSTOMER_TARGET_DASHBOARD_QUERY = /* GraphQL */ `
         qty
         amount
       }
+      quarterly_summary {
+        year
+        period
+        qty
+        amount
+      }
+      monthly_summary {
+        year
+        period
+        qty
+        amount
+      }
+      compare_quarterly {
+        year
+        period
+        qty
+        amount
+      }
+      compare_monthly {
+        year
+        period
+        qty
+        amount
+      }
       product_groups {
         product_group
         qty

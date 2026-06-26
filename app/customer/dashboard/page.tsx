@@ -101,6 +101,7 @@ export default function DashboardPage() {
             }
 
             const data = await api.get(`/kleverapi/dashboard?${params.toString()}`);
+            console.log("dashboard data", data);
             if (data) {
                 setDashboardData(data);
                 if (data.available_years) setAvailableYears(data.available_years);
@@ -128,14 +129,76 @@ export default function DashboardPage() {
         </div>
     );
 
+    // Helper: look up a value from a dedicated summary array; if the API
+    // doesn't return that array, fall back to yearly_summary filtered by year+period.
+    const getSummaryQty = (
+        dedicated: any[] | null | undefined,
+        fallbackPeriod: string | number,
+        year?: number
+    ): string => {
+        const arr = dedicated && dedicated.length > 0 ? dedicated : dashboardData?.yearly_summary;
+        if (!arr) return "0";
+        const entry = arr.find((d: any) =>
+            (year === undefined || Number(d.year) === year) &&
+            String(d.period) === String(fallbackPeriod)
+        );
+        return String(entry?.qty ?? "0");
+    };
+
+    const getSummaryAmount = (
+        dedicated: any[] | null | undefined,
+        fallbackPeriod: string | number,
+        year?: number
+    ): number => {
+        const arr = dedicated && dedicated.length > 0 ? dedicated : dashboardData?.yearly_summary;
+        if (!arr) return 0;
+        const entry = arr.find((d: any) =>
+            (year === undefined || Number(d.year) === year) &&
+            String(d.period) === String(fallbackPeriod)
+        );
+        return Number(entry?.amount ?? 0);
+    };
+
+    // Helper: get qty for a specific year+period from compare data.
+    // Falls back to yearly_summary when compare_quarterly/compare_monthly are absent.
+    const getCompareQty = (
+        dedicated: any[] | null | undefined,
+        year: number,
+        period: number
+    ): number => {
+        const arr = dedicated && dedicated.length > 0 ? dedicated : dashboardData?.yearly_summary;
+        if (!arr) return 0;
+        const entry = arr.find((d: any) =>
+            Number(d.year) === year && Number(d.period) === period
+        );
+        return Number(entry?.qty ?? 0);
+    };
+
+    // Determine whether the API returned any meaningful data.
+    // Checks all summary arrays and numeric values — if everything is absent or
+    // zero the dashboard sections are hidden and "No record found!" is shown.
+    const hasData = (() => {
+        if (!dashboardData) return false;
+        const allSummary = [
+            ...(dashboardData?.yearly_summary || []),
+            ...(dashboardData?.quarterly_summary || []),
+            ...(dashboardData?.monthly_summary || []),
+            ...(dashboardData?.compare_quarterly || []),
+            ...(dashboardData?.compare_monthly || []),
+        ];
+        const hasSummaryData = allSummary.some(
+            (d: any) => Number(d?.qty || 0) > 0 || Number(d?.amount || 0) > 0
+        );
+        const hasGroups = (dashboardData?.product_groups?.length || 0) > 0;
+        const hasSizes = (dashboardData?.tyre_sizes?.length || 0) > 0;
+        return hasSummaryData || hasGroups || hasSizes;
+    })();
+
     const getAttr = (code: string) => {
         return (customer as any).custom_attributes?.find(
             (a: CustomAttribute) => a.attribute_code === code
         )?.value || "N/A";
     }
-
-    const qty = dashboardData?.total_order_qty || { year: '0', quarter: '0', months: '0' };
-    const value = dashboardData?.total_order_value || { year: '0.00', quarter: '0.00', months: '0.00' };
 
     // Translate API data values using data.* keys
     const translateData = (val: string) => {
@@ -228,16 +291,24 @@ export default function DashboardPage() {
                         </div>
                     </section>
 
-                    {/* Summary Sections - Hide when comparing */}
-                    {!isCompare && (
+                    {/* No data state — only shown when not comparing and there is genuinely no data */}
+                    {!hasData && !isCompare && (
+                        <div className="py-10 text-center">
+                            <p className="text-body-lg font-semibold text-black uppercase tracking-widest">
+                                {t("No record found!") || "No record found!"}
+                            </p>
+                        </div>
+                    )}
+
+                    {/* Summary Sections - visible only when data exists and not comparing */}
+                    {hasData && !isCompare && (
                         <div className="space-y-3 md:space-y-6 animate-in fade-in duration-700">
                             {/* TOTAL ORDER QTY SECTION */}
                             <section>
                                 <div className="flex flex-col">
                                     <h2 className="text-body-lg md:text-h3-sm font-bold text-black uppercase mb-1.5 md:mb-3">{t("m.total-order-qty")}</h2>
-                                    <hr className="border-[#ddd] mb-3 md:mb-6"/>
+                                    <hr className="border-[#ddd] mb-3 md:mb-6" />
                                 </div>
-                                {/* <div className="grid grid-cols-1 md:grid-cols-3 gap-6"> */}
                                 <div className="w-full xl:w-3/4 grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-6">
                                     <QtyCard
                                         label={`${t("dashboard.year")} - ${searchYear}`}
@@ -261,9 +332,8 @@ export default function DashboardPage() {
                             <section>
                                 <div className="flex flex-col">
                                     <h2 className="text-body-lg md:text-h3-sm font-bold text-black uppercase mb-1.5 md:mb-3">{t("m.total-order-value")}</h2>
-                                    <hr className="border-[#ddd] mb-3 md:mb-6"/>
+                                    <hr className="border-[#ddd] mb-3 md:mb-6" />
                                 </div>
-                                {/* <div className="grid grid-cols-1 md:grid-cols-3 gap-6"> */}
                                 <div className="w-full xl:w-3/4 grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-6">
                                     <ValueCard
                                         label={`${t("dashboard.year")} - ${searchYear}`}
@@ -369,51 +439,55 @@ export default function DashboardPage() {
 
                             <div className="p-3 border border-[#ddd]">
                                 {/* Chart Implementation */}
-                                <div className="h-[250px] md:h-[450px] w-full mb-16 px-4">
-                                    <ResponsiveContainer width="100%" height="100%">
-                                        <BarChart
-                                            data={activeTab === 'quarterly' ?
-                                                [1, 2, 3, 4].map(q => ({
-                                                    name: quarterNames[q - 1],
-                                                    [searchYear]: Number(dashboardData?.compare_quarterly?.find((d: any) => Number(d.year) === searchYear && Number(d.period) === q)?.qty) || 0,
-                                                    [compareYear]: Number(dashboardData?.compare_quarterly?.find((d: any) => Number(d.year) === compareYear && Number(d.period) === q)?.qty) || 0
-                                                })) :
-                                                [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(m => ({
-                                                    name: monthNames[m - 1],
-                                                    [searchYear]: Number(dashboardData?.compare_monthly?.find((d: any) => Number(d.year) === searchYear && Number(d.period) === m)?.qty) || 0,
-                                                    [compareYear]: Number(dashboardData?.compare_monthly?.find((d: any) => Number(d.year) === compareYear && Number(d.period) === m)?.qty) || 0
-                                                }))
-                                            }
-                                            margin={{ top: 20, right: 30, left: 20, bottom: 20 }}
-                                        >
-                                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
-                                            <XAxis
-                                                dataKey="name"
-                                                axisLine={false}
-                                                tickLine={false}
-                                                tick={{ fill: 'var(--color-text-subtle)', fontSize: 11, fontWeight: 900 }}
-                                                dy={15}
-                                            />
-                                            <YAxis
-                                                axisLine={false}
-                                                tickLine={false}
-                                                tick={{ fill: 'var(--color-text-subtle)', fontSize: 10, fontWeight: 600 }}
-                                            />
-                                            <Tooltip
-                                                contentStyle={{ backgroundColor: 'var(--color-surface)', borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)', fontWeight: 900, fontSize: '12px', textTransform: 'uppercase' }}
-                                                cursor={{ fill: 'var(--color-surface-input)' }}
-                                            />
-                                            <Legend
-                                                verticalAlign="top"
-                                                align="right"
-                                                iconType="circle"
-                                                wrapperStyle={{ paddingBottom: '40px', fontSize: '11px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.1em' }}
-                                            />
-                                            <Bar dataKey={String(searchYear)} fill="#4E81C2" radius={[4, 4, 0, 0]} barSize={32} name={String(searchYear)} />
-                                            <Bar dataKey={String(compareYear)} fill="#111827" radius={[4, 4, 0, 0]} barSize={32} name={String(compareYear)} />
-                                        </BarChart>
-                                    </ResponsiveContainer>
-                                </div>
+                                {(() => {
+                                    const isQuarterly = activeTab === 'quarterly';
+                                    const periods = isQuarterly ? [1, 2, 3, 4] : [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
+                                    const sourceArr = isQuarterly ? dashboardData?.compare_quarterly : dashboardData?.compare_monthly;
+                                    const chartData = periods.map((p, i) => ({
+                                        name: isQuarterly ? quarterNames[i] : monthNames[i],
+                                        [searchYear]: getCompareQty(sourceArr, searchYear, p),
+                                        [compareYear]: getCompareQty(sourceArr, compareYear, p),
+                                    }));
+                                    // When all values are 0, fix Y-axis domain to [0,1] so the grid
+                                    // and axis ticks remain visible instead of collapsing to a flat line.
+                                    const allZero = chartData.every(d => (d[searchYear] as number) === 0 && (d[compareYear] as number) === 0);
+
+                                    return (
+                                        <div className="w-full aspect-[16/9]">
+                                            <ResponsiveContainer width="100%" height="100%">
+                                                <BarChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
+                                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
+                                                    <XAxis
+                                                        dataKey="name"
+                                                        axisLine={false}
+                                                        tickLine={false}
+                                                        tick={{ fill: 'var(--color-text-subtle)', fontSize: 11, fontWeight: 900 }}
+                                                        dy={15}
+                                                    />
+                                                    <YAxis
+                                                        axisLine={false}
+                                                        tickLine={false}
+                                                        tick={{ fill: 'var(--color-text-subtle)', fontSize: 10, fontWeight: 600 }}
+                                                        domain={allZero ? [0, 1] : undefined}
+                                                    />
+                                                    <Tooltip
+                                                        content={allZero ? () => null : undefined}
+                                                        cursor={allZero ? false : { fill: 'var(--color-surface-input)' }}
+                                                        contentStyle={{ backgroundColor: 'var(--color-surface)', borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)', fontWeight: 900, fontSize: '12px', textTransform: 'uppercase' }}
+                                                    />
+                                                    <Legend
+                                                        verticalAlign="top"
+                                                        align="right"
+                                                        iconType="circle"
+                                                        wrapperStyle={{ paddingBottom: '40px', fontSize: '11px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.1em' }}
+                                                    />
+                                                    <Bar dataKey={String(searchYear)} fill="#4E81C2" radius={[4, 4, 0, 0]} barSize={allZero ? 0 : 32} name={String(searchYear)} />
+                                                    <Bar dataKey={String(compareYear)} fill="#6B7280" radius={[4, 4, 0, 0]} barSize={allZero ? 0 : 32} name={String(compareYear)} />
+                                                </BarChart>
+                                            </ResponsiveContainer>
+                                        </div>
+                                    );
+                                })()}
 
                                 {/* Data Table */}
                                 <div className="overflow-x-auto overflow-hidden">
@@ -427,11 +501,10 @@ export default function DashboardPage() {
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-gray-200 bg-white">
-                                            {(activeTab === 'quarterly' ? [1, 2, 3, 4] : [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]).map((p, idx) => {
-                                                const val1 = Number((activeTab === 'quarterly' ? dashboardData?.compare_quarterly : dashboardData?.compare_monthly)
-                                                    ?.find((d: any) => Number(d.year) === searchYear && Number(d.period) === p)?.qty) || 0;
-                                                const val2 = Number((activeTab === 'quarterly' ? dashboardData?.compare_quarterly : dashboardData?.compare_monthly)
-                                                    ?.find((d: any) => Number(d.year) === compareYear && Number(d.period) === p)?.qty) || 0;
+                                            {(activeTab === 'quarterly' ? [1, 2, 3, 4] : [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]).map((p) => {
+                                                const sourceArr = activeTab === 'quarterly' ? dashboardData?.compare_quarterly : dashboardData?.compare_monthly;
+                                                const val1 = getCompareQty(sourceArr, searchYear, p);
+                                                const val2 = getCompareQty(sourceArr, compareYear, p);
 
                                                 const label = activeTab === 'quarterly'
                                                     ? (isRtl ? `ر${p}` : `Q${p}`)

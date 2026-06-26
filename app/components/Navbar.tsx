@@ -126,6 +126,9 @@ export default function Navbar() {
   const storeDropRef = useRef<HTMLDivElement>(null);
   const [openWarehouseMenu, setOpenWarehouseMenu] = useState<string | null>(null);
   const warehouseNavRef = useRef<HTMLElement>(null);
+  // Tracks whether the default warehouse has already been applied this session
+  // so we don't override a user's explicit warehouse selection on re-renders.
+  const defaultStoreApplied = useRef(false);
 
   const { data: customerData } = useSelector((state: RootState) => state.customer);
   const dispatch = useDispatch();
@@ -405,21 +408,26 @@ export default function Navbar() {
 
       setAllPermittedStores(raw);
 
-      const filtered = raw.filter((s) =>
-        s?.is_active !== false &&
-        (String(s.store_code).endsWith(`_${locale}`) || String(s.store_code) === locale)
-      );
+      const isStoreActive = (v: any) => v === true || v === 1 || String(v) === "1";
+      const filtered = raw.filter((s) => {
+        if (!isStoreActive(s?.is_active)) return false;
+        const code = String(s.store_code ?? "");
+        // Hide base locale root stores — they represent "All Warehouse"
+        if (code === "en" || code === "ar") return false;
+        // Only show warehouses matching the current locale (_en or _ar suffix)
+        if (!code.endsWith(`_${locale}`)) return false;
+        return true;
+      });
 
       const mapped: WarehouseItem[] = filtered.map((s) => {
         const storeCode = String(s.store_code ?? "");
-        // Dropdown label: group_name → store_name → website_name → store_code
-        // Never filter out a store just because admin left group_name/store_name blank.
+        // Label uses group_name first (e.g. "Anwar Khaled") as set in Magento Admin
         const label = String(s.group_name || s.store_name || s.website_name || storeCode);
         return {
           label,
           code: storeCode,
           storeUrl: String(s.store_url ?? ""),
-          name: String(s.store_name || s.group_name || storeCode),
+          name: String(s.group_name || s.store_name || storeCode),
         };
       }).filter((w) => !!w.code);
 
@@ -507,21 +515,15 @@ export default function Navbar() {
 
         // Build the final store list:
         // - Unrestricted (has_restrictions=false) OR no permitted stores → show all available
-        // - Restricted (has_restrictions=true, has stores) → show base locale stores
-        //   ("All Warehouse") + customer's specific permitted stores, deduped by store_code
+        // - Restricted (has_restrictions=true, has stores) → show only customer's permitted stores
+        // Base locale stores ("en"/"ar" = "All Warehouse") are always excluded from the dropdown.
         let finalStores: any[];
         if (permData?.has_restrictions === false || permittedStores.length === 0) {
           finalStores = allStores.length > 0 ? allStores : permittedStores;
         } else {
-          // Base locale stores are those whose store_code is exactly "en" or "ar"
-          // (not a warehouse prefix like V101_en) — they represent "All Warehouse"
-          const baseStores = allStores.filter(
-            (s: any) => s.store_code === "en" || s.store_code === "ar"
-          );
-          const combined = [...baseStores, ...permittedStores];
-          // Deduplicate — base stores listed first so they win on code collision
+          // Restricted: use only the customer's permitted stores (no base "All Warehouse" stores)
           const seen = new Set<string>();
-          finalStores = combined.filter((s: any) => {
+          finalStores = permittedStores.filter((s: any) => {
             const code = String(s.store_code ?? "");
             if (!code || seen.has(code)) return false;
             seen.add(code);
@@ -541,6 +543,39 @@ export default function Navbar() {
     })();
     return () => { cancelled = true; };
   }, [isAuthenticated, locale]);
+
+  // Reset the default-store guard when user logs out so the next login
+  // can apply the default again from a clean state.
+  useEffect(() => {
+    if (!isAuthenticated) {
+      defaultStoreApplied.current = false;
+    }
+  }, [isAuthenticated]);
+
+  // Apply default warehouse (Anwar Khaled → first available) when warehouse list loads
+  // and no valid store is already selected via URL or cookie.
+  useEffect(() => {
+    if (!isAuthenticated || !warehouseItems.length) return;
+    // URL store code takes priority — don't override an explicit navigation choice
+    if (warehousePathSeg) return;
+    // Cookie already points to a valid warehouse — respect the user's last selection
+    if (storeCookie && warehouseItems.some((w) => w.code === storeCookie)) return;
+    // Only apply the default once per auth session
+    if (defaultStoreApplied.current) return;
+    defaultStoreApplied.current = true;
+
+    // Find "Anwar Khaled" by group_name/label (case-insensitive, partial match)
+    const anwarKhaled = warehouseItems.find(
+      (w) =>
+        (w.label || "").toLowerCase().includes("anwar khaled") ||
+        (w.name || "").toLowerCase().includes("anwar khaled")
+    );
+    const defaultItem = anwarKhaled || warehouseItems[0];
+    if (!defaultItem) return;
+
+    document.cookie = `NEXT_STORE=${defaultItem.code};path=/;max-age=${60 * 60 * 24 * 365};samesite=lax`;
+    setStoreCookie(defaultItem.code);
+  }, [isAuthenticated, warehouseItems, warehousePathSeg, storeCookie]);
 
   // Resolve the display label for a menu item in the following precedence:
   //   1. code → CODE_TO_TRANSLATION_KEY (most stable across locales)
