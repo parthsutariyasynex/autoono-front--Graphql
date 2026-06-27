@@ -136,7 +136,7 @@ const Sidebar = () => {
         href = href.replace(/\/$/, "");
 
         // Map Magento native routes to Next.js frontend routes
-        if (href === "/customer/address") href = "/customer/address-book";
+        if (href === "/customer/address" || href === "/customer/address-book") href = "/address-book";
         if (href === "/sales/order/history") href = "/my-orders";
         if (href === "/wishlist") href = "/wishlist";
         if (href === "/customer/account") href = "/my-account";
