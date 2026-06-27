@@ -112,14 +112,12 @@ export const KLEVER_DASHBOARD_QUERY = /* GraphQL */ `
         }
         default_billing
         default_shipping
-        dob
         email
         firstname
         gender
         group_id
         id
         lastname
-        middlename
         prefix
         suffix
         taxvat
@@ -238,9 +236,6 @@ export const KLEVER_SUBACCOUNTS_QUERY = /* GraphQL */ `
         is_active
         permissions
         status
-        taxvat
-        created_at
-        updated_at
       }
       total_count
       parent_token
@@ -372,6 +367,7 @@ export const KLEVER_CATEGORY_PRODUCTS_QUERY = /* GraphQL */ `
         tyre_size
         is_in_stock
         stock_label
+        is_action
       }
       filters {
         code
@@ -836,8 +832,10 @@ export const KLEVER_ORDER_UPLOAD_SEARCH_QUERY = /* GraphQL */ `
       items {
         id
         order_id
+        order_increment_id
         file_name
         comment
+        company_code
         upload_for
         created_at
         payment_status
@@ -1019,6 +1017,7 @@ export const KLEVER_NOTIFICATIONS_QUERY = /* GraphQL */ `
         url
         is_read
         date_added
+        date_added_formatted
       }
       total_count
       unread_count

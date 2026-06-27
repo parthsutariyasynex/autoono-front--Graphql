@@ -9,6 +9,7 @@ const ProductEnquiryModal = dynamic(() => import("../components/ProductEnquiryMo
 const AddToCartPopup = dynamic(() => import("../components/AddToCartPopup"), { ssr: false });
 import { checkAuth } from "../products/api";
 import { useCart } from "@/modules/cart/hooks/useCart";
+import { useCanOrder } from "@/hooks/useCanOrder";
 import SidebarFilter from "../components/SidebarFilter";
 import Drawer from "../components/Drawer";
 import Modal from "../components/Modal";
@@ -22,6 +23,7 @@ import { toast } from "react-hot-toast";
 import { useTranslation } from "@/hooks/useTranslation";
 import { useLocalePath } from "@/hooks/useLocalePath";
 import { useGlobalLoading } from "@/components/GlobalLoadingOverlay";
+import AddToCartOverlay from "@/components/AddToCartOverlay";
 import { useLocale } from "@/lib/i18n/client";
 
 const PAGE_SIZE = 20;
@@ -106,6 +108,7 @@ export default function ProductsPage({ categoryId: propCategoryId, storeCode: pr
   // Direct hook call — component is inside <Suspense> in the page file so this is safe.
   const rawSearchParams = useSearchParams();
   const { cart, addToCart } = useCart();
+  const { canOrder } = useCanOrder();
   const { register: registerOverlay, unregister: unregisterOverlay } = useGlobalLoading();
   const [addingToCart, setAddingToCart] = useState<string | null>(null);
   const [justAdded, setJustAdded] = useState<string | null>(null);
@@ -165,7 +168,7 @@ export default function ProductsPage({ categoryId: propCategoryId, storeCode: pr
       const sn = sessionStorage.getItem(`storeName_${sc}`);
       if (sn) setStoreName(sn);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // URL → state: sync when the URL changes after mount (e.g. browser back/forward,
@@ -242,7 +245,7 @@ export default function ProductsPage({ categoryId: propCategoryId, storeCode: pr
       const sn = sessionStorage.getItem(`storeName_${sc2}`);
       if (sn) setStoreName(sn);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rawSearchParams, isMounted]);
 
   useEffect(() => {
@@ -431,9 +434,7 @@ export default function ProductsPage({ categoryId: propCategoryId, storeCode: pr
         const mappedProducts = productArray.map((p: any) => ({
           ...p,
           final_price: Number(p.final_price ?? p.special_price ?? p.price ?? 0),
-          // product-search doesn't return is_action — default to "Yes" so the
-          // Action column (qty + cart + favourite) always shows for search results.
-          is_action: p.is_action ?? "Yes",
+          is_action: p.is_action ?? "No",
         }));
 
         if (abortController.signal.aborted) return;
@@ -524,15 +525,15 @@ export default function ProductsPage({ categoryId: propCategoryId, storeCode: pr
     if (selectedOffers?.length) result = result.filter(p => p?.offer && selectedOffers.some((o: string) => o === p.offer));
 
     switch (sortBy) {
-      case "price-asc":  return result.sort((a, b) => (a.final_price ?? 0) - (b.final_price ?? 0));
+      case "price-asc": return result.sort((a, b) => (a.final_price ?? 0) - (b.final_price ?? 0));
       case "price-desc": return result.sort((a, b) => (b.final_price ?? 0) - (a.final_price ?? 0));
-      case "brand-asc":  return result.sort((a, b) => cmpStr(a.brand ?? "", b.brand ?? ""));
+      case "brand-asc": return result.sort((a, b) => cmpStr(a.brand ?? "", b.brand ?? ""));
       case "brand-desc": return result.sort((a, b) => cmpStr(b.brand ?? "", a.brand ?? ""));
-      case "name-asc":   return result.sort((a, b) => cmpStr(a.name ?? "", b.name ?? ""));
-      case "name-desc":  return result.sort((a, b) => cmpStr(b.name ?? "", a.name ?? ""));
-      case "stock-asc":  return result.sort((a, b) => stockTier(a) - stockTier(b));
+      case "name-asc": return result.sort((a, b) => cmpStr(a.name ?? "", b.name ?? ""));
+      case "name-desc": return result.sort((a, b) => cmpStr(b.name ?? "", a.name ?? ""));
+      case "stock-asc": return result.sort((a, b) => stockTier(a) - stockTier(b));
       case "stock-desc": return result.sort((a, b) => stockTier(b) - stockTier(a));
-      default:           return result;
+      default: return result;
     }
   }, [products, sortBy, isFavorite, favIds, selectedFilters]);
 
@@ -558,9 +559,10 @@ export default function ProductsPage({ categoryId: propCategoryId, storeCode: pr
     "m.price": "price",
   };
 
-  // Show the Action column only if at least one loaded product has is_action === "Yes".
-  // During loading we assume it may appear (prevents column count jump on shimmer → data).
-  const showActionColumn = loading || sortedProducts.some(p => p.is_action === "Yes");
+  // Show the Action column only when: user has ordering permission AND at least one
+  // product has is_action === "Yes". During loading we also include the column so the
+  // column count doesn't jump from shimmer to data.
+  const showActionColumn = canOrder && (loading || sortedProducts.some(p => p.is_action === "Yes"));
   const totalColumns = BASE_HEADER_KEYS.length + (showActionColumn ? 1 : 0);
   const displayCount = totalCount;
   const totalPages = Math.ceil(displayCount / PAGE_SIZE);
@@ -620,6 +622,8 @@ export default function ProductsPage({ categoryId: propCategoryId, storeCode: pr
   ══════════════════════════════════════════════════════════════ */
   return (
     <>
+      <AddToCartOverlay isProcessing={addingToCart !== null} />
+      <div className={addingToCart ? "blur-sm pointer-events-none select-none" : undefined}>
       <div className="flex">
         {/* Desktop Sidebar — visible at lg+ (1024px) so iPad-landscape users
             don't have to open the mobile drawer just to use the filter. */}
@@ -762,6 +766,7 @@ export default function ProductsPage({ categoryId: propCategoryId, storeCode: pr
                 isAdding={addingToCart === p.sku}
                 isJustAdded={justAdded === p.sku}
                 isFavorite={favIds.includes(p.product_id)}
+                canOrder={canOrder}
                 onAddToCart={handleAddToCart}
                 onToggleFavorite={toggleFavorite}
                 onInquiry={handleInquiry}
@@ -892,6 +897,7 @@ export default function ProductsPage({ categoryId: propCategoryId, storeCode: pr
                       isJustAdded={justAdded === p.sku}
                       isFavorite={favIds.includes(p.product_id)}
                       showActionColumn={showActionColumn}
+                      canOrder={canOrder}
                       onAddToCart={handleAddToCart}
                       onToggleFavorite={toggleFavorite}
                       onInquiry={handleInquiry}
@@ -927,6 +933,7 @@ export default function ProductsPage({ categoryId: propCategoryId, storeCode: pr
           </div>
         </div>
       </Drawer>
+      </div>
     </>
   );
 }

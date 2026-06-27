@@ -11,6 +11,9 @@ import { graphqlFetch, isGraphQLRequestError } from "@/src/lib/graphqlFetch";
 export async function GET(request: Request) {
   try {
     const token = await getRequestToken(request);
+    console.log("[subaccounts GET] token present:", !!token);
+    console.log("[subaccounts GET] query being sent:\n", KLEVER_SUBACCOUNTS_QUERY);
+
     if (!token) {
       return NextResponse.json(
         { message: "Authentication required. Authorization header is missing." },
@@ -18,18 +21,49 @@ export async function GET(request: Request) {
       );
     }
 
-    const data = await graphqlFetch<KleverSubaccountsData>({
-      query: KLEVER_SUBACCOUNTS_QUERY,
-      token,
+    // Send the raw GraphQL request directly so we can log the full backend response
+    const endpoint =
+      process.env.MAGENTO_GRAPHQL_URL ||
+      (process.env.NEXT_PUBLIC_MAGENTO_BASE_URL
+        ? `${process.env.NEXT_PUBLIC_MAGENTO_BASE_URL}/graphql`
+        : null);
+    console.log("[subaccounts GET] graphql endpoint:", endpoint);
+
+    const rawRes = await fetch(endpoint!, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ query: KLEVER_SUBACCOUNTS_QUERY }),
       cache: "no-store",
     });
 
-    return NextResponse.json(
-      data.kleverSubaccounts ?? { items: [], total_count: 0, parent_token: null },
-      { status: 200 },
-    );
+    const rawText = await rawRes.text();
+    console.log("[subaccounts GET] backend HTTP status:", rawRes.status);
+    console.log("[subaccounts GET] backend response body:", rawText);
+
+    let payload: any;
+    try {
+      payload = JSON.parse(rawText);
+    } catch {
+      console.error("[subaccounts GET] backend returned non-JSON response");
+      return NextResponse.json({ message: "Upstream returned non-JSON", raw: rawText.slice(0, 500) }, { status: 502 });
+    }
+
+    if (payload.errors?.length) {
+      console.error("[subaccounts GET] GraphQL errors:", JSON.stringify(payload.errors, null, 2));
+      return NextResponse.json({ message: payload.errors[0]?.message, errors: payload.errors }, { status: 400 });
+    }
+
+    const result = payload.data?.kleverSubaccounts ?? { items: [], total_count: 0, parent_token: null };
+    return NextResponse.json(result, { status: 200 });
   } catch (error) {
+    console.error("[subaccounts GET] caught error type:", Object.prototype.toString.call(error));
+    console.error("[subaccounts GET] caught error:", error);
     if (isGraphQLRequestError(error)) {
+      console.error("[subaccounts GET] isGraphQLRequestError: true, message:", error.message, "errors:", JSON.stringify(error.errors));
       return NextResponse.json(
         { message: error.message, errors: error.errors },
         { status: error.status >= 400 ? error.status : 500 },

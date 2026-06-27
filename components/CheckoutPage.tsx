@@ -37,6 +37,7 @@ import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import Price from "@/app/components/Price";
 import { useGlobalLoading, ButtonSpinner } from "@/components/GlobalLoadingOverlay";
+import { useCanOrder } from "@/hooks/useCanOrder";
 
 
 // --- Sub-components ---
@@ -62,6 +63,7 @@ const CheckoutPageUI: React.FC = () => {
     const { t, isRtl } = useTranslation();
     const lp = useLocalePath();
     const { availableGifts, openGiftModal, hasGifts } = useGift();
+    const { canOrder, orderPermLoading } = useCanOrder();
 
     // Hooks
     const { cart, isLoading: isCartLoading, isCartSyncing, updateCartItem, clearCart } = useCart();
@@ -134,6 +136,13 @@ const CheckoutPageUI: React.FC = () => {
     // Tracks whether the payment method was explicitly chosen (from localStorage restore
     // or a user click). Prevents background API refreshes from overriding the choice.
     const paymentMethodSetRef = useRef(false);
+
+    // Redirect users without ordering permission away from checkout
+    useEffect(() => {
+        if (!orderPermLoading && !canOrder) {
+            router.replace(lp("/"));
+        }
+    }, [canOrder, orderPermLoading, router, lp]);
 
     // Local display values for qty inputs — lets user type freely before committing.
     const [qtyValues, setQtyValues] = useState<Record<number, string>>({});

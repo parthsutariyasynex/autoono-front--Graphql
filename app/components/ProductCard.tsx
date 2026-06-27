@@ -46,6 +46,7 @@ export interface ProductCardProps {
     isJustAdded: boolean;
     isFavorite: boolean;
     showActionColumn?: boolean;
+    canOrder?: boolean;
     onAddToCart: (product: any) => void;
     onToggleFavorite: (product: any) => void;
     onInquiry: (product: any) => void;
@@ -62,6 +63,7 @@ function ProductCardImpl({
     isJustAdded,
     isFavorite,
     showActionColumn,
+    canOrder = true,
     onAddToCart,
     onToggleFavorite,
     onInquiry,
@@ -69,7 +71,7 @@ function ProductCardImpl({
     onImagePreview,
 }: ProductCardProps) {
     const { t } = useTranslation();
-    const showActions = product.is_action === "Yes";
+    const showActions = canOrder && product.is_action === "Yes";
     const showOldPrice = product.show_old_price !== false && product.original_price > product.final_price;
     const isOutOfStock = product.is_in_stock === false || product.stock_label === "Not Available";
     const productPath = resolveProductPath(product);

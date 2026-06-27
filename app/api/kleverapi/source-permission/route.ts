@@ -28,6 +28,7 @@ export async function GET(request: NextRequest) {
     if (!result) {
       return NextResponse.json(EMPTY, { headers: NO_CACHE_HEADERS });
     }
+
     return NextResponse.json(
       {
         has_restrictions: result.has_restrictions,

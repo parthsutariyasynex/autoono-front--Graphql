@@ -13,6 +13,8 @@ export interface Order {
     increment_id: string;
     entity_id: string;
     is_paid?: boolean;
+    company_name?: string | null;
+    company_code?: string | null;
 }
 
 interface OrdersTableProps {
@@ -20,9 +22,11 @@ interface OrdersTableProps {
     onViewOrder: (id: string) => void;
     onReorder: (order: Order) => void;
     onMakePayment?: (order: Order) => void;
+    canOrder?: boolean;
+    isSalesPerson?: boolean;
 }
 
-const OrdersTable: React.FC<OrdersTableProps> = ({ orders, onViewOrder, onReorder, onMakePayment }) => {
+const OrdersTable: React.FC<OrdersTableProps> = ({ orders, onViewOrder, onReorder, onMakePayment, canOrder = true, isSalesPerson = false }) => {
     const { t } = useTranslation();
     return (
         <div className="w-full">
@@ -31,13 +35,16 @@ const OrdersTable: React.FC<OrdersTableProps> = ({ orders, onViewOrder, onReorde
                 and up. Action column buttons stack vertically at lg to fit the narrowed
                 column when the account sidebar is on. */}
             <div className="hidden md:block overflow-x-auto">
-                <table className="w-full text-body text-left border-collapse min-w-[640px] border border-[#ddd]">
+                <table className="w-full text-body text-left border-collapse min-w-[900px] border border-[#ddd]">
                     <thead>
                         <tr className="bg-primary text-label uppercase font-bold tracking-widest">
                             <th className="px-2 xl:px-4 py-2 border border-warning/30">{t("orders.orderId")}</th>
+                            <th className="px-2 xl:px-4 py-2 border border-warning/30 whitespace-nowrap">{t("orders.sapOrderNumber") || "SAP Order Number"}</th>
                             <th className="px-2 xl:px-4 py-2 border border-warning/30 whitespace-nowrap text-center">{t("orders.date")}</th>
                             <th className="px-2 xl:px-4 py-2 border border-warning/30 whitespace-nowrap text-center">{t("orders.grandTotal")}</th>
                             <th className="px-2 xl:px-4 py-2 border border-warning/30 text-center">{t("orders.orderedBy")}</th>
+                            <th className="px-2 xl:px-4 py-2 border border-warning/30 whitespace-nowrap">{t("orders.company") || "Company"}</th>
+                            <th className="px-2 xl:px-4 py-2 border border-warning/30 whitespace-nowrap">{t("orders.companyCode") || "Company Code"}</th>
                             <th className="px-2 xl:px-4 py-2 border border-warning/30 text-center">{t("orders.status")}</th>
                             <th className="px-2 xl:px-4 py-2 border border-warning/30 text-center">{t("orders.action")}</th>
                         </tr>
@@ -47,7 +54,7 @@ const OrdersTable: React.FC<OrdersTableProps> = ({ orders, onViewOrder, onReorde
                             orders.map((order, idx) => (
                                 <tr
                                     key={order.increment_id + idx}
-                                    className="border-b border-gray-200 hover:bg-primary/5 transition-colors"
+                                    className={`border-b border-gray-200 transition-colors ${isSalesPerson && order.is_paid === false ? "bg-red-50 hover:bg-red-100" : "hover:bg-primary/5"}`}
                                 >
                                     <td
                                         className="px-2 xl:px-4 py-1.5 border-r border-gray-200 text-black text-body-lg font-medium cursor-pointer"
@@ -55,15 +62,23 @@ const OrdersTable: React.FC<OrdersTableProps> = ({ orders, onViewOrder, onReorde
                                     >
                                         {order.id}
                                     </td>
+                                    <td className="px-2 xl:px-4 py-1.5 border-r border-gray-200 text-black text-body">
+                                        {order.sapOrderNumber || "-"}
+                                    </td>
                                     <td className="px-2 xl:px-4 py-1.5 border-r border-gray-200 text-black text-body whitespace-nowrap text-center">
                                         {order.date}
                                     </td>
                                     <td className="px-2 xl:px-4 py-1.5 border-r border-gray-200 text-black text-body-lg font-medium whitespace-nowrap text-center">
                                         <Price amount={order.grandTotal} />
                                     </td>
-
                                     <td className="px-2 xl:px-4 py-1.5 border-r border-gray-200 text-black text-body text-center">
                                         {order.orderedBy}
+                                    </td>
+                                    <td className="px-2 xl:px-4 py-1.5 border-r border-gray-200 text-black text-body">
+                                        {order.company_name || "-"}
+                                    </td>
+                                    <td className="px-2 xl:px-4 py-1.5 border-r border-gray-200 text-black text-body">
+                                        {order.company_code || "-"}
                                     </td>
                                     <td className="px-2 xl:px-4 py-1.5 border-r border-gray-200 text-center">
                                         <span className={`inline-flex px-2 py-1 border rounded-sm text-caption font-medium uppercase tracking-wider bg-white whitespace-nowrap ${order.status?.toLowerCase().includes('pending') ? 'border-borderStrong text-black' :
@@ -115,7 +130,7 @@ const OrdersTable: React.FC<OrdersTableProps> = ({ orders, onViewOrder, onReorde
                             ))
                         ) : (
                             <tr>
-                                <td colSpan={6} className="px-4 py-10 text-center text-black/50 italic">
+                                <td colSpan={9} className="px-4 py-10 text-center text-black/50 italic">
                                     {t("orders.noRecords")}
                                 </td>
                             </tr>
@@ -130,7 +145,7 @@ const OrdersTable: React.FC<OrdersTableProps> = ({ orders, onViewOrder, onReorde
                     orders.map((order, idx) => (
                         <div
                             key={order.increment_id + idx}
-                            className="border border-[#ddd] rounded-sm bg-white p-4 space-y-3"
+                            className={`border border-[#ddd] rounded-sm p-4 space-y-3 ${isSalesPerson && order.is_paid === false ? "bg-red-50" : "bg-white"}`}
                         >
                             {/* Order number + Date */}
                             <div className="flex items-center justify-between">
@@ -142,6 +157,15 @@ const OrdersTable: React.FC<OrdersTableProps> = ({ orders, onViewOrder, onReorde
                                 </span>
                                 <span className="text-body-sm text-black">{order.date}</span>
                             </div>
+
+                            {/* SAP Order # + Company */}
+                            {(order.sapOrderNumber || order.company_name || order.company_code) && (
+                                <div className="text-body-sm text-black/70 space-y-0.5">
+                                    {order.sapOrderNumber && <div>{t("orders.sapOrderNumber") || "SAP #"}: {order.sapOrderNumber}</div>}
+                                    {order.company_name && <div>{t("orders.company") || "Company"}: {order.company_name}</div>}
+                                    {order.company_code && <div>{t("orders.companyCode") || "Code"}: {order.company_code}</div>}
+                                </div>
+                            )}
 
                             {/* Status badge */}
                             <div>

@@ -2,6 +2,7 @@ import { signOut } from "next-auth/react";
 import { invalidateSessionCache } from "@/lib/sessionCache";
 import { invalidateTokenCache } from "@/lib/api/api-client";
 import { invalidateAxiosTokenCache } from "@/store/axiosHelper";
+import { clearCanOrderCache } from "@/hooks/useCanOrder";
 import { APP_NAMESPACE, AUTH_COOKIE_NAMES } from "./constants";
 
 /**
@@ -29,6 +30,7 @@ export const handleGlobalLogout = async (callbackUrl: string) => {
         invalidateSessionCache();
         invalidateTokenCache();
         invalidateAxiosTokenCache();
+        clearCanOrderCache();
 
         try {
             localStorage.removeItem("token");

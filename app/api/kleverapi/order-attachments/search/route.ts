@@ -44,7 +44,7 @@ export async function GET(request: Request) {
       items = items.filter((i) => i.payment_status === invoiceDue);
     }
 
-    return NextResponse.json({ ...result, items }, { status: 200 });
+    return NextResponse.json({ ...result, items, total_count: items.length }, { status: 200 });
   } catch (error) {
     if (isGraphQLRequestError(error)) {
       return NextResponse.json(

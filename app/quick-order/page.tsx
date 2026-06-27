@@ -11,6 +11,7 @@ import Price from "../components/Price";
 import { redirectToLogin } from "@/utils/helpers";
 import { api, getClientStoreCode } from "@/lib/api/api-client";
 import { useGlobalLoading } from "@/components/GlobalLoadingOverlay";
+import { useCanOrder } from "@/hooks/useCanOrder";
 
 interface QuickOrderItem {
     sku: string;
@@ -26,6 +27,7 @@ export default function QuickOrderPage() {
     const lp = useLocalePath();
     const { addToCart, refetchCart } = useCart();
     const { register: registerOverlay, unregister: unregisterOverlay } = useGlobalLoading();
+    const { canOrder, orderPermLoading } = useCanOrder();
     const [loading, setLoading] = useState(false);
     const [searchTerm, setSearchTerm] = useState("");
     const [searchResults, setSearchResults] = useState<any[]>([]);
@@ -63,6 +65,13 @@ export default function QuickOrderPage() {
             redirectToLogin(router);
         }
     }, [router]);
+
+    // Redirect users without ordering permission
+    useEffect(() => {
+        if (!orderPermLoading && !canOrder) {
+            router.replace(lp("/"));
+        }
+    }, [canOrder, orderPermLoading, router, lp]);
 
     // Click outside to close search results
     useEffect(() => {

@@ -17,9 +17,11 @@ import { FavouriteProductsSkeleton } from "@/components/skeletons";
 import { useTranslation } from "@/hooks/useTranslation";
 import Pagination, { PageSizeSelect } from "@/components/Pagination";
 import { useCart } from "@/modules/cart/context/CartContext";
+import { useCanOrder } from "@/hooks/useCanOrder";
 import { useSession } from "next-auth/react";
 import PortalDropdown from "@/components/PortalDropdown";
 import { useGlobalLoading } from "@/components/GlobalLoadingOverlay";
+import AddToCartOverlay from "@/components/AddToCartOverlay";
 // import { FavouriteProductsSkeleton } from "@/components/skeletons";
 
 interface Product {
@@ -62,6 +64,7 @@ export default function FavouriteProducts({ title }: { title?: React.ReactNode }
     const { data: session } = useSession();
     const { refetchCart } = useCart();
     const { register: registerOverlay, unregister: unregisterOverlay } = useGlobalLoading();
+    const { canOrder } = useCanOrder();
 
     const [favProducts, setFavProducts] = useState<Product[]>([]);
     const [totalCount, setTotalCount] = useState(0);
@@ -356,7 +359,9 @@ export default function FavouriteProducts({ title }: { title?: React.ReactNode }
     };
 
     return (
-        <div className="w-full overflow-hidden">
+        <>
+        <AddToCartOverlay isProcessing={addingToCart !== null} />
+        <div className={`w-full overflow-hidden${addingToCart ? " blur-sm pointer-events-none select-none" : ""}`}>
             {/* Centered Page Title */}
             <div className="mb-5">
                 {typeof title === 'string' ? (
@@ -445,15 +450,15 @@ export default function FavouriteProducts({ title }: { title?: React.ReactNode }
                                     )}
                                 </div>
                                 <div className="flex items-center gap-1 flex-shrink-0">
-                                    {!isOutOfStock ? (
+                                    {canOrder && !isOutOfStock ? (
                                         <button onClick={() => onAddToCart(product)} disabled={addingToCart === product.sku} className={`h-9 px-2.5 rounded-lg flex items-center gap-1.5 text-label font-bold uppercase shadow-sm active:scale-95 cursor-pointer flex-shrink-0 bg-primary text-black`}>
                                             <ShoppingCart size={14} strokeWidth={2.5} className={addingToCart === product.sku ? "opacity-40" : ""} />
                                         </button>
-                                    ) : (
+                                    ) : isOutOfStock ? (
                                         <button onClick={() => { setInquiryProduct(product); setIsInquiryModalOpen(true); }} className="h-9 px-2.5 bg-primary text-black rounded-lg flex items-center gap-1.5 text-label font-bold uppercase shadow-sm active:scale-95 cursor-pointer flex-shrink-0">
                                             <Info size={14} strokeWidth={2.5} />
                                         </button>
-                                    )}
+                                    ) : null}
                                     <button onClick={() => handleRemove(product)} disabled={removing === product.product_id} className={`w-9 h-9 rounded-lg flex items-center justify-center active:scale-95 cursor-pointer flex-shrink-0 ${removing === product.product_id ? "bg-gray-100 text-black/50" : "bg-white text-black/50 border border-gray-200 hover:text-red-500"}`}>
                                         <Trash2 size={16} strokeWidth={2.5} className={removing === product.product_id ? "opacity-40" : ""} />
                                     </button>
@@ -573,7 +578,7 @@ export default function FavouriteProducts({ title }: { title?: React.ReactNode }
                                             </td>
                                             <td className="py-1 px-2 text-center align-middle">
                                                 <div className="flex items-center justify-center gap-1.5">
-                                                    {!isOutOfStock ? (
+                                                    {canOrder && !isOutOfStock ? (
                                                         <div className="w-10 h-9 border border-gray-200 rounded-sm focus:border-primary flex items-center justify-center text-label font-semibold text-black bg-white overflow-hidden">
                                                             <input
                                                                 type="number"
@@ -587,7 +592,7 @@ export default function FavouriteProducts({ title }: { title?: React.ReactNode }
                                                         <div className="w-10 h-9" />
                                                     )}
 
-                                                    {!isOutOfStock ? (
+                                                    {canOrder && !isOutOfStock ? (
                                                         <button
                                                             onClick={() => onAddToCart(product)}
                                                             disabled={addingToCart === product.sku}
@@ -595,14 +600,14 @@ export default function FavouriteProducts({ title }: { title?: React.ReactNode }
                                                         >
                                                             <ShoppingCart size={15} strokeWidth={2.5} className={addingToCart === product.sku ? "opacity-40" : ""} />
                                                         </button>
-                                                    ) : (
+                                                    ) : isOutOfStock ? (
                                                         <button
                                                             onClick={() => { setInquiryProduct(product); setIsInquiryModalOpen(true); }}
                                                             className="w-8 h-8 bg-primary hover:bg-primaryHover text-black rounded-sm flex items-center justify-center shadow-sm transition-all"
                                                         >
                                                             <Info size={15} strokeWidth={2.5} />
                                                         </button>
-                                                    )}
+                                                    ) : null}
 
                                                     <button
                                                         onClick={() => handleRemove(product)}
@@ -687,5 +692,6 @@ export default function FavouriteProducts({ title }: { title?: React.ReactNode }
                 </div>
             </Drawer>
         </div>
+        </>
     );
 }

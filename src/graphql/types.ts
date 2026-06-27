@@ -311,6 +311,8 @@ export interface KleverSubaccountSummary {
   permissions: number[] | string[] | null;
   status: string | null;
   taxvat: string | null;
+  customer_code: string | null;
+  company_name: string | null;
   created_at: string | null;
   updated_at: string | null;
 }
@@ -904,9 +906,11 @@ export interface KleverOrderUploadSearchData {
     items: Array<{
       id: number | string;
       order_id: number | string;
+      order_increment_id: string | null;
       customer_id: number | string | null;
       file_name: string;
       comment: string | null;
+      company_code: string | null;
       upload_for: string | null;
       created_at: string | null;
       updated_at: string | null;
@@ -1206,6 +1210,7 @@ export interface KleverCategoryProductItem {
   tyre_size: string | null;
   is_in_stock: boolean | null;
   stock_label: string | null;
+  is_action: string | null;
   /** Derived server-side from stock_label — not selected from GraphQL */
   stock_color?: string;
 }

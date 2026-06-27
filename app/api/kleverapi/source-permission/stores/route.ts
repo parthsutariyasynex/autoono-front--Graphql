@@ -23,6 +23,7 @@ export async function GET(request: NextRequest) {
 
     const stores = data.kleverSourceAvailableStores ?? [];
     console.log("[source-permission/stores] count:", stores.length, "store:", store);
+
     return NextResponse.json(stores, {
       headers: { "Cache-Control": "no-store, no-cache, must-revalidate" },
     });

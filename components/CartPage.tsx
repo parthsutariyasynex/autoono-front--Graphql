@@ -16,6 +16,7 @@ import { useLocalePath } from "@/hooks/useLocalePath";
 import { useGift } from "@/modules/cart/context/GiftContext";
 import { CartPageSkeleton } from "@/components/skeletons";
 import { useAction } from "@/lib/hooks/useAction";
+import { useCanOrder } from "@/hooks/useCanOrder";
 
 const CartPage: React.FC = () => {
     const router = useRouter();
@@ -26,6 +27,14 @@ const CartPage: React.FC = () => {
     const [pendingQtys, setPendingQtys] = React.useState<Record<number, number>>({});
     const { loading: isClearingCart, run: runClearCart } = useAction("clear-cart");
     const { loading: isUpdatingCart, run: runUpdateCart } = useAction("update-cart");
+    const { canOrder, orderPermLoading } = useCanOrder();
+
+    // Redirect users without ordering permission to the home page
+    React.useEffect(() => {
+        if (!orderPermLoading && !canOrder) {
+            router.replace(lp("/"));
+        }
+    }, [canOrder, orderPermLoading, router, lp]);
 
     // Always fetch fresh cart data when the cart page mounts
     React.useEffect(() => {

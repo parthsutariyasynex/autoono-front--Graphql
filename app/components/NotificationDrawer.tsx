@@ -55,6 +55,11 @@ export default function NotificationDrawer({ isOpen, onClose }: NotificationDraw
         }
     };
 
+    const getNotificationDate = (item: any): string => {
+        const rawDate = item.date_added_formatted || item.date_added || "";
+        return isRtl ? formatNotificationDate(rawDate) : rawDate;
+    };
+
     useEffect(() => {
         if (isOpen) {
             fetchNotifications();
@@ -150,7 +155,7 @@ export default function NotificationDrawer({ isOpen, onClose }: NotificationDraw
                                     {/* Footer: Date & Mark as Read */}
                                     <div className="flex justify-between items-center">
                                         <p className="text-label text-black/50 font-bold uppercase tracking-widest">
-                                            {isRtl ? formatNotificationDate(item.date_added || item.date_added_formatted) : item.date_added_formatted}
+                                            {getNotificationDate(item)}
                                         </p>
 
                                         {!item.is_read && (

@@ -47,11 +47,39 @@ export default function MyAccountPage() {
 
     const [subAccountName, setSubAccountName] = useState("");
     const [isSubAccountSession, setIsSubAccountSession] = useState(false);
+    // true  → Customer / Master Company (full account sections visible)
+    // false → backend marked address_book as not visible (e.g. Sales Person or other restricted role)
+    // Default true so master/customer users never see a flash of hidden sections.
+    const [canViewAccountSections, setCanViewAccountSections] = useState(true);
 
     useEffect(() => {
         if (typeof window !== "undefined") {
-            const isSub = localStorage.getItem("isSubAccount") === "true";
+            // isSubAccount flag is only set during master "Login As" impersonation.
+            // For direct-login subaccounts, fall back to user_type from the sidebar cache.
+            const impersonating = localStorage.getItem("isSubAccount") === "true";
+            let userTypeIsSubaccount = false;
+            // canViewAccountSections: use backend's address_book is_visible flag as the gate.
+            // Avoids hardcoding any role name — if Magento hides address_book for a role,
+            // that role also loses Sales Data, Customer Behavior, and Credit Account sections.
+            let addressBookVisible = true;
+            try {
+                const sc = localStorage.getItem("sidebar_cache_v2");
+                if (sc) {
+                    const parsed = JSON.parse(sc);
+                    userTypeIsSubaccount = parsed?.user_type === "subaccount";
+                    const abItem = (parsed?.items ?? []).find((i: any) => i.code === "address_book");
+                    if (abItem) addressBookVisible = abItem.is_visible !== false;
+                }
+            } catch { }
+            const isSub = impersonating || userTypeIsSubaccount;
+            console.log("sidebar_cache_v2:", localStorage.getItem("sidebar_cache_v2"));
+            console.log("impersonating:", impersonating);
+            console.log("userTypeIsSubaccount:", userTypeIsSubaccount);
+            console.log("isSub:", isSub);
+            console.log("canViewAccountSections (address_book visible):", addressBookVisible);
+
             setIsSubAccountSession(isSub);
+            setCanViewAccountSections(addressBookVisible);
             setSubAccountName(localStorage.getItem("subAccountName") || "");
 
             // Clear cached parent customer data so the page re-fetches under the sub-account token
@@ -65,6 +93,7 @@ export default function MyAccountPage() {
         if (status === "unauthenticated") {
             redirectToLogin(router);
             return;
+
         }
 
         // Navbar already dispatches fetchCustomerInfo when customer is missing.
@@ -74,6 +103,8 @@ export default function MyAccountPage() {
             dispatch(fetchCustomerInfo());
         }
     }, [status, token, dispatch, router, customer]);
+    console.log("Render isSubAccountSession:", isSubAccountSession);
+
 
     if (loading || !customer) {
         return (
@@ -190,41 +221,45 @@ export default function MyAccountPage() {
                                         </div>
                                     </div>
 
-                                        {/* SALES DATA */}
-                                    <div className={cardBase}>
-                                        <div className={sectionHeader}>
-                                            {t("m.sales-data-qty")}
+                                    {/* SALES DATA — hidden for subaccounts and roles where backend marks address_book not visible */}
+                                    {!isSubAccountSession && canViewAccountSections && (
+                                        <div className={cardBase}>
+                                            <div className={sectionHeader}>
+                                                {t("m.sales-data-qty")}
+                                            </div>
+                                            <div className="p-3 md:p-5 text-body text-black/80 space-y-2.5 font-medium leading-relaxed">
+                                                <p>{t("m.total-sales-qty")}: {getAttr("total_sales_qty", "0")}</p>
+                                                <p>{t("m.order-frequency")}: {getAttr("order_frequency", "0")} {t("account.ordersPerMonth")}</p>
+                                            </div>
                                         </div>
-                                        <div className="p-3 md:p-5 text-body text-black/80 space-y-2.5 font-medium leading-relaxed">
-                                            <p>{t("m.total-sales-qty")}: {getAttr("total_sales_qty", "0")}</p>
-                                            <p>{t("m.order-frequency")}: {getAttr("order_frequency", "0")} {t("account.ordersPerMonth")}</p>
-                                        </div>
-                                    </div>
+                                    )}
 
-                                    {/* CUSTOMER BEHAVIOR */}
-                                    <div className={cardBase}>
-                                        <div className={sectionHeader}>
-                                            {t("m.customer-behavior")}
+                                    {/* CUSTOMER BEHAVIOR — hidden for subaccounts and roles where backend marks address_book not visible */}
+                                    {!isSubAccountSession && canViewAccountSections && (
+                                        <div className={cardBase}>
+                                            <div className={sectionHeader}>
+                                                {t("m.customer-behavior")}
+                                            </div>
+                                            <div className="p-3 md:p-5 text-body text-black/80 space-y-2.5 font-medium leading-relaxed">
+                                                <p>{t("m.payment-historydso")}: {getAttr("payment_history")}</p>
+                                                <p>{t("m.credit-limit")}: <Price amount={getAttr("total_credit_limit")} /></p>
+                                                <p>{t("m.credit-period")}: {getAttr("credit_period")} {t("account.days")}</p>
+                                            </div>
                                         </div>
-                                        <div className="p-3 md:p-5 text-body text-black/80 space-y-2.5 font-medium leading-relaxed">
-                                            <p>{t("m.payment-historydso")}: {getAttr("payment_history")}</p>
-                                            <p>{t("m.credit-limit")}: <Price amount={getAttr("total_credit_limit")} /></p>
-                                            <p>{t("m.credit-period")}: {getAttr("credit_period")} {t("account.days")}</p>
-                                        </div>
-                                    </div>
+                                    )}
 
                                 </div>
                             </div>
-      
 
 
 
-                            {/* CREDIT ACCOUNT INFORMATION */}
-                            <CreditLimit />
+
+                            {/* CREDIT ACCOUNT INFORMATION — hidden for subaccounts and roles where backend marks address_book not visible */}
+                            {!isSubAccountSession && canViewAccountSections && <CreditLimit />}
 
 
-                            {/* ADDRESS BOOK */}
-                            <div>
+                            {/* ADDRESS BOOK — hidden for subaccounts and roles where backend marks address_book not visible */}
+                            {!isSubAccountSession && canViewAccountSections && <div>
                                 <h2 className="text-body-lg md:text-h3-sm font-bold text-black uppercase mb-3">{t("addressBook.title")}</h2>
                                 <hr className="border-[#ddd] mb-6" />
 
@@ -273,11 +308,11 @@ export default function MyAccountPage() {
 
                                             <div className="pt-2">
                                                 {defaultShipping?.id ? (
-                                                    <Link href={lp(`/customer/address-book/edit/${defaultShipping.id}`)} className="w-full md:w-auto text-center bg-primary hover:bg-primaryHover text-black text-body font-bold px-4 md:px-8 py-2.5 uppercase transition-all rounded-sm inline-block">
+                                                    <Link href={lp(`/address-book/edit/${defaultShipping.id}`)} className="w-full md:w-auto text-center bg-primary hover:bg-primaryHover text-black text-body font-bold px-4 md:px-8 py-2.5 uppercase transition-all rounded-sm inline-block">
                                                         {t("addressBook.editAddress")}
                                                     </Link>
                                                 ) : (
-                                                    <Link href={lp("/customer/address-book/edit/new")} className="w-full md:w-auto text-center bg-primary hover:bg-primaryHover text-black text-body font-bold px-4 md:px-8 py-2.5 uppercase transition-all rounded-sm inline-block">
+                                                    <Link href={lp("/address-book/edit/new")} className="w-full md:w-auto text-center bg-primary hover:bg-primaryHover text-black text-body font-bold px-4 md:px-8 py-2.5 uppercase transition-all rounded-sm inline-block">
                                                         {t("addressBook.addAddress")}
                                                     </Link>
                                                 )}
@@ -285,7 +320,7 @@ export default function MyAccountPage() {
                                         </div>
                                     </div>
                                 </div>
-                            </div>
+                            </div>}
                         </div>
                     </main>
                 </div>

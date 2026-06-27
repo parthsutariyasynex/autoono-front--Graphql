@@ -13,11 +13,13 @@ import { useCart } from "@/modules/cart/context/CartContext";
 import MakePaymentModal from "@/components/MakePaymentModal";
 import { OrderDetailSkeleton } from "@/components/skeletons";
 import EditPaymentModal from "@/components/EditPaymentModal";
+import { useCanOrder } from "@/hooks/useCanOrder";
 
 export default function OrderDetailsPage() {
     const { data: session, status: authStatus } = useSession();
     const router = useRouter();
     const { t, locale } = useTranslation("orderDetails");
+    const { canOrder } = useCanOrder();
 
     const safeTranslate = (key: string, fallback: string) => {
         // Translation files store flat keys like "orderDetails.productName".
@@ -596,6 +598,7 @@ export default function OrderDetailsPage() {
                         </div>
 
                         <div className="flex flex-col sm:flex-row justify-start items-stretch sm:items-center gap-3 w-full mt-3">
+                            {canOrder && (
                             <button
                                 onClick={handleReorder}
                                 className="bg-primary hover:bg-primary text-black font-bold py-2.5 px-6 rounded-sm text-body-sm uppercase tracking-widest transition-all shadow-sm border border-primary w-full sm:w-auto"
@@ -603,6 +606,7 @@ export default function OrderDetailsPage() {
                                 {safeTranslate("reorder", "REORDER")}
 
                             </button>
+                            )}
 
                             {/* Make Payment — only when the order is not yet paid */}
                             {/* {!isPaid && (

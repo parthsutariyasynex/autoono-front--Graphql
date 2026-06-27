@@ -13,6 +13,7 @@ import Drawer from "../../components/Drawer";
 import Modal from "../../components/Modal";
 import Price from "../../components/Price";
 import AddToCartPopup from "../../components/AddToCartPopup";
+import AddToCartOverlay from "@/components/AddToCartOverlay";
 
 import { api } from "@/lib/api/api-client";
 import { useTranslation } from "@/hooks/useTranslation";
@@ -21,6 +22,7 @@ import { useCart } from "@/modules/cart/context/CartContext";
 import { useSession } from "next-auth/react";
 import PortalDropdown from "@/components/PortalDropdown";
 import { FavouriteProductsSkeleton } from "@/components/skeletons";
+import { useCanOrder } from "@/hooks/useCanOrder";
 
 interface Product {
     product_id: number;
@@ -61,6 +63,7 @@ export default function FavouriteProducts({ title }: { title?: React.ReactNode }
     const { t } = useTranslation();
     const { data: session } = useSession();
     const { refetchCart } = useCart();
+    const { canOrder } = useCanOrder();
 
     const [favProducts, setFavProducts] = useState<Product[]>([]);
     const [totalCount, setTotalCount] = useState(0);
@@ -241,7 +244,9 @@ export default function FavouriteProducts({ title }: { title?: React.ReactNode }
     const totalPages = Math.ceil(totalCount / pageSize);
 
     return (
-        <div className="w-full font-rubik">
+        <>
+        <AddToCartOverlay isProcessing={addingToCart !== null} />
+        <div className={`w-full font-rubik${addingToCart ? " blur-sm pointer-events-none select-none" : ""}`}>
 
             <div className="flex items-center gap-4 mb-8">
                 <div className="flex-1">
@@ -311,7 +316,7 @@ export default function FavouriteProducts({ title }: { title?: React.ReactNode }
                                     )}
                                 </div>
                                 <div className="flex items-center gap-1 flex-shrink-0">
-                                    {!isOutOfStock ? (
+                                    {canOrder && (!isOutOfStock ? (
                                         <button onClick={() => onAddToCart(product)} disabled={addingToCart === product.sku} className={`h-9 px-2.5 rounded-lg flex items-center gap-1.5 text-[11px] font-bold uppercase shadow-sm active:scale-95 cursor-pointer flex-shrink-0 bg-primary text-black`}>
                                             {addingToCart === product.sku ? <div className="w-3.5 h-3.5 border-2 border-black border-t-transparent rounded-full animate-spin"></div> : <><ShoppingCart size={14} strokeWidth={2.5} /></>}
                                         </button>
@@ -319,7 +324,7 @@ export default function FavouriteProducts({ title }: { title?: React.ReactNode }
                                         <button onClick={() => { setInquiryProduct(product); setIsInquiryModalOpen(true); }} className="h-9 px-2.5 bg-primary text-black rounded-lg flex items-center gap-1.5 text-[11px] font-bold uppercase shadow-sm active:scale-95 cursor-pointer flex-shrink-0">
                                             <Info size={14} strokeWidth={2.5} />
                                         </button>
-                                    )}
+                                    ))}
                                     <button onClick={() => handleRemove(product)} disabled={removing === product.product_id} className={`w-9 h-9 rounded-lg flex items-center justify-center active:scale-95 cursor-pointer flex-shrink-0 ${removing === product.product_id ? "bg-gray-100 text-gray-400" : "bg-white text-gray-400 border border-gray-100 hover:text-red-500"}`}>
                                         {removing === product.product_id ? <div className="w-3.5 h-3.5 border-2 border-gray-300 border-t-red-500 rounded-full animate-spin"></div> : <Trash2 size={16} strokeWidth={2.5} />}
                                     </button>
@@ -442,7 +447,7 @@ export default function FavouriteProducts({ title }: { title?: React.ReactNode }
                                             <td className="px-2 text-center align-middle">
                                                 <div className="flex items-center justify-center gap-1.5">
                                                     {/* Col 1: Qty */}
-                                                    {!isOutOfStock ? (
+                                                    {canOrder && (!isOutOfStock ? (
                                                         <div className="w-9 h-8 border border-gray-200 rounded-md flex items-center justify-center text-[11px] font-bold text-gray-900 bg-white shadow-sm overflow-hidden">
                                                             <input
                                                                 type="number"
@@ -454,10 +459,10 @@ export default function FavouriteProducts({ title }: { title?: React.ReactNode }
                                                         </div>
                                                     ) : (
                                                         <div className="w-9 h-8" />
-                                                    )}
+                                                    ))}
 
                                                     {/* Col 2: Cart or Enquiry */}
-                                                    {!isOutOfStock ? (
+                                                    {canOrder && (!isOutOfStock ? (
                                                         <button
                                                             onClick={() => onAddToCart(product)}
                                                             disabled={addingToCart === product.sku}
@@ -477,7 +482,7 @@ export default function FavouriteProducts({ title }: { title?: React.ReactNode }
                                                         >
                                                             <Info size={15} strokeWidth={2.5} />
                                                         </button>
-                                                    )}
+                                                    ))}
 
                                                     {/* Col 3: Delete */}
                                                     <button
@@ -572,5 +577,6 @@ export default function FavouriteProducts({ title }: { title?: React.ReactNode }
                 </div>
             </Drawer>
         </div>
+        </>
     );
 }

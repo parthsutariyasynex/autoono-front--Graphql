@@ -661,7 +661,7 @@ export function DashboardSkeleton() {
         })}
 
         {/* Bottom filters — matches real page: full width through lg, 75% only at xl. */}
-        <section className="w-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 md:grid-cols-3 gap-6 pt-4">
+        {/* <section className="w-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 md:grid-cols-3 gap-6 pt-4">
           {Array.from({ length: 2 }).map((_, i) => (
             <div key={i} className="flex flex-col gap-4">
               <Pulse className="h-4 w-32" />
@@ -671,11 +671,12 @@ export function DashboardSkeleton() {
                 </div>
                 <div className="py-5 px-6 flex justify-center">
                   <Pulse className="h-8 w-20" />
-                </div>
+                </div>  
               </div>
             </div>
           ))}
-        </section>
+        </section> */}
+
       </div>
     </div>
   );

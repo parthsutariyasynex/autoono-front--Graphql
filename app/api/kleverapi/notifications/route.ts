@@ -27,8 +27,10 @@ export async function GET(req: NextRequest) {
 
     const result = data.kleverNotifications;
     if (!result) {
+      console.warn("[notifications] kleverNotifications returned null — backend may have no notifications for this user/store");
       return NextResponse.json({ items: [], total_count: 0, unread_count: 0 });
     }
+    console.log(`[notifications] OK — total=${result.total_count} unread=${result.unread_count} items=${result.items?.length}`);
     return NextResponse.json({
       items: result.items,
       total_count: result.total_count,
@@ -36,11 +38,13 @@ export async function GET(req: NextRequest) {
     });
   } catch (error) {
     if (isGraphQLRequestError(error)) {
+      console.error("[notifications] GraphQL error:", error.status, error.message, error.errors);
       return NextResponse.json(
         { message: error.message, errors: error.errors },
         { status: error.status >= 400 ? error.status : 500 },
       );
     }
+    console.error("[notifications] Unexpected error:", error);
     return NextResponse.json({ message: "Internal server error" }, { status: 500 });
   }
 }

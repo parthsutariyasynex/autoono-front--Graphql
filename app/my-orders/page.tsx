@@ -16,6 +16,7 @@ import { toast } from "react-hot-toast";
 import MakePaymentModal from "@/components/MakePaymentModal";
 import { MyOrdersSkeleton, OrdersTableSkeleton, SidebarSkeleton } from "@/components/skeletons";
 import { getClientStoreCode } from "@/lib/api/api-client";
+import { useCanOrder } from "@/hooks/useCanOrder";
 
 function formatOrderDate(dateStr: string): string {
     if (!dateStr) return "";
@@ -84,6 +85,8 @@ function mapOrder(item: any, paidByOrderId?: Map<string, number>): Order {
         increment_id: item.increment_id || "",
         entity_id: (item.entity_id || item.order_id || item.increment_id || "").toString(),
         is_paid,
+        company_name: item.company_name || null,
+        company_code: item.company_code || null,
     };
 }
 
@@ -117,6 +120,7 @@ function MyOrdersPageContent() {
     const lp = useLocalePath();
     const searchParams = useSearchParams();
     const { refetchCart } = useCart();
+    const { canOrder } = useCanOrder();
 
     const [orders, setOrders] = useState<Order[]>([]);
     const [allOrdersForCounts, setAllOrdersForCounts] = useState<any[]>([]);
@@ -127,6 +131,7 @@ function MyOrdersPageContent() {
     const [hasFetched, setHasFetched] = useState(false);
     const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
     const [selectedOrderForPayment, setSelectedOrderForPayment] = useState<Order | null>(null);
+    const [isSalesPerson, setIsSalesPerson] = useState(false);
 
     // Filter states - derived from URL
     const searchInput = searchParams.get("orderNumber") || "All";
@@ -150,6 +155,16 @@ function MyOrdersPageContent() {
             redirectToLogin(router);
         }
     }, [authStatus, router]);
+
+    useEffect(() => {
+        try {
+            const cache = JSON.parse(localStorage.getItem("sidebar_cache_v2") || "{}");
+            const addressBookItem = (cache.items || []).find((i: any) => i.code === "address_book");
+            setIsSalesPerson(addressBookItem?.is_visible === false);
+        } catch {
+            setIsSalesPerson(false);
+        }
+    }, []);
 
     // Calculate counts dynamically from all orders
     const statusCounts = useMemo(() => {
@@ -511,6 +526,8 @@ function MyOrdersPageContent() {
                                 onViewOrder={handleViewOrder}
                                 onReorder={handleReorder}
                                 onMakePayment={handleMakePayment}
+                                canOrder={canOrder}
+                                isSalesPerson={isSalesPerson}
                             />
                             {totalItems > 0 && (
                                 <Pagination

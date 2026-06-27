@@ -7,6 +7,7 @@ import { useState, useEffect, useMemo, useRef } from "react";
 import { useTranslation } from "@/hooks/useTranslation";
 import { useLocalePath } from "@/hooks/useLocalePath";
 import { api } from "@/lib/api/api-client";
+import { useCanOrder } from "@/hooks/useCanOrder";
 
 interface SidebarItem {
     label: string;
@@ -36,6 +37,8 @@ const Sidebar = () => {
     const pathname = usePathname();
     const { t } = useTranslation();
     const lp = useLocalePath();
+
+    const { canOrder } = useCanOrder();
 
     const [sidebarData, setSidebarData] = useState<SidebarResponse | null>(null);
     const [loading, setLoading] = useState(true);
@@ -215,9 +218,35 @@ const Sidebar = () => {
                     }
                 }
 
-                // Hide My Forecast from sidebar
-                if (itemCode === "my_forecast" || itemCode === "forecast" || itemCode === "viewforcast") {
-                    return false;
+                // 4. Hide Quick Order when the user lacks ordering permission
+                if (!canOrder) {
+                    const urlLower = (item.url || "").toLowerCase();
+                    const labelLower = (item.label || "").toLowerCase();
+                    if (
+                        itemCode.includes("quick") ||
+                        urlLower.includes("quick-order") ||
+                        urlLower.includes("quick_order") ||
+                        labelLower.includes("quick order")
+                    ) {
+                        return false;
+                    }
+                }
+
+                // 5. Always hide My Forecast — not shown on live Magento
+                {
+                    const urlLower = (item.url || "").toLowerCase();
+                    const labelLower = (item.label || "").toLowerCase();
+                    if (
+                        itemCode === "my_forecast" ||
+                        itemCode === "forecast" ||
+                        itemCode === "viewforcast" ||
+                        labelLower.includes("forecast") ||
+                        labelLower.includes("forcast") ||
+                        urlLower.includes("viewforcast") ||
+                        urlLower.includes("forecast")
+                    ) {
+                        return false;
+                    }
                 }
 
                 return true;
@@ -227,7 +256,7 @@ const Sidebar = () => {
                 ...item,
                 internalUrl: getInternalPath(item.url)
             }));
-    }, [sidebarData, lp, isSubAccountSession]);
+    }, [sidebarData, lp, isSubAccountSession, canOrder]);
 
     // Active item detection
     const activeCode = useMemo(() => {

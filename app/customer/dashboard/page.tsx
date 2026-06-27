@@ -356,7 +356,7 @@ export default function DashboardPage() {
                             {/* BOTTOM FILTERS */}
                             <section className="w-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 md:grid-cols-3 gap-6 pt-4">
                                 {/* Product Group Filter */}
-                                <div className="flex flex-col gap-4 group">
+                                {/* <div className="flex flex-col gap-4 group">
                                     <h3 className="text-body font-bold text-black uppercase tracking-widest ltr:text-left rtl:text-right">{t("dashboard.productGroupLabel")}</h3>
                                     <div className="bg-white border border-[#ddd] rounded-sm shadow-sm overflow-hidden">
                                         <div className="bg-primary border-b border-[#ddd] h-10 px-5 flex items-center relative">
@@ -379,10 +379,10 @@ export default function DashboardPage() {
                                             </p>
                                         </div>
                                     </div>
-                                </div>
+                                </div> */}
 
                                 {/* Tyre Size Filter */}
-                                <div className="flex flex-col gap-4 group">
+                                {/* <div className="flex flex-col gap-4 group">
                                     <h3 className="text-body font-bold text-black uppercase tracking-widest ltr:text-left rtl:text-right">{t("dashboard.tyreSizeLabel")}</h3>
                                     <div className="bg-white border border-[#ddd] rounded-sm shadow-sm overflow-hidden">
                                         <div className="bg-primary border-b border-[#ddd] h-10 px-5 flex items-center relative">
@@ -405,7 +405,7 @@ export default function DashboardPage() {
                                             </p>
                                         </div>
                                     </div>
-                                </div>
+                                </div> */}
                             </section>
                         </div>
                     )}

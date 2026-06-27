@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { useSession } from "next-auth/react";
-import { NotificationsResponse, NotificationItem } from "../types";
+import { NotificationItem } from "../types";
 import toast from "react-hot-toast";
 import { useTranslation } from "@/hooks/useTranslation";
 
@@ -23,6 +23,7 @@ export function useNotifications() {
     const [unreadCount, setUnreadCount] = useState(0);
     const [totalCount, setTotalCount] = useState(0);
     const [isLoading, setIsLoading] = useState(false);
+    const [hasFetchedNotifications, setHasFetchedNotifications] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
     const [deletingIds, setDeletingIds] = useState<number[]>([]);
@@ -33,6 +34,10 @@ export function useNotifications() {
 
     // Inflight guard: prevents concurrent fetch calls (e.g. StrictMode double-mount)
     const fetchingRef = useRef(false);
+
+    useEffect(() => {
+        setHasFetchedNotifications(false);
+    }, [sessionToken]);
 
     const fetchNotifications = useCallback(async (pageSize = 15, currentPage = 1, force = false) => {
         const token = sessionToken;
@@ -68,7 +73,9 @@ export function useNotifications() {
             }
 
             if (!response.ok) {
-                // Backend down or server error — fail silently
+                const errBody = await response.json().catch(() => null);
+                console.error("[useNotifications] fetch failed:", response.status, errBody);
+                setError(`Notifications fetch failed (${response.status})`);
                 return;
             }
 
@@ -81,7 +88,9 @@ export function useNotifications() {
             const normalizedItems = items.map((item: any) => ({
                 ...item,
                 notification_id: item.notification_id ?? item.id ?? item.entity_id,
-                is_read: !!(item.is_read ?? item.isRead ?? false)
+                is_read: !!(item.is_read ?? item.isRead ?? false),
+                date_added: item.date_added ?? "",
+                date_added_formatted: item.date_added_formatted ?? "",
             }));
 
             setNotifications(normalizedItems);
@@ -89,10 +98,11 @@ export function useNotifications() {
             setTotalCount(data.total_count ?? data.totalCount ?? normalizedItems.length);
             _lastNotifFetchAt = Date.now();
             _lastNotifFetchToken = token;
-        } catch {
-            // Network error or backend unreachable — fail silently
+        } catch (err) {
+            console.error("[useNotifications] network error:", err);
         } finally {
             setIsLoading(false);
+            setHasFetchedNotifications(true);
             fetchingRef.current = false;
         }
     }, [sessionToken]);
@@ -193,6 +203,7 @@ export function useNotifications() {
         unreadCount,
         totalCount,
         isLoading,
+        hasFetchedNotifications,
         error,
         deletingIds,
         fetchNotifications,

@@ -330,7 +330,7 @@ async function handleElasticsearchSearch(
       stock_color: k ? deriveStockColor(k) : "green",
       product_url: null,
       item_code: null,
-      is_action: "Yes",
+      is_action: k?.is_action ?? null,
     };
   });
 

@@ -33,7 +33,15 @@ const CreditLimit = () => {
 
     useEffect(() => {
         if (typeof window !== "undefined") {
-            setIsSubAccount(localStorage.getItem("isSubAccount") === "true");
+            // isSubAccount flag is only set during master "Login As" impersonation.
+            // For direct-login subaccounts, fall back to user_type from the sidebar cache.
+            const impersonating = localStorage.getItem("isSubAccount") === "true";
+            let userTypeIsSubaccount = false;
+            try {
+                const sc = localStorage.getItem("sidebar_cache_v2");
+                if (sc) userTypeIsSubaccount = JSON.parse(sc)?.user_type === "subaccount";
+            } catch {}
+            setIsSubAccount(impersonating || userTypeIsSubaccount);
         }
     }, []);
 

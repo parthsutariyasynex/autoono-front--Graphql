@@ -95,6 +95,7 @@ export default function NotificationsPage() {
     const {
         notifications,
         isLoading,
+        hasFetchedNotifications,
         fetchNotifications,
         markAsRead,
         removeNotification,
@@ -137,6 +138,7 @@ export default function NotificationsPage() {
 
     const totalPages = Math.ceil(totalCount / pageSize) || 1;
     const pageNumbers = Array.from({ length: Math.min(6, totalPages) }, (_, i) => i + 1);
+    const isNotificationsLoading = isLoading || !hasFetchedNotifications;
 
     return (
         <>
@@ -166,7 +168,7 @@ export default function NotificationsPage() {
                                         </tr>
                                     </thead>
                                     <tbody className="bg-white">
-                                        {isLoading ? (
+                                        {isNotificationsLoading ? (
                                             <>
                                                 {Array.from({ length: 6 }).map((_, i) => (
                                                     <tr key={i} className="border-b border-border animate-pulse">
@@ -184,9 +186,9 @@ export default function NotificationsPage() {
                                                     className={`border-b border-border last:border-0 transition-colors ${!item.is_read ? "bg-warningBgLight" : "bg-white"}`}
                                                 >
                                                     <td className="px-2 xl:px-4 py-1.5 border-r border-gray-200 text-body-lg text-black border-border align-middle relative">
-                                                        {!item.is_read && (
+                                                        {/* {!item.is_read && (
                                                             <div className="absolute left-2 top-1/2 -translate-y-1/2 w-2 h-2 bg-primary rounded-full shadow-sm"></div>
-                                                        )}
+                                                        )} */}
                                                         {formatDate(item.date_added_formatted, locale)}
                                                     </td>
                                                     <td className={`px-2 xl:px-4 py-1.5 border-r border-gray-200 text-body-lg text-center align-middle ${!item.is_read ? "font-medium text-black" : "font-normal text-black/70"}`}>
@@ -229,7 +231,7 @@ export default function NotificationsPage() {
 
                             {/* Mobile Card List */}
                             <div className="md:hidden">
-                                {isLoading ? (
+                                {isNotificationsLoading ? (
                                     <div className="space-y-0 animate-pulse">
                                         {Array.from({ length: 6 }).map((_, i) => (
                                             <div key={i} className="bg-white p-3 rounded-sm border border-[#ddd] mb-3 flex flex-col gap-2">
