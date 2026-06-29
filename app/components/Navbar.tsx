@@ -1158,9 +1158,7 @@ export default function Navbar() {
                   {/* Show selected store/warehouse name; fall back to language
                       name if no store is active. Click still toggles locale. */}
                   {currentStore
-                    ? (storeName && storeName !== currentStore
-                      ? storeName
-                      : currentStore.replace(/_(en|ar)$/i, ""))
+                    ? currentStore.replace(/_(en|ar)$/i, "")
                     : (locale === "en" ? "Arabic" : "English")}
                 </Link>
 

@@ -700,7 +700,7 @@ export default function ProductsPage({ categoryId: propCategoryId, storeCode: pr
               </div>
               {!hideFilters && (
                 <button onClick={() => setIsMobileFilterOpen(true)} className="lg:hidden h-[44px] bg-white border border-gray-200 rounded-xl flex items-center justify-center gap-2 text-label font-semibold uppercase tracking-wider shadow-sm active:scale-95 cursor-pointer">
-                  <Filter className="w-4 h-4" /> Filter
+                  <Filter className="w-4 h-4" /> {t("m.filter")}
                   {Object.keys(selectedFilters).length > 0 && <span className="w-5 h-5 bg-primary rounded-full text-caption font-semibold flex items-center justify-center">{Object.keys(selectedFilters).length}</span>}
                 </button>
               )}
