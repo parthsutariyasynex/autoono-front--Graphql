@@ -17,6 +17,7 @@ import { useGift } from "@/modules/cart/context/GiftContext";
 import { CartPageSkeleton } from "@/components/skeletons";
 import { useAction } from "@/lib/hooks/useAction";
 import { useCanOrder } from "@/hooks/useCanOrder";
+import AddToCartOverlay from "@/components/AddToCartOverlay";
 
 const CartPage: React.FC = () => {
     const router = useRouter();
@@ -25,6 +26,7 @@ const CartPage: React.FC = () => {
     const { openGiftModal, availableGifts, hasGifts, isAllGiftsSelected, fetchDiscountPopup } = useGift();
     const { cart, isLoading, isCartSyncing, error, removeFromCart, updateCartItem, clearCart, refetchCart } = useCart();
     const [pendingQtys, setPendingQtys] = React.useState<Record<number, number>>({});
+    const [overlayMsg, setOverlayMsg] = React.useState<string | null>(null);
     const { loading: isClearingCart, run: runClearCart } = useAction("clear-cart");
     const { loading: isUpdatingCart, run: runUpdateCart } = useAction("update-cart");
     const { canOrder, orderPermLoading } = useCanOrder();
@@ -47,28 +49,31 @@ const CartPage: React.FC = () => {
     };
 
     const handleRemove = async (id: number) => {
+        setOverlayMsg("Removing Item...");
         try {
             await removeFromCart(id);
-            // Clear pending update for this item if any
             if (pendingQtys[id]) {
                 const newPending = { ...pendingQtys };
                 delete newPending[id];
                 setPendingQtys(newPending);
             }
-            // Re-evaluate gift eligibility after removal — qty may have dropped below threshold
             fetchDiscountPopup();
             toast.success(t("cart.itemRemoved"));
         } catch (err) {
             toast.error(t("cart.itemRemovalFailed"));
+        } finally {
+            setOverlayMsg(null);
         }
     };
 
     const handleUpdateCart = async () => {
+        setOverlayMsg("Updating Cart...");
         const updateIds = Object.keys(pendingQtys);
         if (updateIds.length === 0) {
             await refetchCart();
             fetchDiscountPopup();
             toast.success(t("cart.updated") || "Cart updated");
+            setOverlayMsg(null);
             return;
         }
 
@@ -88,10 +93,12 @@ const CartPage: React.FC = () => {
                 refetchCart();
             }
         });
+        setOverlayMsg(null);
     };
 
 
     const handleClearCart = async () => {
+        setOverlayMsg("Clearing Cart...");
         const toastId = toast.loading(t("cart.clearing") || "Clearing cart...");
         await runClearCart(async () => {
             try {
@@ -102,6 +109,7 @@ const CartPage: React.FC = () => {
                 toast.error(msg, { id: toastId });
             }
         });
+        setOverlayMsg(null);
     };
 
     // Show skeleton while loading, syncing (warehouse switch in progress), or before
@@ -142,7 +150,9 @@ const CartPage: React.FC = () => {
     }
 
     return (
-        <div className="min-auto bg-surfaceOverlay pb-4 lg:pb-10">
+        <>
+        <AddToCartOverlay isProcessing={overlayMsg !== null} message={overlayMsg || ""} />
+        <div className={`min-auto bg-surfaceOverlay pb-4 lg:pb-10${overlayMsg ? " blur-sm pointer-events-none select-none" : ""}`}>
             {/* Main Content Container */}
             <div className="w-full px-3 lg:px-12 pt-4 md:pt-8">
 
@@ -280,6 +290,7 @@ const CartPage: React.FC = () => {
                 }
             `}</style>
         </div>
+        </>
     );
 };
 

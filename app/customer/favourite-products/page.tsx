@@ -245,8 +245,8 @@ export default function FavouriteProducts({ title }: { title?: React.ReactNode }
 
     return (
         <>
-        <AddToCartOverlay isProcessing={addingToCart !== null} />
-        <div className={`w-full font-rubik${addingToCart ? " blur-sm pointer-events-none select-none" : ""}`}>
+        <AddToCartOverlay isProcessing={addingToCart !== null || removing !== null} message={removing !== null ? "Removing from Favourites..." : "Processing Add to Cart..."} />
+        <div className={`w-full font-rubik${(addingToCart !== null || removing !== null) ? " blur-sm pointer-events-none select-none" : ""}`}>
 
             <div className="flex items-center gap-4 mb-8">
                 <div className="flex-1">

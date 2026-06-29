@@ -269,7 +269,7 @@ function parseCmsContent(rawContent: string, knownTitle?: string): Block[] {
     // extra spaces) don't prevent the match.
     if (knownTitle) {
         const normTitle = normalizeForMatch(knownTitle);
-        const normText  = normalizeForMatch(text);
+        const normText = normalizeForMatch(text);
         if (normText.startsWith(normTitle)) {
             // Slice by the raw title length as an approximation; any leading
             // whitespace left over is removed by the subsequent .trim().
@@ -403,7 +403,7 @@ export default function CmsPage({ identifier, fallbackTitleKey, arabicHeadings }
             >
                 {/* Title */}
                 {title && (
-                    <h1 className="text-2xl sm:text-3xl font-black text-black uppercase tracking-tight mb-8 sm:mb-10 text-center">
+                    <h1 className="text-2xl sm:text-3xl font-bold text-black uppercase tracking-tight mb-8 sm:mb-10 text-center">
                         {title}
                     </h1>
                 )}
@@ -421,7 +421,7 @@ export default function CmsPage({ identifier, fallbackTitleKey, arabicHeadings }
                     />
                 ) : (
                     <div
-                        className={`text-[15px] leading-[1.8] sm:leading-[1.9] text-black/80 font-medium ${isRtl ? "text-right" : "text-left"}`}
+                        className={`text-[15px] leading-[1.8] sm:leading-[1.9] text-black font-medium ${isRtl ? "text-right" : "text-left"}`}
                     >
                         {blocks.map((b, i) => {
                             if (b.type === "h2") {

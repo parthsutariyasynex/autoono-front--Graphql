@@ -63,7 +63,6 @@ export default function FavouriteProducts({ title }: { title?: React.ReactNode }
     const { t } = useTranslation();
     const { data: session } = useSession();
     const { refetchCart } = useCart();
-    const { register: registerOverlay, unregister: unregisterOverlay } = useGlobalLoading();
     const { canOrder } = useCanOrder();
 
     const [favProducts, setFavProducts] = useState<Product[]>([]);
@@ -226,7 +225,6 @@ export default function FavouriteProducts({ title }: { title?: React.ReactNode }
 
     const handleRemove = async (product: Product) => {
         setRemoving(product.product_id);
-        registerOverlay("fav-remove");
         const toastId = toast.loading(t("favorites.remove"));
         try {
             const deleteId = product.favorite_id || product.product_id;
@@ -235,12 +233,8 @@ export default function FavouriteProducts({ title }: { title?: React.ReactNode }
                 `/kleverapi/favorite-products/${deleteId}`,
                 storeCode ? { headers: { "x-store-code": storeCode } } : {},
             );
-            // Treat an explicit success:false as an error (API returns 422 for this,
-            // but guard here too in case the route is called from other contexts).
             if (result?.success === false) throw new Error("Server declined remove");
 
-            // Update local state only AFTER confirmed API success to prevent
-            // stale localStorage when the backend remove fails silently.
             const stored = localStorage.getItem("favourites");
             const favIds: number[] = stored ? JSON.parse(stored) : [];
             localStorage.setItem("favourites", JSON.stringify(favIds.filter((id: number) => id !== product.product_id)));
@@ -257,14 +251,12 @@ export default function FavouriteProducts({ title }: { title?: React.ReactNode }
             toast.error(t("favorites.removeFailed"), { id: toastId });
         } finally {
             setRemoving(null);
-            unregisterOverlay("fav-remove");
         }
     };
 
     const onAddToCart = async (product: Product) => {
         const qty = quantities[product.product_id] || 1;
         setAddingToCart(product.sku);
-        registerOverlay("fav-add-to-cart");
         try {
             await api.post("/kleverapi/cart/add", { sku: product.sku, qty });
             await refetchCart();
@@ -277,7 +269,6 @@ export default function FavouriteProducts({ title }: { title?: React.ReactNode }
             toast.error(t("cart.updateFailed"));
         } finally {
             setAddingToCart(null);
-            unregisterOverlay("fav-add-to-cart");
         }
     };
 
@@ -360,8 +351,8 @@ export default function FavouriteProducts({ title }: { title?: React.ReactNode }
 
     return (
         <>
-        <AddToCartOverlay isProcessing={addingToCart !== null} />
-        <div className={`w-full overflow-hidden${addingToCart ? " blur-sm pointer-events-none select-none" : ""}`}>
+        <AddToCartOverlay isProcessing={addingToCart !== null || removing !== null} message={removing !== null ? "Removing from Favourites..." : "Processing Add to Cart..."} />
+        <div className={`w-full overflow-hidden${(addingToCart !== null || removing !== null) ? " blur-sm pointer-events-none select-none" : ""}`}>
             {/* Centered Page Title */}
             <div className="mb-5">
                 {typeof title === 'string' ? (

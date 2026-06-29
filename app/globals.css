@@ -410,7 +410,7 @@
    Targets the HTML produced by the CMS — we can't add classNames to those
    children, so we style them by tag from the parent class. */
 .cms-content {
-  color: rgba(0, 0, 0, 0.75);
+  color: #000000;
   font-size: 15px;
   line-height: 1.9;
   font-weight: 500;
@@ -422,7 +422,7 @@
 .cms-content h5,
 .cms-content h6 {
   font-weight: 800;
-  color: #111;
+  color: #000000;
   margin-top: 2em;
   margin-bottom: 0.6em;
   text-transform: uppercase;
@@ -464,7 +464,7 @@
 
 /* Bold tags from the CMS body render as bold (not relying on UA defaults). */
 .cms-content strong,
-.cms-content b    { font-weight: 700; color: #111; }
+.cms-content b    { font-weight: 700; color: #000000; }
 
 /* Ensure list bullets/numbers are always visible even under CSS resets. */
 .cms-content ul   { list-style: disc; }
