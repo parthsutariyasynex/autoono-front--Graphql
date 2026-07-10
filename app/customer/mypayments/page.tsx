@@ -951,7 +951,7 @@ export default function MyPaymentsPage() {
                         grand_total: selectedPayment.invoice_amount || 0,
                         grandTotal: selectedPayment.invoice_amount || 0,
                         customerCode: selectedPayment.customer_code || customerCode || "N/A",
-                        receivable_payment: selectedPayment.due_payment || 0
+                        receivable_payment: selectedPayment.receivable_payment ?? selectedPayment.invoice_amount ?? 0
                     }}
                     customerName={customerFullName}
                     customerCode={customerCode}

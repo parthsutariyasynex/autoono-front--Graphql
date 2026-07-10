@@ -87,9 +87,11 @@ const PaymentDetailModal: React.FC<PaymentDetailModalProps> = ({
         ? Number(payment.paid_payment).toFixed(2)
         : "0.00";
 
-    const duePayment = (receivablePayment !== "-")
-        ? Math.max(0, Number(receivablePayment) - Number(paidAmount)).toFixed(2)
-        : "-";
+    const duePayment = (payment.due_payment !== undefined && payment.due_payment !== null)
+        ? Number(payment.due_payment).toFixed(2)
+        : (receivablePayment !== "-")
+            ? Math.max(0, Number(receivablePayment) - Number(paidAmount)).toFixed(2)
+            : "-";
 
     return (
         <Drawer
