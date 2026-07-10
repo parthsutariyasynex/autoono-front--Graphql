@@ -501,11 +501,29 @@ export interface KleverPaymentHistoryItem {
   id: number | string;
   receipt_no: string | null;
   payment_date: string | null;
+  order_id: number | string | null;
   order_increment_id: string | null;
+  customer_id: number | string | null;
+  customer_code: string | null;
+  customer_name: string | null;
+  company_name: string | null;
+  payment_for: string | null;
+  payment_method: string | null;
   invoice_amount: number | null;
+  receivable_payment: number | null;
   paid_payment: number | null;
   due_payment: number | null;
   payment_status: string | null;
+  sap_invoice_no: string | null;
+  receiver_name: string | null;
+  signed_doc_url: string | null;
+  remarks: string | null;
+  payment_by: string | null;
+  comment1: string | null;
+  comment2: string | null;
+  is_edit: boolean | null;
+  created_at: string | null;
+  updated_at: string | null;
 }
 
 export interface KleverPaymentHistoryData {
@@ -515,20 +533,10 @@ export interface KleverPaymentHistoryData {
   } | null;
 }
 
-export interface KleverPaymentHistoryDetail {
-  id: number | string;
-  receipt_no: string | null;
-  payment_date: string | null;
-  order_id: number | string | null;
-  order_increment_id: string | null;
-  paid_payment: number | null;
-  payment_method: string | null;
-  payment_status: string | null;
-  remarks: string | null;
-}
+export type KleverPaymentHistoryDetail = KleverPaymentHistoryItem;
 
 export interface KleverPaymentHistoryByIdData {
-  kleverPaymentHistoryById: KleverPaymentHistoryDetail | null;
+  kleverPaymentHistoryById: KleverPaymentHistoryItem | null;
 }
 
 export interface KleverPaymentHistoryReceiptData {
@@ -551,6 +559,38 @@ export interface KleverPaymentHistoryEditData {
     payment_id: number | string | null;
     receipt_no: string | null;
   };
+}
+
+export interface KleverPaymentHistoryOrderReceivableData {
+  kleverPaymentHistoryOrderReceivable: {
+    success: boolean;
+    message: string | null;
+    invoice_amount: number | null;
+    receivable_payment: number | null;
+  } | null;
+}
+
+export interface KleverPaymentHistoryAccountReceivableData {
+  kleverPaymentHistoryAccountReceivable: {
+    success: boolean;
+    message: string | null;
+    total_order_amount: number | null;
+    total_paid: number | null;
+    receivable_payment: number | null;
+  } | null;
+}
+
+export interface KleverPaymentHistoryExportCsvData {
+  kleverPaymentHistoryExportCsv: KleverFilePayload | null;
+}
+
+export interface KleverPaymentMethodOption {
+  value: string;
+  label: string | null;
+}
+
+export interface KleverPaymentHistoryPaymentMethodsData {
+  kleverPaymentHistoryPaymentMethods: KleverPaymentMethodOption[] | null;
 }
 
 export interface KleverStoreSummary {
@@ -1289,3 +1329,17 @@ export interface KleverMenuItem {
 export interface KleverMenuItemsData {
   kleverMenuItems: KleverMenuItem[];
 }
+
+export interface KleverProductStockBySourceItem {
+  source_code: string;
+  quantity: number;
+}
+
+export interface KleverProductStockBySourceData {
+  kleverProductStockBySource: {
+    success: boolean;
+    message: string | null;
+    items: KleverProductStockBySourceItem[];
+  } | null;
+}
+

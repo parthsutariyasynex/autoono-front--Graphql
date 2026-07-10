@@ -361,6 +361,37 @@ export const KLEVER_PAYMENT_HISTORY_SAVE_MUTATION = /* GraphQL */ `
   }
 `;
 
+// Account-level payment (My Payment page header "Make Payment").
+// Uses paymentFor: "account" — backend ignores orderId, records against the
+// account, and computes due_payment = receivablePayment - paidPayment.
+// companyName defaults to the customer's company_name attribute if omitted.
+// Separate doc so the shared order-save mutation (orderId: Int!) stays untouched.
+export const KLEVER_ACCOUNT_PAYMENT_SAVE_MUTATION = /* GraphQL */ `
+  mutation KleverAccountPaymentSave(
+    $paidPayment: Float!
+    $paymentDate: String
+    $paymentMethod: String
+    $remarks: String
+    $companyName: String
+    $receivablePayment: Float
+  ) {
+    kleverPaymentHistorySave(
+      paymentFor: "account"
+      paidPayment: $paidPayment
+      paymentDate: $paymentDate
+      paymentMethod: $paymentMethod
+      remarks: $remarks
+      companyName: $companyName
+      receivablePayment: $receivablePayment
+    ) {
+      success
+      message
+      payment_id
+      receipt_no
+    }
+  }
+`;
+
 export const KLEVER_PAYMENT_HISTORY_EDIT_MUTATION = /* GraphQL */ `
   mutation KleverPaymentHistoryEdit($paymentId: Int!, $paidPayment: Float, $remarks: String) {
     kleverPaymentHistoryEdit(paymentId: $paymentId, paidPayment: $paidPayment, remarks: $remarks) {

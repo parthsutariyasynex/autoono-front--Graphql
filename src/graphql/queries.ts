@@ -863,6 +863,7 @@ export const KLEVER_PAYMENT_HISTORY_QUERY = /* GraphQL */ `
     $orderId: Int
     $paymentStatus: String
     $paymentMethod: String
+    $paymentFor: String
     $pageSize: Int
     $currentPage: Int
   ) {
@@ -870,6 +871,7 @@ export const KLEVER_PAYMENT_HISTORY_QUERY = /* GraphQL */ `
       orderId: $orderId
       paymentStatus: $paymentStatus
       paymentMethod: $paymentMethod
+      paymentFor: $paymentFor
       pageSize: $pageSize
       currentPage: $currentPage
     ) {
@@ -877,11 +879,29 @@ export const KLEVER_PAYMENT_HISTORY_QUERY = /* GraphQL */ `
         id
         receipt_no
         payment_date
+        order_id
         order_increment_id
+        customer_id
+        customer_code
+        customer_name
+        company_name
+        payment_for
+        payment_method
         invoice_amount
+        receivable_payment
         paid_payment
         due_payment
         payment_status
+        sap_invoice_no
+        receiver_name
+        signed_doc_url
+        remarks
+        payment_by
+        comment1
+        comment2
+        is_edit
+        created_at
+        updated_at
       }
       total_count
     }
@@ -896,10 +916,27 @@ export const KLEVER_PAYMENT_HISTORY_BY_ID_QUERY = /* GraphQL */ `
       payment_date
       order_id
       order_increment_id
-      paid_payment
+      customer_id
+      customer_code
+      customer_name
+      company_name
+      payment_for
       payment_method
+      invoice_amount
+      receivable_payment
+      paid_payment
+      due_payment
       payment_status
+      sap_invoice_no
+      receiver_name
+      signed_doc_url
       remarks
+      payment_by
+      comment1
+      comment2
+      is_edit
+      created_at
+      updated_at
     }
   }
 `;
@@ -911,6 +948,49 @@ export const KLEVER_PAYMENT_HISTORY_RECEIPT_QUERY = /* GraphQL */ `
       filename
       base64
       mime_type
+    }
+  }
+`;
+
+export const KLEVER_PAYMENT_HISTORY_ORDER_RECEIVABLE_QUERY = /* GraphQL */ `
+ query KleverPaymentHistoryOrderReceivable($orderId: Int!) {
+    kleverPaymentHistoryOrderReceivable(orderId: $orderId) {
+      success
+      message
+      invoice_amount
+      receivable_payment
+    }
+  }
+`;
+
+export const KLEVER_PAYMENT_HISTORY_ACCOUNT_RECEIVABLE_QUERY = /* GraphQL */ `
+  query GetAccountReceivable {
+    kleverPaymentHistoryAccountReceivable {
+      success
+      message
+      total_order_amount
+      total_paid
+      receivable_payment
+    }
+  }
+`;
+
+export const KLEVER_PAYMENT_HISTORY_EXPORT_CSV_QUERY = /* GraphQL */ `
+  query KleverPaymentHistoryExportCsv {
+    kleverPaymentHistoryExportCsv{
+      success
+      filename
+      base64
+      mime_type
+    }
+  }
+`;
+
+export const KLEVER_PAYMENT_HISTORY_PAYMENT_METHODS_QUERY = /* GraphQL */ `
+  query KleverPaymentHistoryPaymentMethods {
+    kleverPaymentHistoryPaymentMethods {
+      value
+      label
     }
   }
 `;
@@ -1223,3 +1303,17 @@ export const KLEVER_MENU_ITEMS_QUERY = /* GraphQL */ `
     }
   }
 `;
+
+export const GET_PRODUCT_STOCK_BY_SOURCE = /* GraphQL */ `
+  query GetProductStockBySource($sku: String!) {
+    kleverProductStockBySource(sku: $sku) {
+      success
+      message
+      items {
+        source_code
+        quantity
+      }
+    }
+  }
+`;
+
