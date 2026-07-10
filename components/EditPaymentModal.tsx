@@ -173,9 +173,10 @@ const EditPaymentModal: React.FC<EditPaymentModalProps> = ({ isOpen, onClose, pa
                             onChange={(e) => setFormData({ ...formData, payment_method: e.target.value })}
                             className={inputClass}
                         >
-                            <option value="Bank Transfer">{t("orderDetails.bankTransfer")}</option>
-                            <option value="Cash">{t("orderDetails.cash")}</option>
-                            <option value="Check">{t("orderDetails.check")}</option>
+                            <option value="Cash">{t("orderDetails.cash") || "Cash"}</option>
+                            <option value="Bank Transfer">{t("orderDetails.bankTransfer") || "Bank Transfer"}</option>
+                            <option value="Cheque">{t("orderDetails.check") || "Cheque"}</option>
+                            <option value="Card">Card</option>
                         </select>
                     </div>
 

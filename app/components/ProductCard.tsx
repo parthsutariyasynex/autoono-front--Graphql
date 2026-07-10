@@ -16,14 +16,22 @@ export function stockColorClass(color?: string) {
     return "bg-gray-400";
 }
 
-export function StockBadge({ product }: { product: any }) {
+export function StockBadge({ product, onClick }: { product: any; onClick?: () => void }) {
     const { t } = useTranslation();
     const rawLabel = product.stock_label || "";
     const _tKey = `data.${rawLabel}`;
     const displayLabel = rawLabel && t(_tKey) !== _tKey ? t(_tKey) : rawLabel;
     return (
         <div className="flex flex-col items-center justify-center text-center gap-1">
-            <span className={`w-4 h-4 rounded-full border border-gray-100 shadow-sm ${stockColorClass(product.stock_color)}`} />
+            <span
+                onClick={onClick ? (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    onClick();
+                } : undefined}
+                className={`w-4 h-4 rounded-full border border-gray-100 shadow-sm ${stockColorClass(product.stock_color)} ${onClick ? "cursor-pointer hover:scale-110 active:scale-95 transition-transform" : ""}`}
+                title={onClick ? t("stockBySource.title") : undefined}
+            />
             <span className="text-caption font-semibold text-black/80 uppercase leading-none">
                 {displayLabel}
             </span>
@@ -52,6 +60,7 @@ export interface ProductCardProps {
     onInquiry: (product: any) => void;
     onQtyChange: (sku: string, qty: number) => void;
     onImagePreview?: (product: any) => void;
+    onStockClick?: (sku: string, name?: string) => void;
 }
 
 function ProductCardImpl({
@@ -69,6 +78,7 @@ function ProductCardImpl({
     onInquiry,
     onQtyChange,
     onImagePreview,
+    onStockClick,
 }: ProductCardProps) {
     const { t } = useTranslation();
     const showActions = canOrder && product.is_action === "Yes";
@@ -89,7 +99,15 @@ function ProductCardImpl({
                             <p className="text-caption text-black/40 font-medium mt-0.5 truncate">{product.item_code}</p>
                         )}
                         <div className="flex items-center gap-1.5 mt-1.5">
-                            <span className={`w-2 h-2 rounded-full ${stockColorClass(product.stock_color)}`} />
+                            <span
+                                onClick={onStockClick ? (e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    onStockClick(product.sku, product.name);
+                                } : undefined}
+                                className={`w-2 h-2 rounded-full ${stockColorClass(product.stock_color)} ${onStockClick ? "cursor-pointer hover:scale-125 active:scale-95 transition-transform" : ""}`}
+                                title={onStockClick ? t("stockBySource.title") : undefined}
+                            />
                             <span className="text-caption font-semibold text-black/70 uppercase">{translatedStockLabel}</span>
                         </div>
                     </div>
@@ -182,7 +200,12 @@ function ProductCardImpl({
                     ) : <span className="text-caption text-black/40 font-semibold uppercase leading-[40px]">No Image</span>}
                 </div>
             </td>
-            <td className="px-2 md:px-4 text-center"><StockBadge product={product} /></td>
+            <td className="px-2 md:px-4 text-center">
+                <StockBadge
+                    product={product}
+                    onClick={onStockClick ? () => onStockClick(product.sku, product.name) : undefined}
+                />
+            </td>
             <td className="px-2 md:px-4 text-center whitespace-nowrap">
                 <div className="flex flex-col items-center justify-center">
                     {showOldPrice && (

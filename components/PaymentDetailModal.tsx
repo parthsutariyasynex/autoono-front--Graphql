@@ -98,59 +98,59 @@ const PaymentDetailModal: React.FC<PaymentDetailModalProps> = ({
             title={t("orderDetails.paymentDetail") || "Payment Detail"}
             scrollable={true}
         >
-            <div className="flex-1 overflow-y-auto px-6 py-6 divide-y divide-gray-100 bg-white custom-scrollbar">
+            <div className="flex-1 overflow-y-auto px-5 py-4 divide-y divide-gray-100 bg-white custom-scrollbar">
                 {/* Receipt No */}
-                <div className="pb-3.5">
+                <div className="pb-1">
                     <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">
                         {t("orderDetails.receiptNo") || "Receipt No"}
                     </div>
-                    <div className="text-xs md:text-sm font-bold text-[#222222]">
+                    <div className="text-xs font-semibold text-[#222222]">
                         {payment.receipt_no || "-"}
                     </div>
                 </div>
 
                 {/* Payment Date */}
-                <div className="py-3.5">
+                <div className="py-1">
                     <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">
                         {t("orderDetails.paymentDate") || "Payment Date"}
                     </div>
-                    <div className="text-xs md:text-sm font-bold text-[#222222]">
+                    <div className="text-xs font-semibold text-[#222222]">
                         {paymentDateFormatted}
                     </div>
                 </div>
 
                 {/* Contact Name */}
-                <div className="py-3.5">
+                <div className="py-1">
                     <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">
                         {t("orderDetails.contactName") || "Contact Name"}
                     </div>
-                    <div className="text-xs md:text-sm font-bold text-[#222222]">
+                    <div className="text-xs font-semibold text-[#222222]">
                         {payment.customer_name || customerName || "-"}
                     </div>
                 </div>
 
                 {/* Customer Code */}
-                <div className="py-3.5">
+                <div className="py-1">
                     <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">
                         {t("orderDetails.customerCode") || "Customer Code"}
                     </div>
-                    <div className="text-xs md:text-sm font-bold text-[#222222]">
+                    <div className="text-xs font-semibold text-[#222222]">
                         {payment.customer_code || customerCode || "-"}
                     </div>
                 </div>
 
                 {/* Company Name */}
-                <div className="py-3.5">
+                <div className="py-1">
                     <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">
                         {t("orderDetails.companyName") || "Company Name"}
                     </div>
-                    <div className="text-xs md:text-sm font-bold text-[#222222]">
+                    <div className="text-xs font-semibold text-[#222222]">
                         {payment.company_name || customerCompany || "-"}
                     </div>
                 </div>
 
                 {/* Payment Status */}
-                <div className="py-3.5">
+                <div className="py-1">
                     <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1.5">
                         {t("orderDetails.paymentStatus") || "Payment Status"}
                     </div>
@@ -162,91 +162,91 @@ const PaymentDetailModal: React.FC<PaymentDetailModalProps> = ({
                 </div>
 
                 {/* Payment For */}
-                <div className="py-3.5">
+                <div className="py-1">
                     <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">
                         {t("orderDetails.paymentFor") || "Payment For"}
                     </div>
-                    <div className="text-xs md:text-sm font-bold text-[#222222]">
+                    <div className="text-xs font-semibold text-[#222222]">
                         {paymentFor}
                     </div>
                 </div>
 
                 {/* Order No */}
-                <div className="py-3.5">
+                <div className="py-1">
                     <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">
                         {t("orderDetails.orderNo") || "Order No"}
                     </div>
-                    <div className="text-xs md:text-sm font-bold text-[#222222]">
+                    <div className="text-xs font-semibold text-[#222222]">
                         {orderNo}
                     </div>
                 </div>
 
                 {/* SAP Order No */}
-                <div className="py-3.5">
+                <div className="py-1">
                     <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">
                         {t("orderDetails.sapOrderNo") || "SAP Order No"}
                     </div>
-                    <div className="text-xs md:text-sm font-bold text-[#222222]">
+                    <div className="text-xs font-semibold text-[#222222]">
                         {sapOrderNo}
                     </div>
                 </div>
 
                 {/* Payment Method */}
-                <div className="py-3.5">
+                <div className="py-1">
                     <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">
                         {t("orderDetails.paymentMethod") || "Payment Method"}
                     </div>
-                    <div className="text-xs md:text-sm font-bold text-[#222222]">
+                    <div className="text-xs font-semibold text-[#222222]">
                         {payment.payment_method || "-"}
                     </div>
                 </div>
 
                 {/* Invoice Amount */}
-                <div className="py-3.5">
+                <div className="py-1">
                     <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">
                         {t("orderDetails.invoiceAmount") || "Invoice Amount"}
                     </div>
-                    <div className="text-xs md:text-sm font-bold text-[#222222]">
+                    <div className="text-xs font-semibold text-[#222222]">
                         {invoiceAmount}
                     </div>
                 </div>
 
                 {/* Receivable Payment */}
-                <div className="py-3.5">
+                <div className="py-1">
                     <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">
                         {t("orderDetails.receivablePayment") || "Receivable Payment"}
                     </div>
-                    <div className="text-xs md:text-sm font-bold text-[#222222]">
+                    <div className="text-xs font-semibold text-[#222222]">
                         {receivablePayment}
                     </div>
                 </div>
 
                 {/* Paid Amount */}
-                <div className="py-3.5">
+                <div className="py-1">
                     <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">
                         {t("orderDetails.paidAmount") || "Paid Amount"}
                     </div>
-                    <div className="text-xs md:text-sm font-bold text-[#222222]">
+                    <div className="text-xs font-semibold text-[#222222]">
                         {paidAmount}
                     </div>
                 </div>
 
                 {/* Due Payment */}
-                <div className="py-3.5">
+                <div className="py-1">
                     <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">
                         {t("orderDetails.duePayment") || "Due Payment"}
                     </div>
-                    <div className="text-xs md:text-sm font-bold text-[#222222]">
+                    <div className="text-xs font-semibold text-[#222222]">
                         {duePayment}
                     </div>
                 </div>
 
                 {/* Remarks */}
-                <div className="py-3.5">
+                <div className="py-1">
                     <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">
                         {t("orderDetails.remarks") || "Remarks"}
                     </div>
-                    <div className="text-xs md:text-sm font-bold text-[#222222] leading-relaxed">
+                    <div className="text-xs font-semibold text-[#222222] leading-relaxed">
                         {payment.remarks || "-"}
                     </div>
                 </div>

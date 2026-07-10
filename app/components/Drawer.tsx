@@ -25,23 +25,27 @@ export default function Drawer({ isOpen, onClose, children, title, scrollable = 
             className="flex flex-col"
             scrollable={scrollable}
         >
-            {/* Close Button Overlay — sits on the far end of the header.
-                In LTR it lives on the right; in RTL the drawer slides in from
-                the left edge and the title pins to the right, so the close
-                button needs to flip to the left to avoid overlapping the title. */}
-            <button
-                onClick={onClose}
-                className="absolute ltr:right-4 rtl:left-4 top-4 z-[110] p-1 bg-white/80 backdrop-blur-sm rounded-full shadow-sm hover:bg-gray-100 transition-colors text-black/60 hover:text-black"
-                aria-label="Close drawer"
-            >
-                <X size={16} strokeWidth={2.5} />
-            </button>
-
             {/* Header if title exists */}
-            {title && (
-                <div className="bg-primary px-4 py-4 flex items-center justify-between flex-shrink-0">
+            {title ? (
+                <div className="bg-primary px-4 py-4 flex items-center justify-between flex-shrink-0 border-b border-black/5">
                     <h2 className="text-xl font-bold text-black">{title}</h2>
+                    <button
+                        onClick={onClose}
+                        className="p-1 bg-white/80 backdrop-blur-sm rounded-full shadow-sm hover:bg-gray-100 transition-colors text-black/60 hover:text-black group flex items-center justify-center cursor-pointer"
+                        aria-label="Close drawer"
+                    >
+                        <X size={16} strokeWidth={2.5} className="transition-transform duration-300 group-hover:rotate-90" />
+                    </button>
                 </div>
+            ) : (
+                /* Close Button Overlay if no title */
+                <button
+                    onClick={onClose}
+                    className="absolute ltr:right-4 rtl:left-4 top-4 z-[110] p-1 bg-white/80 backdrop-blur-sm rounded-full shadow-sm hover:bg-gray-100 transition-colors text-black/60 hover:text-black group cursor-pointer"
+                    aria-label="Close drawer"
+                >
+                    <X size={16} strokeWidth={2.5} className="transition-transform duration-300 group-hover:rotate-90" />
+                </button>
             )}
 
             {/* Content Area */}

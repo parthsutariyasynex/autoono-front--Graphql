@@ -13,6 +13,7 @@ import Drawer from "../../components/Drawer";
 import Modal from "../../components/Modal";
 import Price from "../../components/Price";
 import AddToCartPopup from "../../components/AddToCartPopup";
+import StockBySourceModal from "../../components/StockBySourceModal";
 import AddToCartOverlay from "@/components/AddToCartOverlay";
 
 import { api } from "@/lib/api/api-client";
@@ -83,6 +84,16 @@ export default function FavouriteProducts({ title }: { title?: React.ReactNode }
     const [selectedImage, setSelectedImage] = useState<string | null>(null);
     const [isImageModalOpen, setIsImageModalOpen] = useState(false);
     const [previewProduct, setPreviewProduct] = useState<Product | null>(null);
+
+    const [isStockModalOpen, setIsStockModalOpen] = useState(false);
+    const [stockProductSku, setStockProductSku] = useState<string | null>(null);
+    const [stockProductName, setStockProductName] = useState<string | null>(null);
+
+    const handleStockClick = useCallback((sku: string, name?: string) => {
+        setStockProductSku(sku);
+        setStockProductName(name || null);
+        setIsStockModalOpen(true);
+    }, []);
 
     const loadFavourites = useCallback(async () => {
         setLoading(true);
@@ -289,7 +300,15 @@ export default function FavouriteProducts({ title }: { title?: React.ReactNode }
                                         {product.year && <span className="text-[11px] text-gray-400 font-mono">{product.year}</span>}
                                     </div>
                                     <div className="flex items-center gap-1.5 mt-1.5">
-                                        <span className={`w-2 h-2 rounded-full ${dotColor}`}></span>
+                                        <span
+                                            onClick={(e) => {
+                                                e.preventDefault();
+                                                e.stopPropagation();
+                                                handleStockClick(product.sku, product.name);
+                                            }}
+                                            className={`w-2 h-2 rounded-full ${dotColor} cursor-pointer hover:scale-125 active:scale-95 transition-transform`}
+                                            title={t("stockBySource.title")}
+                                        />
                                         <span className="text-[10px] font-bold text-gray-600 uppercase">{stockLabel}</span>
                                     </div>
                                     {product.offer && <p className="text-[10px] font-bold text-red-600 uppercase mt-1">{product.offer}</p>}
@@ -422,7 +441,15 @@ export default function FavouriteProducts({ title }: { title?: React.ReactNode }
                                             </td>
                                             <td className="px-3 py-4 text-center">
                                                 <div className="flex flex-col items-center justify-center text-center gap-1.5">
-                                                    <span className={`w-3.5 h-3.5 rounded-full border border-white shadow-sm ${stockColor}`}></span>
+                                                    <span
+                                                        onClick={(e) => {
+                                                            e.preventDefault();
+                                                            e.stopPropagation();
+                                                            handleStockClick(product.sku, product.name);
+                                                        }}
+                                                        className={`w-3.5 h-3.5 rounded-full border border-white shadow-sm ${stockColor} cursor-pointer hover:scale-110 active:scale-95 transition-transform`}
+                                                        title={t("stockBySource.title")}
+                                                    />
                                                     <span className="text-[10px] font-extrabold text-gray-700 uppercase leading-none tracking-tighter">{stockLabel}</span>
                                                 </div>
                                             </td>
@@ -552,6 +579,17 @@ export default function FavouriteProducts({ title }: { title?: React.ReactNode }
                 onClose={() => {
                     setIsAddedPopupOpen(false);
                     setAddedProduct(null);
+                }}
+            />
+
+            <StockBySourceModal
+                isOpen={isStockModalOpen}
+                sku={stockProductSku}
+                productName={stockProductName}
+                onClose={() => {
+                    setIsStockModalOpen(false);
+                    setStockProductSku(null);
+                    setStockProductName(null);
                 }}
             />
 

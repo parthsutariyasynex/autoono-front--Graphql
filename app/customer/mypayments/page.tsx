@@ -13,7 +13,7 @@ import Price from "@/app/components/Price";
 import AccountPaymentModal from "@/components/AccountPaymentModal";
 import PaymentDetailModal from "@/components/PaymentDetailModal";
 import Pagination from "@/components/Pagination";
-import { Search, Download, CreditCard, ChevronLeft, ChevronRight, FileText } from "lucide-react";
+import { Search, Download, CreditCard, ChevronLeft, ChevronRight, FileText, AlertTriangle } from "lucide-react";
 import { useSelector, useDispatch } from "react-redux";
 import { RootState, AppDispatch } from "@/store/store";
 import { fetchCustomerInfo } from "@/store/actions/customerActions";
@@ -371,23 +371,7 @@ export default function MyPaymentsPage() {
         }
     }, [authStatus, fetchPayments, fetchOrders]);
 
-    // Prevent layout shift caused by the scrollbar disappearing when a modal overlay is open.
-    // Only active while this page is mounted — cleaned up on unmount.
-    useEffect(() => {
-        const open = isAccountPaymentOpen || isEditPaymentOpen;
-        if (open) {
-            const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
-            document.body.style.overflow = "hidden";
-            document.body.style.paddingRight = `${scrollbarWidth}px`;
-        } else {
-            document.body.style.overflow = "";
-            document.body.style.paddingRight = "";
-        }
-        return () => {
-            document.body.style.overflow = "";
-            document.body.style.paddingRight = "";
-        };
-    }, [isAccountPaymentOpen, isEditPaymentOpen]);
+
 
     // Client-side filtering logic for text matching and date ranges
     const filteredPayments = useMemo(() => {
@@ -438,7 +422,7 @@ export default function MyPaymentsPage() {
         const token = (session as any)?.accessToken;
         if (!token) return;
 
-        const toastId = toast.loading(safeTranslate("common.loading", "Fetching details..."));
+        const toastId = toast.loading(safeTranslate("orderDetails.fetchingPaymentDetails", "Fetching payment details..."));
         try {
             const storeCode = getClientStoreCode();
             const res = await fetch(`/api/kleverapi/payment-history/${paymentId}`, {
@@ -806,9 +790,11 @@ export default function MyPaymentsPage() {
                     {isLoading ? (
                         <LocalPaymentsTableSkeleton rows={pageSize} safeTranslate={safeTranslate} customerCompany={customerCompany} customerCode={customerCode} />
                     ) : filteredPayments.length === 0 ? (
-                        <div className="bg-white border border-[#ddd] p-10 text-center rounded-sm shadow-sm">
-                            <FileText size={48} className="mx-auto text-black/20 mb-4" />
-                            <p className="text-body font-bold text-black/60">{safeTranslate("orders.noRecords", "No payment records found.")}</p>
+                        <div className="bg-amber-50 border border-amber-200 border-l-4 border-l-amber-500 p-4 rounded-r-sm shadow-sm flex items-center gap-3 w-full">
+                            <AlertTriangle className="w-5 h-5 text-amber-500 flex-shrink-0" />
+                            <span className="text-sm font-bold text-amber-800">
+                                {safeTranslate("orders.noRecords", "No payment records found.")}
+                            </span>
                         </div>
                     ) : (
                         <>

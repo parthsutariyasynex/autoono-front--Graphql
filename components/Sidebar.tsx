@@ -143,6 +143,7 @@ const Sidebar = () => {
         if (href === "/sales/order/history") href = "/my-orders";
         if (href === "/wishlist") href = "/wishlist";
         if (href === "/customer/account") href = "/my-account";
+        if (href.includes("/mypayments") || href.includes("/mypayment") || href.includes("/payment/mypayments") || href.includes("/payment/history") || href.includes("/payment/history/")) href = "/customer/mypayments";
         // Order Attachments: Magento returns kleverapi/orderupload or customer/orderupload
         if (href.includes("/orderupload") || href.includes("/order-attachment")) href = "/customer/order-attachments";
 
@@ -158,6 +159,9 @@ const Sidebar = () => {
         }
         if (code === "my_statement" || code === "statement" || code === "mystatement" || label.includes("statement")) {
             return t("sidebar.myStatement") || item.label;
+        }
+        if (code === "my_payment" || code === "mypayment" || code === "mypayments" || code === "payments" || code === "payment" || label.includes("payment")) {
+            return t("sidebar.myPayment") || item.label;
         }
         if (code === "manage_accounts" || label.includes("manage accounts") || label.includes("manage_accounts")) {
             return t("sidebar.manageAccounts") || item.label;
@@ -281,6 +285,7 @@ const Sidebar = () => {
         }
 
         if (cleanPath.includes("/statement")) return "statement";
+        if (cleanPath.includes("/mypayments") || cleanPath.includes("/payment")) return "my_payment";
         if (cleanPath.includes("/favorite") || cleanPath.includes("/favourite") || cleanPath.includes("/wishlist")) return "favourite_products";
         // if (cleanPath.includes("/forecast") || cleanPath.includes("/forcast") || cleanPath.includes("/viewforcast")) return "my_forecast";
         if (cleanPath.includes("/dashboard")) return "dashboard";

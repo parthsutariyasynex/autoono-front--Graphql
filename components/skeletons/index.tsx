@@ -1027,6 +1027,127 @@ export function StatementSkeleton() {
   );
 }
 
+// ─── Payments Skeleton ────────────────────────────────────────────────────────
+export function PaymentsSkeleton() {
+  return (
+    <div className="flex-1 w-full px-4 md:px-6 lg:px-8 py-4 md:py-6 lg:py-5 bg-surfacePage">
+      {/* Title + Action Button */}
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-5">
+        <Pulse className="h-8 w-48" />
+        <div className="flex gap-2">
+          <Pulse className="h-10 w-32 rounded-sm" />
+          <Pulse className="h-10 w-32 rounded-sm" />
+        </div>
+      </div>
+
+      {/* Filters Bar */}
+      <div className="bg-white border border-[#ddd] p-4 mb-4 rounded-sm flex flex-col md:flex-row gap-4 items-end">
+        <div className="flex-1 space-y-2 w-full">
+          <Pulse className="h-4 w-20" />
+          <Pulse className="h-10 w-full border-[#ddd] rounded-sm" />
+        </div>
+        <div className="flex-1 space-y-2 w-full">
+          <Pulse className="h-4 w-20" />
+          <Pulse className="h-10 w-full border-[#ddd] rounded-sm" />
+        </div>
+        <Pulse className="h-10 w-24 rounded-sm w-full md:w-auto" />
+      </div>
+
+      <PaymentsTableSkeleton rows={5} />
+    </div>
+  );
+}
+
+// ─── Payments Table Skeleton ──────────────────────────────────────────────────
+export function PaymentsTableSkeleton({ rows = 8 }: { rows?: number }) {
+  return (
+    <>
+      {/* Desktop Table Skeleton */}
+      <div className="hidden md:block bg-white border border-[#ddd] overflow-hidden shadow-sm rounded-sm">
+        <div className="overflow-x-auto">
+          <table className="w-full text-xs border-collapse">
+            <thead>
+              <tr className="bg-primary">
+                <th className="px-4 py-3 font-bold text-black text-center tracking-widest uppercase whitespace-nowrap">Payment Date</th>
+                <th className="px-4 py-3 font-bold text-black text-center tracking-widest uppercase whitespace-nowrap">Payment Amount</th>
+                <th className="px-4 py-3 font-bold text-black text-center tracking-widest uppercase whitespace-nowrap">Payment For</th>
+                <th className="px-4 py-3 font-bold text-black text-center tracking-widest uppercase whitespace-nowrap">Order No</th>
+                <th className="px-4 py-3 font-bold text-black text-center tracking-widest uppercase whitespace-nowrap">SAP Order No</th>
+                <th className="px-4 py-3 font-bold text-black text-center tracking-widest uppercase whitespace-nowrap">Company Name</th>
+                <th className="px-4 py-3 font-bold text-black text-center tracking-widest uppercase whitespace-nowrap">Customer Code</th>
+                <th className="px-4 py-3 font-bold text-black text-center tracking-widest uppercase whitespace-nowrap">Payment Status</th>
+                <th className="px-4 py-3 font-bold text-black text-center tracking-widest uppercase whitespace-nowrap">Action</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-[#ddd] text-center">
+              {Array.from({ length: rows }).map((_, i) => (
+                <tr key={i} className="hover:bg-primary/5 bg-white transition-colors">
+                  <td className="px-4 py-3 text-black/80 font-medium">
+                    <Pulse className="h-4 w-20 mx-auto" />
+                  </td>
+                  <td className="px-4 py-3 text-black/80 font-bold">
+                    <Pulse className="h-4 w-16 mx-auto" />
+                  </td>
+                  <td className="px-4 py-3 text-black/80 font-medium">
+                    <Pulse className="h-4 w-12 mx-auto" />
+                  </td>
+                  <td className="px-4 py-3 text-black/80 font-medium">
+                    <Pulse className="h-4 w-20 mx-auto" />
+                  </td>
+                  <td className="px-4 py-3 text-black/80 font-medium">
+                    <Pulse className="h-4 w-20 mx-auto" />
+                  </td>
+                  <td className="px-4 py-3 text-black/80 font-medium text-left max-w-[150px] truncate">
+                    <Pulse className="h-4 w-28" />
+                  </td>
+                  <td className="px-4 py-3 text-black/80 font-medium">
+                    <Pulse className="h-4 w-16 mx-auto" />
+                  </td>
+                  <td className="px-4 py-3">
+                    <Pulse className="h-5 w-20 mx-auto rounded-sm" />
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center justify-center gap-2">
+                      <div className="w-12 h-[26px] bg-gray-200 rounded-sm animate-pulse" />
+                      <div className="w-20 h-[26px] bg-gray-200 rounded-sm animate-pulse" />
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Mobile Card Skeleton */}
+      <div className="md:hidden space-y-3">
+        {Array.from({ length: Math.min(rows, 3) }).map((_, i) => (
+          <div key={i} className="border border-[#ddd] rounded-sm bg-white p-4 space-y-3 shadow-sm">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-black flex items-center gap-1">
+                Payment For: <Pulse className="h-3.5 w-12" />
+              </span>
+              <Pulse className="h-5 w-16 rounded-sm" />
+            </div>
+            <div className="text-xs text-black/80 font-medium space-y-2">
+              <div className="flex items-center gap-1">Payment Date: <Pulse className="h-3 w-20" /></div>
+              <div className="flex items-center gap-1">Payment Amount: <Pulse className="h-3 w-16" /></div>
+              <div className="flex items-center gap-1">Order No: <Pulse className="h-3 w-20" /></div>
+              <div className="flex items-center gap-1">SAP Order No: <Pulse className="h-3 w-20" /></div>
+              <div className="flex items-center gap-1">Company Name: <Pulse className="h-3 w-32" /></div>
+              <div className="flex items-center gap-1">Customer Code: <Pulse className="h-3 w-16" /></div>
+            </div>
+            <div className="flex gap-2 pt-2 border-t border-gray-100">
+              <div className="h-8 bg-gray-200 rounded-sm flex-1 animate-pulse" />
+              <div className="h-8 bg-gray-200 rounded-sm flex-1 animate-pulse" />
+            </div>
+          </div>
+        ))}
+      </div>
+    </>
+  );
+}
+
 // ─── Multi-Shipping Skeleton ──────────────────────────────────────────────────
 // export function MultiShippingSkeleton() {
 //   return (

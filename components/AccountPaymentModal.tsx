@@ -204,94 +204,94 @@ const AccountPaymentModal: React.FC<AccountPaymentModalProps> = ({
                     </div>
                 </div>
             ) : (
-                <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-4 bg-white" dir={isRtl ? "rtl" : "ltr"}>
+                <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto custom-scrollbar p-3 space-y-2.5 bg-white" dir={isRtl ? "rtl" : "ltr"}>
                     {/* Total Order Amount */}
-                    <div className="space-y-1.5">
-                        <label className="text-body-sm font-bold text-black block">
+                    <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest block">
                             {t("orderDetails.totalOrderAmount") || "Total Order Amount"}
                         </label>
                         <input
                             type="text"
                             readOnly
                             value={Number(account.totalOrderAmount).toFixed(2)}
-                            className="w-full px-3 py-2 bg-white border border-gray-300 rounded-sm text-body text-black outline-none cursor-default font-medium"
+                            className="w-full px-3 py-1.5 bg-white border border-gray-300 rounded-sm text-xs text-black outline-none cursor-default font-medium"
                         />
                     </div>
 
                     {/* Receivable (Account Balance) */}
-                    <div className="space-y-1.5">
-                        <label className="text-body-sm font-bold text-black block">
+                    <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest block">
                             {t("orderDetails.receivableAccountBalance") || "Receivable (Account Balance)"}
                         </label>
                         <input
                             type="text"
                             readOnly
                             value={Number(account.receivableBalance).toFixed(2)}
-                            className="w-full px-3 py-2 bg-white border border-gray-300 rounded-sm text-body text-black outline-none cursor-default font-medium"
+                            className="w-full px-3 py-1.5 bg-white border border-gray-300 rounded-sm text-xs text-black outline-none cursor-default font-medium"
                         />
                     </div>
 
                     {/* Contact Name */}
-                    <div className="space-y-1.5">
-                        <label className="text-body-sm font-bold text-black block">
+                    <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest block">
                             {t("orderDetails.contactName") || "Contact Name"}
                         </label>
                         <input
                             type="text"
                             readOnly
                             value={account.contactName}
-                            className="w-full px-3 py-2 bg-white border border-gray-300 rounded-sm text-body text-black outline-none cursor-default font-medium"
+                            className="w-full px-3 py-1.5 bg-white border border-gray-300 rounded-sm text-xs text-black outline-none cursor-default font-medium"
                         />
                     </div>
 
                     {/* Customer Code */}
-                    <div className="space-y-1.5">
-                        <label className="text-body-sm font-bold text-black block">
+                    <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest block">
                             {t("orderDetails.customerCode") || "Customer Code"}
                         </label>
                         <input
                             type="text"
                             readOnly
                             value={account.customerCode}
-                            className="w-full px-3 py-2 bg-white border border-gray-300 rounded-sm text-body text-black outline-none cursor-default font-medium"
+                            className="w-full px-3 py-1.5 bg-white border border-gray-300 rounded-sm text-xs text-black outline-none cursor-default font-medium"
                         />
                     </div>
 
                     {/* Company Name */}
-                    <div className="space-y-1.5">
-                        <label className="text-body-sm font-bold text-black block">
+                    <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest block">
                             {t("orderDetails.companyName") || "Company Name"}
                         </label>
                         <input
                             type="text"
                             readOnly
                             value={account.companyName}
-                            className="w-full px-3 py-2 bg-white border border-gray-300 rounded-sm text-body text-black outline-none cursor-default font-medium"
+                            className="w-full px-3 py-1.5 bg-white border border-gray-300 rounded-sm text-xs text-black outline-none cursor-default font-medium"
                         />
                     </div>
 
                     {/* Payment Date */}
-                    <div className="space-y-1.5">
-                        <label className="text-body-sm font-bold text-black block">
+                    <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest block">
                             {t("orderDetails.paymentDate") || "Payment Date"} <span className="text-red-500">*</span>
                         </label>
                         <input
                             type="date"
                             value={formData.payment_date}
                             onChange={(e) => setFormData({ ...formData, payment_date: e.target.value })}
-                            className="w-full px-3 py-2 bg-white border border-gray-300 rounded-sm text-body text-black outline-none focus:border-[#1e73be] transition-colors cursor-pointer font-medium"
+                            className="w-full px-3 py-1.5 bg-white border border-gray-300 rounded-sm text-xs text-black outline-none focus:border-[#1e73be] transition-colors cursor-pointer font-medium"
                         />
                     </div>
 
                     {/* Payment Method */}
-                    <div className="space-y-1.5">
-                        <label className="text-body-sm font-bold text-black block">
+                    <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest block">
                             {t("orderDetails.paymentMethod") || "Payment Method"} <span className="text-red-500">*</span>
                         </label>
                         <select
                             value={formData.payment_method}
                             onChange={(e) => setFormData({ ...formData, payment_method: e.target.value })}
-                            className="w-full px-3 py-2 bg-white border border-gray-300 rounded-sm text-body text-black outline-none focus:border-[#1e73be] transition-colors font-medium cursor-pointer"
+                            className="w-full px-3 py-1.5 bg-white border border-gray-300 rounded-sm text-xs text-black outline-none focus:border-[#1e73be] transition-colors font-medium cursor-pointer"
                         >
                             <option value="">{t("orderDetails.selectOption") || "-- Select --"}</option>
                             {(account.paymentMethods.length > 0
@@ -311,8 +311,8 @@ const AccountPaymentModal: React.FC<AccountPaymentModalProps> = ({
                     </div>
 
                     {/* Paid Payment */}
-                    <div className="space-y-1.5">
-                        <label className="text-body-sm font-bold text-black block">
+                    <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest block">
                             {t("orderDetails.paidPayment") || "Paid Payment"} <span className="text-red-500">*</span>
                         </label>
                         <input
@@ -321,20 +321,20 @@ const AccountPaymentModal: React.FC<AccountPaymentModalProps> = ({
                             required
                             value={formData.paid_payment}
                             onChange={(e) => setFormData({ ...formData, paid_payment: e.target.value })}
-                            className="w-full px-3 py-2 bg-white border border-gray-300 rounded-sm text-body text-black outline-none focus:border-[#1e73be] transition-colors font-medium"
+                            className="w-full px-3 py-1.5 bg-white border border-gray-300 rounded-sm text-xs text-black outline-none focus:border-[#1e73be] transition-colors font-medium"
                         />
                     </div>
 
                     {/* Remarks */}
-                    <div className="space-y-1.5">
-                        <label className="text-body-sm font-bold text-black block">
+                    <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest block">
                             {t("orderDetails.remarks") || "Remarks"}
                         </label>
                         <textarea
                             value={formData.remarks}
                             onChange={(e) => setFormData({ ...formData, remarks: e.target.value })}
                             rows={3}
-                            className="w-full px-3 py-2 bg-white border border-gray-300 rounded-sm text-body text-black outline-none focus:border-[#1e73be] transition-colors resize-none font-medium h-[80px]"
+                            className="w-full px-3 py-1.5 bg-white border border-gray-300 rounded-sm text-xs text-black outline-none focus:border-[#1e73be] transition-colors resize-none font-medium h-[60px]"
                         />
                     </div>
 
@@ -343,7 +343,7 @@ const AccountPaymentModal: React.FC<AccountPaymentModalProps> = ({
                         <button
                             type="submit"
                             disabled={isSubmitting}
-                            className="w-full bg-[#1e73be] hover:bg-[#155a96] text-white py-2.5 rounded-sm font-bold text-body uppercase transition-all active:scale-95 shadow-sm disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                            className="w-full bg-[#1e73be] hover:bg-[#155a96] text-white py-2 rounded-sm font-bold text-xs uppercase transition-all active:scale-95 shadow-sm disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                         >
                             {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
                             {t("orderDetails.submitPayment") || "Submit Payment"}

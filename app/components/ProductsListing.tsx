@@ -18,6 +18,7 @@ import { formatPrice, redirectToLogin, formatMagentoQueryParams, parseMagentoQue
 import Price from "../components/Price";
 import PortalDropdown from "@/components/PortalDropdown";
 import { ProductCard, StockBadge } from "../components/ProductCard";
+import StockBySourceModal from "./StockBySourceModal";
 
 import { toast } from "react-hot-toast";
 import { useTranslation } from "@/hooks/useTranslation";
@@ -147,6 +148,16 @@ export default function ProductsPage({ categoryId: propCategoryId, storeCode: pr
   const [inquiryProduct, setInquiryProduct] = useState<any | null>(null);
   const [previewProduct, setPreviewProduct] = useState<any | null>(null);
   const [urlCategoryId, setUrlCategoryId] = useState<string | null>(() => rawSearchParams.get("categoryId") || null);
+
+  const [isStockModalOpen, setIsStockModalOpen] = useState(false);
+  const [stockProductSku, setStockProductSku] = useState<string | null>(null);
+  const [stockProductName, setStockProductName] = useState<string | null>(null);
+
+  const handleStockClick = useCallback((sku: string, name?: string) => {
+    setStockProductSku(sku);
+    setStockProductName(name || null);
+    setIsStockModalOpen(true);
+  }, []);
 
   const [isMounted, setIsMounted] = useState(false);
   const isSyncingFromUrl = useRef(false);
@@ -412,10 +423,39 @@ export default function ProductsPage({ categoryId: propCategoryId, storeCode: pr
           url = `/api/category-products?${queryString ? queryString + "&" : ""}pageSize=${PAGE_SIZE}&lang=${fetchLocale}${storeParam}${catParam}${searchByParam}`;
         }
 
+        // ── DEBUG: log every parameter before sending so a 500 can be traced ────
+        const _parsedParams: Record<string, string> = {};
+        try {
+          new URL(url, window.location.origin).searchParams.forEach((v, k) => { _parsedParams[k] = v; });
+        } catch { /* url already absolute */ }
+        console.group("[ProductsListing] outgoing request");
+        console.log("URL            :", url);
+        console.log("categoryId     :", _parsedParams.categoryId ?? "(not in url — cross-category search)");
+        console.log("x-store-code   :", tempStoreCode || "(none — no warehouse selected)");
+        console.log("x-locale       :", fetchLocale);
+        console.log("pageSize       :", _parsedParams.pageSize ?? PAGE_SIZE);
+        console.log("page           :", _parsedParams.page ?? currentPage);
+        console.log("storeCode param:", _parsedParams.storeCode ?? "(none)");
+        console.log("itemCode mode  :", !!itemCodeTerm, itemCodeTerm || "");
+        console.log("searchBy term  :", searchByTerm || "(none)");
+        console.log("active filters :", queryString || "(none)");
+        console.log("all url params :", _parsedParams);
+        console.groupEnd();
+        // ── END DEBUG ────────────────────────────────────────────────────────────
+
         const res = await fetch(url, { headers, signal: abortController.signal });
         if (!res.ok) {
           if (res.status === 401) { localStorage.removeItem("token"); redirectToLogin(router); return; }
-          throw new Error(`API Error: ${res.status}`);
+          let errMsg = `API Error: ${res.status}`;
+          try {
+            const errData = await res.json();
+            if (errData?.message) errMsg = errData.message;
+            console.error("[ProductsListing] API error response:", errData);
+            console.error("[ProductsListing] failed url was:", url);
+            console.error("[ProductsListing] failed store-code:", tempStoreCode || "(none)");
+            console.error("[ProductsListing] failed categoryId:", _parsedParams.categoryId ?? "not set");
+          } catch { /* non-JSON error body */ }
+          throw new Error(errMsg);
         }
         const data = await res.json();
         if (data.server_error) {
@@ -771,6 +811,7 @@ export default function ProductsPage({ categoryId: propCategoryId, storeCode: pr
                 onToggleFavorite={toggleFavorite}
                 onInquiry={handleInquiry}
                 onQtyChange={handleQtyChange}
+                onStockClick={handleStockClick}
               />
             ))}
           </div>
@@ -903,6 +944,7 @@ export default function ProductsPage({ categoryId: propCategoryId, storeCode: pr
                       onInquiry={handleInquiry}
                       onQtyChange={handleQtyChange}
                       onImagePreview={handleImagePreview}
+                      onStockClick={handleStockClick}
                     />
                   ))}
                 </tbody>
@@ -918,6 +960,7 @@ export default function ProductsPage({ categoryId: propCategoryId, storeCode: pr
       <ProductDialog product={selectedProduct} isOpen={!!selectedProduct} onClose={() => setSelectedProduct(null)} />
       <ProductEnquiryModal isOpen={isInquiryModalOpen} productSku={inquiryProduct?.sku || ""} productName={inquiryProduct?.name || ""} productPrice={inquiryProduct?.final_price || 0} onClose={() => { setIsInquiryModalOpen(false); setInquiryProduct(null); }} />
       <AddToCartPopup isOpen={isAddedPopupOpen} product={addedProduct} onClose={() => { setIsAddedPopupOpen(false); setAddedProduct(null); }} />
+      <StockBySourceModal isOpen={isStockModalOpen} sku={stockProductSku} productName={stockProductName} onClose={() => { setIsStockModalOpen(false); setStockProductSku(null); setStockProductName(null); }} />
       <Drawer isOpen={isImageModalOpen && !!selectedImage} onClose={() => setIsImageModalOpen(false)}>
         <div className="flex flex-col h-full bg-white">
           <div className="bg-primary px-4 py-4 flex items-center flex-shrink-0">
