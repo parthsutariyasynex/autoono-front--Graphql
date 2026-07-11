@@ -64,7 +64,9 @@ function LoginPageContent() {
         return;
       }
       if (sess?.accessToken) {
-        const callbackUrl = searchParams.get("callbackUrl") || lp("/products");
+        // No callbackUrl → go to the locale/store root and let middleware apply the
+        // single landing-path strategy (getDefaultLandingPath → first menu category).
+        const callbackUrl = searchParams.get("callbackUrl") || lp("/");
         window.location.href = callbackUrl;
       }
     }
@@ -211,7 +213,8 @@ function LoginPageContent() {
             await new Promise(r => setTimeout(r, 200));
           }
           toast.success(t("login.loginSuccess"));
-          const callbackUrl = searchParams.get("callbackUrl") || lp("/products");
+          // No callbackUrl → defer to middleware's single landing strategy via the root.
+          const callbackUrl = searchParams.get("callbackUrl") || lp("/");
           window.location.href = callbackUrl;
         } else {
           localStorage.removeItem("token");
@@ -243,7 +246,8 @@ function LoginPageContent() {
             await new Promise(r => setTimeout(r, 200));
           }
           toast.success(t("login.loginSuccess"));
-          const callbackUrl = searchParams.get("callbackUrl") || lp("/products");
+          // No callbackUrl → defer to middleware's single landing strategy via the root.
+          const callbackUrl = searchParams.get("callbackUrl") || lp("/");
           window.location.href = callbackUrl;
         } else {
           localStorage.removeItem("token");

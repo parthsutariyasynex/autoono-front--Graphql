@@ -126,17 +126,32 @@ async function getDefaultLandingPath(request: NextRequest, locale: string): Prom
         const accessToken = (jwt as any)?.accessToken;
         if (!accessToken) return null;
 
-        const res = await fetch(`${MAGENTO_BASE}/rest/${locale}/V1/kleverapi/menu`, {
+        // Use the same GraphQL source the app's menu proxy uses (kleverMenuItems).
+        // The old REST endpoint (/rest/{locale}/V1/kleverapi/menu) is fronted by a
+        // WAF that returns an HTML 403 to server-side calls, so it never produced
+        // JSON here and getDefaultLandingPath always fell back to /products.
+        const store = request.cookies.get(STORE_CODE_COOKIE)?.value || locale;
+        const res = await fetch(`${MAGENTO_BASE}/graphql`, {
+            method: "POST",
             headers: {
                 "Content-Type": "application/json",
                 "Authorization": `Bearer ${accessToken}`,
+                "Store": store,
             },
+            body: JSON.stringify({ query: "{ kleverMenuItems { url is_visible sort_order } }" }),
             cache: "no-store",
         });
         if (!res.ok) return null;
 
-        const items = await res.json();
-        if (!Array.isArray(items)) return null;
+        const json = await res.json();
+        const rawItems = json?.data?.kleverMenuItems;
+        if (!Array.isArray(rawItems)) return null;
+
+        // Match the proxy's ordering: visible items first, sorted by sort_order,
+        // so the landing page is the *first* Magento menu category.
+        const items = rawItems
+            .filter((it: any) => it?.is_visible !== false)
+            .sort((a: any, b: any) => (a?.sort_order || 0) - (b?.sort_order || 0));
 
         for (const item of items) {
             const url = item?.url || "";
@@ -356,9 +371,12 @@ export async function middleware(request: NextRequest) {
                 const isAuthenticated = await checkAuth(request);
                 if (isAuthenticated) {
                     const callbackUrl = request.nextUrl.searchParams.get("callbackUrl");
+                    // Same landing strategy as the root redirect: first visible menu
+                    // category (getDefaultLandingPath), falling back to /products.
+                    const landing = callbackUrl ? null : await getDefaultLandingPath(request, locale);
                     const redirectUrl = request.nextUrl.clone();
                     redirectUrl.search = "";
-                    redirectUrl.pathname = callbackUrl || `/${locale}/products`;
+                    redirectUrl.pathname = callbackUrl || landing || `/${locale}/products`;
                     return withCookies(NextResponse.redirect(redirectUrl), locale, storeCode);
                 }
             }
@@ -443,9 +461,12 @@ export async function middleware(request: NextRequest) {
             const isAuthenticated = await checkAuth(request);
             if (isAuthenticated) {
                 const callbackUrl = request.nextUrl.searchParams.get("callbackUrl");
+                // Same landing strategy as the root redirect: first visible menu
+                // category (getDefaultLandingPath), falling back to /products.
+                const landing = callbackUrl ? null : await getDefaultLandingPath(request, locale);
                 const redirectUrl = request.nextUrl.clone();
                 redirectUrl.search = "";
-                redirectUrl.pathname = callbackUrl || `/${locale}/products`;
+                redirectUrl.pathname = callbackUrl || landing || `/${locale}/products`;
                 return withCookies(NextResponse.redirect(redirectUrl), locale);
             }
         }
