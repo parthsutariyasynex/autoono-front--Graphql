@@ -1,5 +1,5 @@
 import { Suspense } from "react";
-import ProductsPage from "@/app/components/ProductsListing";
+import ProductsPage from "@/components/ProductsListing";
 import { ProductListingSkeleton } from "@/components/skeletons";
 
 export default function ProductsRoute() {

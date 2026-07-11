@@ -3,7 +3,7 @@ import React, { useState, useEffect } from "react";
 import { useTranslation } from "@/hooks/useTranslation";
 import { useSession } from "next-auth/react";
 import toast from "react-hot-toast";
-import Drawer from "@/app/components/Drawer";
+import Drawer from "@/components/Drawer";
 
 interface EditPaymentModalProps {
     isOpen: boolean;

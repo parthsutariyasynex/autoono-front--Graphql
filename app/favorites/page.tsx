@@ -3,7 +3,7 @@
 // import React, { useEffect, useState } from "react";
 // import { useSession } from "next-auth/react";
 // import { useRouter, useSearchParams } from "next/navigation";
-// import FavouriteProducts from "@/app/components/FavouriteProducts";
+// import FavouriteProducts from "@/components/FavouriteProducts";
 // import Sidebar from "@/components/Sidebar";
 // import { redirectToLogin } from "@/utils/helpers";
 // import { useLocalePath } from "@/hooks/useLocalePath";
@@ -88,7 +88,7 @@ import { useTranslation } from "@/hooks/useTranslation";
 import React, { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
-import FavouriteProducts from "@/app/components/FavouriteProducts";
+import FavouriteProducts from "@/components/FavouriteProducts";
 import Sidebar from "@/components/Sidebar";
 import { redirectToLogin } from "@/utils/helpers";
 import { useLocalePath } from "@/hooks/useLocalePath";

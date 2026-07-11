@@ -4,7 +4,7 @@ import { KLEVER_QUICK_ORDER_ADD_TO_CART_MUTATION } from "@/src/graphql/mutations
 import { ADD_PRODUCTS_TO_CART_MUTATION } from "@/src/graphql/mutations";
 import { CUSTOMER_CART_ID_QUERY, CUSTOMER_CART_QUERY } from "@/src/graphql/queries";
 import type { KleverQuickOrderAddToCartData, CustomerCartIdData, CustomerCartData } from "@/src/graphql/types";
-import { graphqlFetch, isGraphQLRequestError } from "@/src/lib/graphqlFetch";
+import { graphqlFetch, isGraphQLRequestError } from "@/lib/graphqlFetch";
 
 interface AddProductsToCartData {
   addProductsToCart: {

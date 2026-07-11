@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { INITIATE_PASSWORD_RESET_WITH_OTP_MUTATION } from "@/src/graphql/mutations";
 import type { InitiatePasswordResetWithOtpData } from "@/src/graphql/types";
-import { graphqlFetch, isGraphQLRequestError } from "@/src/lib/graphqlFetch";
+import { graphqlFetch, isGraphQLRequestError } from "@/lib/graphqlFetch";
 
 const DEFAULT_WEBSITE_ID = Number(process.env.MAGENTO_WEBSITE_ID || "1");
 const DEFAULT_TEMPLATE = process.env.MAGENTO_PASSWORD_RESET_TEMPLATE || "email_reset";

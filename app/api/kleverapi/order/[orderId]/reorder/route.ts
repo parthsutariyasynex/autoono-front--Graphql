@@ -3,7 +3,7 @@ import { getRequestToken } from "@/lib/api/auth-helper";
 import { KLEVER_ORDER_DETAILS_QUERY } from "@/src/graphql/queries";
 import { REORDER_ITEMS_MUTATION } from "@/src/graphql/mutations";
 import type { KleverOrderDetailsData, ReorderItemsData } from "@/src/graphql/types";
-import { graphqlFetch, isGraphQLRequestError } from "@/src/lib/graphqlFetch";
+import { graphqlFetch, isGraphQLRequestError } from "@/lib/graphqlFetch";
 
 export async function POST(
   request: Request,

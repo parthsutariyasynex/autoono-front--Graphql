@@ -6,7 +6,7 @@ import type {
   KleverCategoryFilterOptionsData,
   KleverFilterGroup,
 } from "@/src/graphql/types";
-import { graphqlFetch, isGraphQLRequestError } from "@/src/lib/graphqlFetch";
+import { graphqlFetch, isGraphQLRequestError } from "@/lib/graphqlFetch";
 
 const KEY_MAP: Record<string, string> = {
   color: "tyre_size",

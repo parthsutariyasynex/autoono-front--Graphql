@@ -6,10 +6,10 @@ import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import { X } from "lucide-react";
-import Price from "@/app/components/Price";
+import Price from "@/components/Price";
 import { useGift } from "@/modules/cart/context/GiftContext";
 import { useCart } from "@/modules/cart/hooks/useCart";
-import { useAction } from "@/lib/hooks/useAction";
+import { useAction } from "@/hooks/useAction";
 import { ButtonSpinner } from "@/components/GlobalLoadingOverlay";
 
 interface CartSummaryProps {

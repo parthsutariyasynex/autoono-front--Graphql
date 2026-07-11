@@ -3,7 +3,7 @@ import { getRequestToken } from "@/lib/api/auth-helper";
 import { getLocaleFromRequest } from "@/lib/api/magento-url";
 import { KLEVER_CHECKOUT_PO_REMOVE_FILE_MUTATION } from "@/src/graphql/mutations";
 import type { KleverCheckoutPoRemoveFileData } from "@/src/graphql/types";
-import { graphqlFetch, isGraphQLRequestError } from "@/src/lib/graphqlFetch";
+import { graphqlFetch, isGraphQLRequestError } from "@/lib/graphqlFetch";
 
 const MAGENTO_BASE_URL = process.env.NEXT_PUBLIC_MAGENTO_BASE_URL || "";
 

@@ -3,7 +3,7 @@ import { getRequestToken } from "@/lib/api/auth-helper";
 import { getLocaleFromRequest } from "@/lib/api/magento-url";
 import { KLEVER_SOURCE_PERMISSIONS_QUERY } from "@/src/graphql/queries";
 import type { KleverSourcePermissionsData } from "@/src/graphql/types";
-import { graphqlFetch, isGraphQLRequestError } from "@/src/lib/graphqlFetch";
+import { graphqlFetch, isGraphQLRequestError } from "@/lib/graphqlFetch";
 
 const EMPTY = { has_restrictions: null, total_count: 0, permitted_store_ids: [], permitted_stores: [] };
 const NO_CACHE_HEADERS = { "Cache-Control": "no-store, no-cache, must-revalidate" };

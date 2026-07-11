@@ -6,7 +6,7 @@ import type {
   KleverPaymentHistoryByIdData,
   KleverPaymentHistoryEditData,
 } from "@/src/graphql/types";
-import { graphqlFetch, isGraphQLRequestError } from "@/src/lib/graphqlFetch";
+import { graphqlFetch, isGraphQLRequestError } from "@/lib/graphqlFetch";
 
 export async function GET(
   request: Request,

@@ -7,8 +7,8 @@ import type {
   CustomerCartIdData,
   RemoveItemFromCartData,
 } from "@/src/graphql/types";
-import { graphqlFetch, isGraphQLRequestError } from "@/src/lib/graphqlFetch";
-import { reshapeCustomerCart } from "@/src/lib/cartShape";
+import { graphqlFetch, isGraphQLRequestError } from "@/lib/graphqlFetch";
+import { reshapeCustomerCart } from "@/lib/cartShape";
 
 export async function DELETE(
   req: Request,

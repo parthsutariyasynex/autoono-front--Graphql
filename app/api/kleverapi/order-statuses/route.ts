@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getRequestToken } from "@/lib/api/auth-helper";
 import { KLEVER_ORDER_FILTER_OPTIONS_QUERY } from "@/src/graphql/queries";
 import type { KleverOrderFilterOptionsData } from "@/src/graphql/types";
-import { graphqlFetch } from "@/src/lib/graphqlFetch";
+import { graphqlFetch } from "@/lib/graphqlFetch";
 
 const FALLBACK = ["All", "Check Pending"];
 

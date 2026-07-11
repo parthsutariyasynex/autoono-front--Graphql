@@ -7,7 +7,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useCheckout } from "@/modules/checkout/hooks/useCheckout";
 import { CheckoutSuccessSkeleton } from "@/components/skeletons";
-import Price from "@/app/components/Price";
+import Price from "@/components/Price";
 
 const CheckoutSuccessPage = () => {
     return (

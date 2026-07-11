@@ -5,7 +5,7 @@ import { useLocalePath } from "@/hooks/useLocalePath";
 import React, { Suspense, useState, useEffect, useCallback, useMemo } from "react";
 import { useSession } from "next-auth/react";
 import { redirectToLogin } from "@/utils/helpers";
-import Price from "@/app/components/Price";
+import Price from "@/components/Price";
 import { useRouter, useSearchParams } from "next/navigation";
 import Sidebar from "@/components/Sidebar";
 import Filters from "@/components/Filters";

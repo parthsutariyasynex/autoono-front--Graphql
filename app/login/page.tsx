@@ -11,7 +11,7 @@ import { sendOtp } from "@/store/actions/authActions";
 import { RootState } from "@/store/store";
 import { useTranslation } from "@/hooks/useTranslation";
 import { useLocalePath } from "@/hooks/useLocalePath";
-import CountryDropdown from "@/app/components/CountryDropdown";
+import CountryDropdown from "@/components/CountryDropdown";
 import { LoginSkeleton } from "@/components/skeletons";
 
 export default function LoginPage() {

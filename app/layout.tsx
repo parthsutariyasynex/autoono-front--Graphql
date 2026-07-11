@@ -6,13 +6,13 @@ import { join } from "path";
 import { CartProvider } from "../modules/cart/context/CartContext";
 import { GiftProvider } from "../modules/cart/context/GiftContext";
 import { ReduxProvider } from "@/store/provider";
-import ProtectedLayout from "@/app/components/ProtectedLayout";
+import ProtectedLayout from "@/components/ProtectedLayout";
 import "./globals.css";
 import { Toaster } from "react-hot-toast";
 import { NextAuthProvider } from "@/components/providers/NextAuthProvider";
 import { getServerSession } from "@/lib/getServerSession";
-import DirectionSync from "@/app/components/DirectionSync";
-import PriceIconObserver from "@/app/components/PriceIconObserver";
+import DirectionSync from "@/components/DirectionSync";
+import PriceIconObserver from "@/components/PriceIconObserver";
 import { GlobalLoadingProvider } from "@/components/GlobalLoadingOverlay";
 import {
   localeDirection,

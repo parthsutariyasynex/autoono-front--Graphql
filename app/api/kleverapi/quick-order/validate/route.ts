@@ -3,7 +3,7 @@ import { getRequestToken } from "@/lib/api/auth-helper";
 import { getLocaleFromRequest } from "@/lib/api/magento-url";
 import { KLEVER_QUICK_ORDER_VALIDATE_MUTATION } from "@/src/graphql/mutations";
 import type { KleverQuickOrderValidateData } from "@/src/graphql/types";
-import { graphqlFetch, isGraphQLRequestError } from "@/src/lib/graphqlFetch";
+import { graphqlFetch, isGraphQLRequestError } from "@/lib/graphqlFetch";
 
 function toQuickOrderItems(raw: unknown): Array<{ sku: string; qty: number }> {
   if (!Array.isArray(raw)) return [];

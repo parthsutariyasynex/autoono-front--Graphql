@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getRequestToken } from "@/lib/api/auth-helper";
 import { KLEVER_QUICK_ORDER_REMOVE_ITEM_MUTATION } from "@/src/graphql/mutations";
 import type { KleverQuickOrderRemoveItemData } from "@/src/graphql/types";
-import { graphqlFetch, isGraphQLRequestError } from "@/src/lib/graphqlFetch";
+import { graphqlFetch, isGraphQLRequestError } from "@/lib/graphqlFetch";
 
 export async function DELETE(
   request: NextRequest,

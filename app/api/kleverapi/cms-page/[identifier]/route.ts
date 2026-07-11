@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getLocaleFromRequest } from "@/lib/api/magento-url";
 import { CMS_PAGE_QUERY } from "@/src/graphql/queries";
 import type { CmsPageData } from "@/src/graphql/types";
-import { graphqlFetch, isGraphQLRequestError } from "@/src/lib/graphqlFetch";
+import { graphqlFetch, isGraphQLRequestError } from "@/lib/graphqlFetch";
 
 export async function GET(
   request: NextRequest,

@@ -8,7 +8,7 @@ import { api } from "@/lib/api/api-client";
 import { useTranslation } from "@/hooks/useTranslation";
 import { useLocalePath } from "@/hooks/useLocalePath";
 import { RootState } from "@/store/store";
-import { useAction } from "@/lib/hooks/useAction";
+import { useAction } from "@/hooks/useAction";
 
 interface AddressFormProps {
   mode?: "new" | "edit";

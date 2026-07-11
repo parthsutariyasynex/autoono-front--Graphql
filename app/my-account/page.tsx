@@ -11,8 +11,8 @@ import Sidebar from "@/components/Sidebar";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { redirectToLogin } from "@/utils/helpers";
-import CreditLimit from "@/app/components/CreditLimit";
-import Price from "@/app/components/Price";
+import CreditLimit from "@/components/CreditLimit";
+import Price from "@/components/Price";
 import { AccountSkeleton } from "@/components/skeletons";
 
 

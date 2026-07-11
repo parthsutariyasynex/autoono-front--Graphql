@@ -4,7 +4,7 @@ import { useLocalePath } from "@/hooks/useLocalePath";
 
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import { createPortal } from "react-dom";
-import Navbar from "@/app/components/Navbar";
+import Navbar from "@/components/Navbar";
 import { useCart } from "@/modules/cart/hooks/useCart";
 import { useCheckout, Address } from "@/modules/checkout/hooks/useCheckout";
 import {
@@ -35,7 +35,7 @@ import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
-import Price from "@/app/components/Price";
+import Price from "@/components/Price";
 import { useGlobalLoading, ButtonSpinner } from "@/components/GlobalLoadingOverlay";
 import { useCanOrder } from "@/hooks/useCanOrder";
 

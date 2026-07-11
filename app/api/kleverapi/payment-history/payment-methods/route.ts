@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getRequestToken } from "@/lib/api/auth-helper";
 import { KLEVER_PAYMENT_HISTORY_PAYMENT_METHODS_QUERY } from "@/src/graphql/queries";
 import type { KleverPaymentHistoryPaymentMethodsData } from "@/src/graphql/types";
-import { graphqlFetch, isGraphQLRequestError } from "@/src/lib/graphqlFetch";
+import { graphqlFetch, isGraphQLRequestError } from "@/lib/graphqlFetch";
 
 export async function GET(request: Request) {
   try {

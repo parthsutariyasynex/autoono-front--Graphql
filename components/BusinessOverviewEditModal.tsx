@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { api } from "@/lib/api/api-client";
 import toast from "react-hot-toast";
 import { useTranslation } from "@/hooks/useTranslation";
-import Drawer from "@/app/components/Drawer";
+import Drawer from "@/components/Drawer";
 
 interface BusinessOverviewData {
     total_employees: string;

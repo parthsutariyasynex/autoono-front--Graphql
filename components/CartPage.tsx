@@ -4,7 +4,7 @@ import React from "react";
 import CartItem from "./CartItem";
 import CartSummary from "./CartSummary";
 import CartActions from "./CartActions";
-import Navbar from "@/app/components/Navbar";
+import Navbar from "@/components/Navbar";
 import Link from "next/link";
 import { ArrowRight, ShoppingBag, Gift, Pencil, CheckCircle2 } from "lucide-react";
 import { useCart } from "@/modules/cart/hooks/useCart";
@@ -15,7 +15,7 @@ import { useTranslation } from "@/hooks/useTranslation";
 import { useLocalePath } from "@/hooks/useLocalePath";
 import { useGift } from "@/modules/cart/context/GiftContext";
 import { CartPageSkeleton } from "@/components/skeletons";
-import { useAction } from "@/lib/hooks/useAction";
+import { useAction } from "@/hooks/useAction";
 import { useCanOrder } from "@/hooks/useCanOrder";
 import AddToCartOverlay from "@/components/AddToCartOverlay";
 

@@ -9,7 +9,7 @@ import { redirectToLogin } from "@/utils/helpers";
 import { useTranslation } from "@/hooks/useTranslation";
 import { PaymentsSkeleton, PaymentsTableSkeleton } from "@/components/skeletons";
 import { getClientStoreCode } from "@/lib/api/api-client";
-import Price from "@/app/components/Price";
+import Price from "@/components/Price";
 import AccountPaymentModal from "@/components/AccountPaymentModal";
 import PaymentDetailModal from "@/components/PaymentDetailModal";
 import Pagination from "@/components/Pagination";

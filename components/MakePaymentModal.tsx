@@ -6,6 +6,7 @@ import { useSession } from "next-auth/react";
 import toast from "react-hot-toast";
 import { useLockBodyScroll } from "@/hooks/useLockBodyScroll";
 import { getClientStoreCode } from "@/lib/api/api-client";
+import Drawer from "@/components/Drawer";
 
 interface MakePaymentModalProps {
     isOpen: boolean;
@@ -39,6 +40,7 @@ const MakePaymentModal: React.FC<MakePaymentModalProps> = ({
     const [totalCreditLimit, setTotalCreditLimit] = useState<number>(62355.30);
     const [orderList, setOrderList] = useState<any[]>([]);
     const [localSelectedOrder, setLocalSelectedOrder] = useState<any>(null);
+    const [dueAmount, setDueAmount] = useState<number | null>(null);
 
     const [formData, setFormData] = useState({
         payment_date: new Date().toISOString().split("T")[0],
@@ -52,7 +54,7 @@ const MakePaymentModal: React.FC<MakePaymentModalProps> = ({
         if (!ord) return;
         try {
             const storeCode = getClientStoreCode();
-            const res = await fetch(`/api/kleverapi/payment-history?orderId=${ord.order_id || ord.id || ord.entity_id}`, {
+            const res = await fetch(`/api/kleverapi/payment-history?orderId=${ord.entity_id || ord.order_id || ord.id}`, {
                 headers: {
                     Authorization: `Bearer ${token}`,
                     ...(storeCode ? { "x-store-code": storeCode } : {}),
@@ -67,6 +69,7 @@ const MakePaymentModal: React.FC<MakePaymentModalProps> = ({
                 }, 0);
                 calculatedDue = Math.max(0, calculatedDue - totalPaid);
             }
+            setDueAmount(calculatedDue);
             setFormData((prev) => ({
                 ...prev,
                 paid_payment: calculatedDue > 0 ? calculatedDue.toFixed(2) : "",
@@ -133,6 +136,7 @@ const MakePaymentModal: React.FC<MakePaymentModalProps> = ({
                 if (order) {
                     setLocalSelectedOrder(order);
                     if (receivablePayment !== undefined) {
+                        setDueAmount(receivablePayment);
                         setFormData((prev) => ({
                             ...prev,
                             paid_payment: Number(receivablePayment).toFixed(2),
@@ -156,7 +160,9 @@ const MakePaymentModal: React.FC<MakePaymentModalProps> = ({
 
                         const defaultOrder = unpaid || items[0] || null;
                         setLocalSelectedOrder(defaultOrder);
-                        // Leave paid_payment blank for general header payments
+                        if (defaultOrder) {
+                            await fetchDueAmount(defaultOrder, token);
+                        }
                     }
                 }
             } catch (error) {
@@ -208,7 +214,7 @@ const MakePaymentModal: React.FC<MakePaymentModalProps> = ({
                     "x-locale": locale,
                 },
                 body: JSON.stringify({
-                    order_id: localSelectedOrder.order_id || localSelectedOrder.id || localSelectedOrder.entity_id,
+                    order_id: localSelectedOrder.entity_id || localSelectedOrder.order_id || localSelectedOrder.id,
                     sap_invoice_no: localSelectedOrder.sap_order_number || localSelectedOrder.sap_invoice_no || "",
                     payment_date: formData.payment_date,
                     payment_method: formData.payment_method,
@@ -234,182 +240,176 @@ const MakePaymentModal: React.FC<MakePaymentModalProps> = ({
     };
 
     return (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4" dir={isRtl ? "rtl" : "ltr"}>
-            <div className="bg-white w-full max-w-5xl rounded-sm shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200 relative">
-                {/* Loading state indicator */}
-                {isLoadingData && (
-                    <div className="absolute inset-0 z-50 bg-white/80 flex items-center justify-center">
-                        <div className="flex flex-col items-center gap-2">
-                            <Loader2 className="w-8 h-8 animate-spin text-[#1e73be]" />
-                            <span className="text-body-sm font-bold text-black/60">Loading account information...</span>
-                        </div>
+        <Drawer
+            isOpen={isOpen}
+            onClose={onClose}
+            title={t("orders.makePayment") || "Make Payment"}
+            scrollable={true}
+        >
+            {isLoadingData && (
+                <div className="absolute inset-0 z-50 bg-white/80 flex items-center justify-center">
+                    <div className="flex flex-col items-center gap-2">
+                        <Loader2 className="w-8 h-8 animate-spin text-[#1e73be]" />
+                        <span className="text-body-sm font-bold text-black/60">Loading order information...</span>
                     </div>
-                )}
-
-                {/* Header */}
-                <div className="bg-black text-white px-5 py-3 flex items-center justify-between">
-                    <h2 className="text-body-lg font-bold uppercase tracking-wide">
-                        {t("orders.makePayment") || "Make Payment"}
-                    </h2>
-                    <button onClick={onClose} className="hover:opacity-70 transition-opacity">
-                        <X size={20} />
-                    </button>
+                </div>
+            )}
+            <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto custom-scrollbar p-3 space-y-2.5 bg-white" dir={isRtl ? "rtl" : "ltr"}>
+                {/* Order # */}
+                <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest block">
+                        {t("orderDetails.orderNo") || "Order #"}
+                    </label>
+                    <input
+                        type="text"
+                        readOnly
+                        value={localSelectedOrder?.increment_id || localSelectedOrder?.order_id || ""}
+                        className="w-full px-3 py-1.5 bg-white border border-gray-300 rounded-sm text-xs text-black outline-none cursor-default font-medium"
+                    />
                 </div>
 
-                {/* Form Content */}
-                <form onSubmit={handleSubmit} className="p-6 md:p-8">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
-                        {/* Left Column */}
-                        <div className="space-y-4">
-                            {/* Total Order Amount */}
-                            <div className="space-y-1.5">
-                                <label className="text-body-sm font-bold text-black block">
-                                    {t("orderDetails.totalOrderAmount") || "Total Order Amount"}
-                                </label>
-                                <input
-                                    type="text"
-                                    readOnly
-                                    value={
-                                        totalCreditLimit !== undefined
-                                            ? Number(totalCreditLimit).toFixed(2)
-                                            : "0.00"
-                                    }
-                                    className="w-full px-3 py-2 bg-white border border-gray-300 rounded-sm text-body text-black outline-none cursor-default font-medium"
-                                />
-                            </div>
+                {/* Customer Name */}
+                <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest block">
+                        {t("orderDetails.customerName") || "Customer Name"}
+                    </label>
+                    <input
+                        type="text"
+                        readOnly
+                        value={contactName}
+                        className="w-full px-3 py-1.5 bg-white border border-gray-300 rounded-sm text-xs text-black outline-none cursor-default font-medium"
+                    />
+                </div>
 
-                            {/* Contact Name */}
-                            <div className="space-y-1.5">
-                                <label className="text-body-sm font-bold text-black block">
-                                    {t("orderDetails.contactName") || "Contact Name"}
-                                </label>
-                                <input
-                                    type="text"
-                                    readOnly
-                                    value={contactName}
-                                    className="w-full px-3 py-2 bg-white border border-gray-300 rounded-sm text-body text-black outline-none cursor-default font-medium"
-                                />
-                            </div>
+                {/* Customer Code */}
+                <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest block">
+                        {t("orderDetails.customerCode") || "Customer Code"}
+                    </label>
+                    <input
+                        type="text"
+                        readOnly
+                        value={customerCode}
+                        className="w-full px-3 py-1.5 bg-white border border-gray-300 rounded-sm text-xs text-black outline-none cursor-default font-medium"
+                    />
+                </div>
 
-                            {/* Company Name */}
-                            <div className="space-y-1.5">
-                                <label className="text-body-sm font-bold text-black block">
-                                    {t("orderDetails.companyName") || "Company Name"}
-                                </label>
-                                <input
-                                    type="text"
-                                    readOnly
-                                    value={companyName}
-                                    className="w-full px-3 py-2 bg-white border border-gray-300 rounded-sm text-body text-black outline-none cursor-default font-medium"
-                                />
-                            </div>
+                {/* SAP Invoice No */}
+                <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest block">
+                        {t("orderDetails.sapInvoiceNo") || "SAP Invoice No"}
+                    </label>
+                    <input
+                        type="text"
+                        readOnly
+                        value={localSelectedOrder?.sap_order_number || localSelectedOrder?.sap_invoice_no || ""}
+                        className="w-full px-3 py-1.5 bg-white border border-gray-300 rounded-sm text-xs text-black outline-none cursor-default font-medium"
+                    />
+                </div>
 
-                            {/* Payment Date */}
-                            <div className="space-y-1.5">
-                                <label className="text-body-sm font-bold text-black block">
-                                    {t("orderDetails.paymentDate") || "Payment Date"} <span className="text-red-500">*</span>
-                                </label>
-                                <input
-                                    type="date"
-                                    value={formData.payment_date}
-                                    onChange={(e) => setFormData({ ...formData, payment_date: e.target.value })}
-                                    className="w-full px-3 py-2 bg-white border border-gray-300 rounded-sm text-body text-black outline-none focus:border-[#1e73be] transition-colors cursor-pointer font-medium"
-                                />
-                            </div>
+                {/* Payment Date */}
+                <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest block">
+                        {t("orderDetails.paymentDate") || "Payment Date"} <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                        type="date"
+                        value={formData.payment_date}
+                        onChange={(e) => setFormData({ ...formData, payment_date: e.target.value })}
+                        className="w-full px-3 py-1.5 bg-white border border-gray-300 rounded-sm text-xs text-black outline-none focus:border-[#1e73be] transition-colors cursor-pointer font-medium"
+                    />
+                </div>
 
-                            {/* Paid Payment */}
-                            <div className="space-y-1.5">
-                                <label className="text-body-sm font-bold text-black block">
-                                    {t("orderDetails.paidPayment") || "Paid Payment"} <span className="text-red-500">*</span>
-                                </label>
-                                <input
-                                    type="number"
-                                    step="0.01"
-                                    required
-                                    value={formData.paid_payment}
-                                    onChange={(e) => setFormData({ ...formData, paid_payment: e.target.value })}
-                                    className="w-full px-3 py-2 bg-white border border-gray-300 rounded-sm text-body text-black outline-none focus:border-[#1e73be] transition-colors font-medium"
-                                />
-                            </div>
-                        </div>
+                {/* Payment Method */}
+                <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest block">
+                        {t("orderDetails.paymentMethod") || "Payment Method"} <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                        value={formData.payment_method}
+                        onChange={(e) => setFormData({ ...formData, payment_method: e.target.value })}
+                        className="w-full px-3 py-1.5 bg-white border border-gray-300 rounded-sm text-xs text-black outline-none focus:border-[#1e73be] transition-colors font-medium cursor-pointer"
+                    >
+                        <option value="">{t("orderDetails.selectOption") || "-- Select --"}</option>
+                        <option value="Cash">{t("orderDetails.cash") || "Cash"}</option>
+                        <option value="Bank Transfer">{t("orderDetails.bankTransfer") || "Bank Transfer"}</option>
+                        <option value="Cheque">{t("orderDetails.check") || "Cheque"}</option>
+                        <option value="Card">Card</option>
+                    </select>
+                </div>
 
-                        {/* Right Column */}
-                        <div className="flex flex-col justify-between">
-                            <div className="space-y-4">
-                                {/* Receivable (Account Balance) */}
-                                <div className="space-y-1.5">
-                                    <label className="text-body-sm font-bold text-black block">
-                                        {t("orderDetails.receivableAccountBalance") || "Receivable (Account Balance)"}
-                                    </label>
-                                    <input
-                                        type="text"
-                                        readOnly
-                                        value={Number(receivableBalance).toFixed(2)}
-                                        className="w-full px-3 py-2 bg-white border border-gray-300 rounded-sm text-body text-black outline-none cursor-default font-medium"
-                                    />
-                                </div>
+                {/* Invoice Amount */}
+                <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest block">
+                        {t("orderDetails.grandTotal") || "Invoice Amount"}
+                    </label>
+                    <input
+                        type="text"
+                        readOnly
+                        value={Number(localSelectedOrder?.grand_total || localSelectedOrder?.grandTotal || 0).toFixed(2)}
+                        className="w-full px-3 py-1.5 bg-white border border-gray-300 rounded-sm text-xs text-black outline-none cursor-default font-medium"
+                    />
+                </div>
 
-                                {/* Customer Code */}
-                                <div className="space-y-1.5">
-                                    <label className="text-body-sm font-bold text-black block">
-                                        {t("orderDetails.customerCode") || "Customer Code"}
-                                    </label>
-                                    <input
-                                        type="text"
-                                        readOnly
-                                        value={customerCode}
-                                        className="w-full px-3 py-2 bg-white border border-gray-300 rounded-sm text-body text-black outline-none cursor-default font-medium"
-                                    />
-                                </div>
+                {/* Receivable Payment */}
+                <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest block">
+                        {t("orderDetails.receivablePayment") || "Receivable Payment"}
+                    </label>
+                    <input
+                        type="text"
+                        readOnly
+                        disabled
+                        value={
+                            receivablePayment !== undefined
+                                ? Number(receivablePayment).toFixed(2)
+                                : (dueAmount !== null ? Number(dueAmount).toFixed(2) : "0.00")
+                        }
+                        className="w-full px-3 py-1.5 bg-gray-100 border border-gray-300 rounded-sm text-xs text-gray-500 outline-none cursor-not-allowed font-medium"
+                    />
+                </div>
 
-                                {/* Payment Method */}
-                                <div className="space-y-1.5">
-                                    <label className="text-body-sm font-bold text-black block">
-                                        {t("orderDetails.paymentMethod") || "Payment Method"} <span className="text-red-500">*</span>
-                                    </label>
-                                    <select
-                                        value={formData.payment_method}
-                                        onChange={(e) => setFormData({ ...formData, payment_method: e.target.value })}
-                                        className="w-full px-3 py-2 bg-white border border-gray-300 rounded-sm text-body text-black outline-none focus:border-[#1e73be] transition-colors font-medium cursor-pointer"
-                                    >
-                                        <option value="">{t("orderDetails.selectOption") || "-- Select --"}</option>
-                                        <option value="Cash">{t("orderDetails.cash") || "Cash"}</option>
-                                        <option value="Bank Transfer">{t("orderDetails.bankTransfer") || "Bank Transfer"}</option>
-                                        <option value="Cheque">{t("orderDetails.check") || "Cheque"}</option>
-                                        <option value="Card">Card</option>
-                                    </select>
-                                </div>
+                {/* Paid Payment */}
+                <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest block">
+                        {t("orderDetails.paidPayment") || "Paid Payment"} <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                        type="number"
+                        step="0.01"
+                        required
+                        value={formData.paid_payment}
+                        onChange={(e) => setFormData({ ...formData, paid_payment: e.target.value })}
+                        className="w-full px-3 py-1.5 bg-white border border-gray-300 rounded-sm text-xs text-black outline-none focus:border-[#1e73be] transition-colors font-medium"
+                    />
+                </div>
 
-                                {/* Remarks */}
-                                <div className="space-y-1.5">
-                                    <label className="text-body-sm font-bold text-black block">
-                                        {t("orderDetails.remarks") || "Remarks"}
-                                    </label>
-                                    <textarea
-                                        value={formData.remarks}
-                                        onChange={(e) => setFormData({ ...formData, remarks: e.target.value })}
-                                        rows={4}
-                                        className="w-full px-3 py-2 bg-white border border-gray-300 rounded-sm text-body text-black outline-none focus:border-[#1e73be] transition-colors resize-none font-medium h-[106px]"
-                                    />
-                                </div>
-                            </div>
+                {/* Remarks */}
+                <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest block">
+                        {t("orderDetails.remarks") || "Remarks"}
+                    </label>
+                    <textarea
+                        value={formData.remarks}
+                        onChange={(e) => setFormData({ ...formData, remarks: e.target.value })}
+                        rows={3}
+                        className="w-full px-3 py-1.5 bg-white border border-gray-300 rounded-sm text-xs text-black outline-none focus:border-[#1e73be] transition-colors resize-none font-medium h-[60px]"
+                    />
+                </div>
 
-                            {/* Submit Button */}
-                            <div className="flex justify-end pt-4">
-                                <button
-                                    type="submit"
-                                    disabled={isSubmitting || isLoadingData}
-                                    className="bg-[#1e73be] hover:bg-[#155a96] text-white px-8 py-2.5 rounded-sm font-bold text-body uppercase transition-all active:scale-95 shadow-sm disabled:opacity-70 disabled:cursor-not-allowed flex items-center gap-2"
-                                >
-                                    {isSubmitting && <Loader2 className="w-4.5 h-4.5 animate-spin" />}
-                                    {t("orderDetails.submitPayment") || "Submit Payment"}
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </form>
-            </div>
-        </div>
+                {/* Submit Button */}
+                <div className="pt-2">
+                    <button
+                        type="submit"
+                        disabled={isSubmitting || isLoadingData}
+                        className="w-full bg-[#1e73be] hover:bg-[#155a96] text-white py-2 rounded-sm font-bold text-xs uppercase transition-all active:scale-95 shadow-sm disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    >
+                        {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
+                        {t("orderDetails.submitPayment") || "Submit Payment"}
+                    </button>
+                </div>
+            </form>
+        </Drawer>
     );
 };
 

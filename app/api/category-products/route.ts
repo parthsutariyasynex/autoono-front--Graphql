@@ -11,7 +11,7 @@ import type {
   KleverCategoryProductsData,
   ProductsSearchData,
 } from "@/src/graphql/types";
-import { graphqlFetch, isGraphQLRequestError } from "@/src/lib/graphqlFetch";
+import { graphqlFetch, isGraphQLRequestError } from "@/lib/graphqlFetch";
 
 // Server-side response cache. kleverCategoryProducts is slow on the backend
 // (~10s direct, ~12-18s through the dev server). Keyed by tokenHash + store +

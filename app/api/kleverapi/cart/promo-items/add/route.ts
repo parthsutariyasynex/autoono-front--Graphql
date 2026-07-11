@@ -3,7 +3,7 @@ import { getRequestToken } from "@/lib/api/auth-helper";
 import { getLocaleFromRequest } from "@/lib/api/magento-url";
 import { KLEVER_ADD_PROMO_ITEMS_MUTATION } from "@/src/graphql/mutations";
 import type { KleverAddPromoItemsData } from "@/src/graphql/types";
-import { graphqlFetch, isGraphQLRequestError } from "@/src/lib/graphqlFetch";
+import { graphqlFetch, isGraphQLRequestError } from "@/lib/graphqlFetch";
 
 function toPromoItems(raw: unknown): Array<{ sku: string; ruleId: number; qty: number }> {
   if (!Array.isArray(raw)) return [];

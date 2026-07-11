@@ -10,7 +10,7 @@ import type {
   KleverSubaccountByIdData,
   KleverUpdateSubaccountData,
 } from "@/src/graphql/types";
-import { graphqlFetch, isGraphQLRequestError } from "@/src/lib/graphqlFetch";
+import { graphqlFetch, isGraphQLRequestError } from "@/lib/graphqlFetch";
 
 function toPermissionsArray(raw: unknown): number[] | undefined {
   if (!Array.isArray(raw)) return undefined;

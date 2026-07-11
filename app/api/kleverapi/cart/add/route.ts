@@ -3,8 +3,8 @@ import { getRequestToken } from "@/lib/api/auth-helper";
 import { CUSTOMER_CART_QUERY, CUSTOMER_CART_ID_QUERY } from "@/src/graphql/queries";
 import { ADD_PRODUCTS_TO_CART_MUTATION } from "@/src/graphql/mutations";
 import type { CustomerCartData, CustomerCartIdData } from "@/src/graphql/types";
-import { graphqlFetch, isGraphQLRequestError } from "@/src/lib/graphqlFetch";
-import { reshapeCustomerCart } from "@/src/lib/cartShape";
+import { graphqlFetch, isGraphQLRequestError } from "@/lib/graphqlFetch";
+import { reshapeCustomerCart } from "@/lib/cartShape";
 
 interface AddProductsToCartData {
   addProductsToCart: {

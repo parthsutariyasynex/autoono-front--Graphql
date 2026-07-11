@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getRequestToken } from "@/lib/api/auth-helper";
 import { KLEVER_ORDER_UPLOAD_FILTER_OPTIONS_QUERY } from "@/src/graphql/queries";
 import type { KleverOrderUploadFilterOptionsData } from "@/src/graphql/types";
-import { graphqlFetch, isGraphQLRequestError } from "@/src/lib/graphqlFetch";
+import { graphqlFetch, isGraphQLRequestError } from "@/lib/graphqlFetch";
 
 export async function GET(request: Request) {
   const isDev = process.env.NODE_ENV !== "production";

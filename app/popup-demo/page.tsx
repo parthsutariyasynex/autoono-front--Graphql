@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import Popup from "../components/Popup";
+import Popup from "@/components/Popup";
 import { Info, Layout, ShoppingCart, Settings } from "lucide-react";
 
 export default function PopupDemo() {

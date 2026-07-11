@@ -1,7 +1,7 @@
 "use client";
 import React from "react";
 import { useTranslation } from "@/hooks/useTranslation";
-import Price from "@/app/components/Price";
+import Price from "@/components/Price";
 
 export interface Order {
     id: string;

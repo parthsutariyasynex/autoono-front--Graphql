@@ -1,7 +1,7 @@
 "use client";
 import React from "react";
 import { useTranslation } from "@/hooks/useTranslation";
-import Drawer from "@/app/components/Drawer";
+import Drawer from "@/components/Drawer";
 
 interface PaymentDetailModalProps {
     isOpen: boolean;

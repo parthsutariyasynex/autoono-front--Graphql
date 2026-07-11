@@ -3,7 +3,7 @@ import { getRequestToken } from "@/lib/api/auth-helper";
 import { getLocaleFromRequest } from "@/lib/api/magento-url";
 import { KLEVER_ACCOUNT_SIDEBAR_QUERY } from "@/src/graphql/queries";
 import type { KleverAccountSidebarData } from "@/src/graphql/types";
-import { graphqlFetch } from "@/src/lib/graphqlFetch";
+import { graphqlFetch } from "@/lib/graphqlFetch";
 
 const fallbackSidebar = {
   user_type: "customer",

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { GENERATE_CUSTOMER_TOKEN_MUTATION } from "@/src/graphql/mutations";
 import type { GenerateCustomerTokenData } from "@/src/graphql/types";
-import { graphqlFetch, isGraphQLRequestError } from "@/src/lib/graphqlFetch";
+import { graphqlFetch, isGraphQLRequestError } from "@/lib/graphqlFetch";
 
 export async function POST(request: Request) {
   try {

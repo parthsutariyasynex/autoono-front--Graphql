@@ -5,7 +5,7 @@ import { useTranslation } from "@/hooks/useTranslation";
 import { useSession } from "next-auth/react";
 import toast from "react-hot-toast";
 import { getClientStoreCode } from "@/lib/api/api-client";
-import Drawer from "@/app/components/Drawer";
+import Drawer from "@/components/Drawer";
 
 interface AccountPaymentModalProps {
     isOpen: boolean;

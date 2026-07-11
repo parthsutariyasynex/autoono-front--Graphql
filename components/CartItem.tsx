@@ -4,10 +4,10 @@ import React, { useState } from "react";
 import { X, Minus, Plus } from "lucide-react";
 import Link from "next/link";
 import { CartItem as CartItemType } from "@/modules/cart/hooks/useCart";
-import Price from "@/app/components/Price";
+import Price from "@/components/Price";
 import toast from "react-hot-toast";
 import { useTranslation } from "@/hooks/useTranslation";
-import { useAction } from "@/lib/hooks/useAction";
+import { useAction } from "@/hooks/useAction";
 import { ButtonSpinner } from "@/components/GlobalLoadingOverlay";
 
 interface CartItemProps {

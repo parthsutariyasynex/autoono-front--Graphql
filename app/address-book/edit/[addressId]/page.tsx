@@ -3,7 +3,7 @@
 import { Suspense, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Sidebar from "@/components/Sidebar";
-import Addresses from "@/app/components/Addresses";
+import Addresses from "@/components/Addresses";
 import { useTranslation } from "@/hooks/useTranslation";
 import { api } from "@/lib/api/api-client";
 

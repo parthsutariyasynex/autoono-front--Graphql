@@ -3,7 +3,7 @@
 // import { Suspense } from "react";
 // import { useParams } from "next/navigation";
 // import Sidebar from "@/components/Sidebar";
-// import Addresses from "@/app/components/Addresses";
+// import Addresses from "@/components/Addresses";
 // import { useTranslation } from "@/hooks/useTranslation";
 
 // export default function EditAddressPage() {

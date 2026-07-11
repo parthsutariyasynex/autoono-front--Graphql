@@ -12,7 +12,7 @@ import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { forgotPassword } from "@/store/actions/authActions";
 import { RootState } from "@/store/store";
 
-import CountryDropdown from "@/app/components/CountryDropdown";
+import CountryDropdown from "@/components/CountryDropdown";
 import { ForgotPasswordSkeleton } from "@/components/skeletons";
 
 export default function ForgotPasswordPage() {

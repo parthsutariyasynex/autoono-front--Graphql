@@ -8,7 +8,7 @@ import type {
   KleverSearchPoolData,
   KleverCategoryProductsData,
 } from "@/src/graphql/types";
-import { graphqlFetch, isGraphQLRequestError } from "@/src/lib/graphqlFetch";
+import { graphqlFetch, isGraphQLRequestError } from "@/lib/graphqlFetch";
 
 // Two consumers share this endpoint:
 //   1. SearchPopup typeahead — reads only name + sku. Pass `light=1` to use

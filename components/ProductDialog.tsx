@@ -1,6 +1,6 @@
 "use client";
 
-import type { Product } from "../../modules/types/product";
+import type { Product } from "@/modules/types/product";
 import Drawer from "./Drawer";
 import { useTranslation } from "@/hooks/useTranslation";
 

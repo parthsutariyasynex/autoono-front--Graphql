@@ -1,7 +1,7 @@
 "use client";
 
 import Sidebar from "@/components/Sidebar";
-import Addresses from "../../components/Addresses";
+import Addresses from "@/components/Addresses";
 
 export default function AddressBookPage() {
     return (

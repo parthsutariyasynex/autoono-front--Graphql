@@ -11,7 +11,7 @@ import Sidebar from "@/components/Sidebar";
 import { useSession } from "next-auth/react";
 import { redirectToLogin } from "@/utils/helpers";
 import PortalDropdown from "@/components/PortalDropdown";
-import { useAction } from "@/lib/hooks/useAction";
+import { useAction } from "@/hooks/useAction";
 
 /**
  * Proper data structures for the Forecast API

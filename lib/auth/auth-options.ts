@@ -4,7 +4,7 @@ import { isValidLocale, defaultLocale, type Locale } from "@/lib/i18n/config";
 import { SESSION_COOKIE_NAME, CSRF_COOKIE_NAME, CALLBACK_URL_COOKIE_NAME } from "./constants";
 import { GENERATE_CUSTOMER_TOKEN_MUTATION } from "@/src/graphql/mutations";
 import type { GenerateCustomerTokenData } from "@/src/graphql/types";
-import { graphqlFetch, isGraphQLRequestError } from "@/src/lib/graphqlFetch";
+import { graphqlFetch, isGraphQLRequestError } from "@/lib/graphqlFetch";
 
 const MAGENTO_DOMAIN =
     process.env.NEXT_PUBLIC_MAGENTO_BASE_URL || "https://autoono-demo.btire.com";

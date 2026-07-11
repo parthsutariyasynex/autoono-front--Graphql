@@ -3,7 +3,7 @@ import { getRequestToken } from "@/lib/api/auth-helper";
 import { getLocaleFromRequest } from "@/lib/api/magento-url";
 import { KLEVER_DISCOUNT_POPUP_QUERY } from "@/src/graphql/queries";
 import type { KleverDiscountPopupData } from "@/src/graphql/types";
-import { graphqlFetch, isGraphQLRequestError } from "@/src/lib/graphqlFetch";
+import { graphqlFetch, isGraphQLRequestError } from "@/lib/graphqlFetch";
 
 // kleverDiscountPopup relies on the customer's shopping cart. The cart is
 // always bound to the BASE locale store ("en"/"ar"), not to a warehouse

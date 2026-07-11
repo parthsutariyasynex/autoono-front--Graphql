@@ -3,7 +3,7 @@ import { getRequestToken } from "@/lib/api/auth-helper";
 import { getLocaleFromRequest } from "@/lib/api/magento-url";
 import { KLEVER_CREDIT_ACCOUNT_QUERY } from "@/src/graphql/queries";
 import type { KleverCreditAccountData } from "@/src/graphql/types";
-import { graphqlFetch, isGraphQLRequestError } from "@/src/lib/graphqlFetch";
+import { graphqlFetch, isGraphQLRequestError } from "@/lib/graphqlFetch";
 
 // Resolve the REAL store-view code (e.g. V101_en, WJ01_en) the same way the
 // other account APIs receive it. The kleverCreditAccount resolver is

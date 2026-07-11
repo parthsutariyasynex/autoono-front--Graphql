@@ -2,8 +2,8 @@ import { NextResponse } from "next/server";
 import { getRequestToken } from "@/lib/api/auth-helper";
 import { CUSTOMER_CART_QUERY } from "@/src/graphql/queries";
 import type { CustomerCartData } from "@/src/graphql/types";
-import { graphqlFetch, isGraphQLRequestError } from "@/src/lib/graphqlFetch";
-import { reshapeCustomerCart } from "@/src/lib/cartShape";
+import { graphqlFetch, isGraphQLRequestError } from "@/lib/graphqlFetch";
+import { reshapeCustomerCart } from "@/lib/cartShape";
 
 export async function GET(req: Request) {
   try {

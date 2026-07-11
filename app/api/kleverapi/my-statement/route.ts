@@ -3,7 +3,7 @@ import { getRequestToken } from "@/lib/api/auth-helper";
 import { getLocaleFromRequest } from "@/lib/api/magento-url";
 import { KLEVER_MY_STATEMENT_QUERY } from "@/src/graphql/queries";
 import type { KleverMyStatementData } from "@/src/graphql/types";
-import { graphqlFetch, isGraphQLRequestError } from "@/src/lib/graphqlFetch";
+import { graphqlFetch, isGraphQLRequestError } from "@/lib/graphqlFetch";
 
 function resolveStatementError(raw: string): string {
   if (/not defined in company code/i.test(raw)) {

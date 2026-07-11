@@ -11,7 +11,7 @@ import { useLocalePath } from "@/hooks/useLocalePath";
 import Drawer from "./Drawer";
 import Popup from "./Popup";
 import toast from "react-hot-toast";
-import { useAction } from "@/lib/hooks/useAction";
+import { useAction } from "@/hooks/useAction";
 import { ButtonSpinner } from "@/components/GlobalLoadingOverlay";
 
 interface CartDrawerProps {

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getRequestToken } from "@/lib/api/auth-helper";
 import { KLEVER_QUICK_ORDER_CHECKOUT_MUTATION } from "@/src/graphql/mutations";
 import type { KleverQuickOrderCheckoutData } from "@/src/graphql/types";
-import { graphqlFetch, isGraphQLRequestError } from "@/src/lib/graphqlFetch";
+import { graphqlFetch, isGraphQLRequestError } from "@/lib/graphqlFetch";
 
 function toQuickOrderItems(raw: unknown): Array<{ sku: string; qty: number }> {
   if (!Array.isArray(raw)) return [];

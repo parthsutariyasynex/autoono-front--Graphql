@@ -3,7 +3,7 @@ import { getRequestToken } from "@/lib/api/auth-helper";
 import { CUSTOMER_CART_ID_QUERY } from "@/src/graphql/queries";
 import { REMOVE_ITEM_FROM_CART_MUTATION } from "@/src/graphql/mutations";
 import type { CustomerCartIdData, RemoveItemFromCartData } from "@/src/graphql/types";
-import { graphqlFetch, isGraphQLRequestError } from "@/src/lib/graphqlFetch";
+import { graphqlFetch, isGraphQLRequestError } from "@/lib/graphqlFetch";
 
 export async function POST(req: Request) {
   try {

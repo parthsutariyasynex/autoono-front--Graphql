@@ -4,7 +4,7 @@ import { getLocaleFromRequest } from "@/lib/api/magento-url";
 import { CUSTOMER_QUERY, KLEVER_DASHBOARD_QUERY } from "@/src/graphql/queries";
 import { CREATE_CUSTOMER_ADDRESS_MUTATION } from "@/src/graphql/mutations";
 import type { CreateCustomerAddressData, CustomerData } from "@/src/graphql/types";
-import { graphqlFetch, isGraphQLRequestError } from "@/src/lib/graphqlFetch";
+import { graphqlFetch, isGraphQLRequestError } from "@/lib/graphqlFetch";
 
 function toCustomerAddressInput(raw: Record<string, unknown>) {
   const street = Array.isArray(raw.street)

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getRequestToken } from "@/lib/api/auth-helper";
 import { KLEVER_QUICK_ORDER_CLEAR_ALL_MUTATION } from "@/src/graphql/mutations";
 import type { KleverQuickOrderClearAllData } from "@/src/graphql/types";
-import { graphqlFetch, isGraphQLRequestError } from "@/src/lib/graphqlFetch";
+import { graphqlFetch, isGraphQLRequestError } from "@/lib/graphqlFetch";
 
 async function handle(request: NextRequest) {
   try {

@@ -6,7 +6,7 @@ import type {
   KleverCategoryProductItem,
   KleverCategoryProductsData,
 } from "@/src/graphql/types";
-import { graphqlFetch, isGraphQLRequestError } from "@/src/lib/graphqlFetch";
+import { graphqlFetch, isGraphQLRequestError } from "@/lib/graphqlFetch";
 
 function deriveStockColor(item: KleverCategoryProductItem): string {
   const label = (item.stock_label || "").toLowerCase().trim();

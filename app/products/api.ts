@@ -13,7 +13,7 @@
 // }
 // app/products/api.ts
 import { api } from "@/lib/api/api-client";
-import { getCategoryProducts } from "@/src/lib/categoryProducts";
+import { getCategoryProducts } from "@/lib/categoryProducts";
 import type { Product } from "../../modules/types/product";
 import type { AppRouterInstance } from "next/dist/shared/lib/app-router-context.shared-runtime";
 

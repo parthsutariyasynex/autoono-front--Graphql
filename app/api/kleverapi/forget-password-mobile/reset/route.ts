@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { RESET_PASSWORD_MUTATION } from "@/src/graphql/mutations";
 import type { ResetPasswordData } from "@/src/graphql/types";
-import { graphqlFetch, isGraphQLRequestError } from "@/src/lib/graphqlFetch";
+import { graphqlFetch, isGraphQLRequestError } from "@/lib/graphqlFetch";
 
 export async function POST(req: Request) {
   try {

@@ -10,7 +10,7 @@ import type {
   UpdateCustomerAddressData,
   DeleteCustomerAddressData,
 } from "@/src/graphql/types";
-import { graphqlFetch, isGraphQLRequestError } from "@/src/lib/graphqlFetch";
+import { graphqlFetch, isGraphQLRequestError } from "@/lib/graphqlFetch";
 
 function toCustomerAddressInput(raw: Record<string, unknown>) {
   const street = Array.isArray(raw.street)

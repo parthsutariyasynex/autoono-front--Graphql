@@ -7,7 +7,7 @@ import { Search, ShoppingCart, Trash2, Upload, FileDown, Check, X, Plus, ArrowRi
 import { useRouter } from "next/navigation";
 import { useCart } from "@/modules/cart/hooks/useCart";
 import { toast } from "react-hot-toast";
-import Price from "../components/Price";
+import Price from "@/components/Price";
 import { redirectToLogin } from "@/utils/helpers";
 import { api, getClientStoreCode } from "@/lib/api/api-client";
 import { useCanOrder } from "@/hooks/useCanOrder";
