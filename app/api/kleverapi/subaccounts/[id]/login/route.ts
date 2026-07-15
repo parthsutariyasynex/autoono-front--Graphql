@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server";
 import { getRequestToken } from "@/lib/api/auth-helper";
-import { KLEVER_LOGIN_AS_SUBACCOUNT_MUTATION } from "@/src/graphql/mutations";
-import type { KleverLoginAsSubaccountData } from "@/src/graphql/types";
+import {
+  KLEVER_LOGIN_AS_SUBACCOUNT_MUTATION,
+  KLEVER_LOGIN_AS_SALESPERSON_ACCOUNT_MUTATION,
+} from "@/src/graphql/mutations";
+import type { KleverLoginAsSubaccountData, KleverLoginAsSalespersonAccountData } from "@/src/graphql/types";
 import { graphqlFetch, isGraphQLRequestError } from "@/src/lib/graphqlFetch";
 
 export async function POST(
@@ -18,6 +21,23 @@ export async function POST(
     const subaccountId = Number(id);
     if (!subaccountId) {
       return NextResponse.json({ message: "Invalid subaccount id" }, { status: 400 });
+    }
+
+    const isSalesPersonScope = new URL(request.url).searchParams.get("scope") === "salesperson";
+
+    if (isSalesPersonScope) {
+      const body = await request.json().catch(() => ({}));
+      const data = await graphqlFetch<KleverLoginAsSalespersonAccountData>({
+        query: KLEVER_LOGIN_AS_SALESPERSON_ACCOUNT_MUTATION,
+        variables: { customerId: subaccountId, loginType: body?.loginType ?? null },
+        token,
+        cache: "no-store",
+      });
+
+      if (!data.kleverLoginAsSalespersonAccount) {
+        return NextResponse.json({ message: "Failed to switch to account" }, { status: 500 });
+      }
+      return NextResponse.json(data.kleverLoginAsSalespersonAccount, { status: 200 });
     }
 
     const data = await graphqlFetch<KleverLoginAsSubaccountData>({

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getRequestToken } from "@/lib/api/auth-helper";
-import { KLEVER_SUBACCOUNTS_QUERY } from "@/src/graphql/queries";
+import { KLEVER_SUBACCOUNTS_QUERY, KLEVER_SALESPERSON_ACCOUNTS_QUERY } from "@/src/graphql/queries";
 import { KLEVER_CREATE_SUBACCOUNT_MUTATION } from "@/src/graphql/mutations";
 import type {
   KleverCreateSubaccountData,
@@ -11,8 +11,10 @@ import { graphqlFetch, isGraphQLRequestError } from "@/src/lib/graphqlFetch";
 export async function GET(request: Request) {
   try {
     const token = await getRequestToken(request);
+    const isSalesPersonScope = new URL(request.url).searchParams.get("scope") === "salesperson";
+    const query = isSalesPersonScope ? KLEVER_SALESPERSON_ACCOUNTS_QUERY : KLEVER_SUBACCOUNTS_QUERY;
     console.log("[subaccounts GET] token present:", !!token);
-    console.log("[subaccounts GET] query being sent:\n", KLEVER_SUBACCOUNTS_QUERY);
+    console.log("[subaccounts GET] query being sent:\n", query);
 
     if (!token) {
       return NextResponse.json(
@@ -36,7 +38,7 @@ export async function GET(request: Request) {
         Accept: "application/json",
         Authorization: `Bearer ${token}`,
       },
-      body: JSON.stringify({ query: KLEVER_SUBACCOUNTS_QUERY }),
+      body: JSON.stringify({ query }),
       cache: "no-store",
     });
 
@@ -57,7 +59,9 @@ export async function GET(request: Request) {
       return NextResponse.json({ message: payload.errors[0]?.message, errors: payload.errors }, { status: 400 });
     }
 
-    const result = payload.data?.kleverSubaccounts ?? { items: [], total_count: 0, parent_token: null };
+    const result = isSalesPersonScope
+      ? payload.data?.kleverSalespersonAccounts ?? { items: [], total_count: 0 }
+      : payload.data?.kleverSubaccounts ?? { items: [], total_count: 0, parent_token: null };
     return NextResponse.json(result, { status: 200 });
   } catch (error) {
     console.error("[subaccounts GET] caught error type:", Object.prototype.toString.call(error));

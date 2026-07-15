@@ -266,6 +266,17 @@ export const KLEVER_LOGIN_AS_SUBACCOUNT_MUTATION = /* GraphQL */ `
   }
 `;
 
+export const KLEVER_LOGIN_AS_SALESPERSON_ACCOUNT_MUTATION = /* GraphQL */ `
+  mutation KleverLoginAsSalespersonAccount($customerId: Int!, $loginType: String) {
+    kleverLoginAsSalespersonAccount(customerId: $customerId, loginType: $loginType) {
+      token
+      customer_id
+      email
+      login_type
+    }
+  }
+`;
+
 export const UPDATE_CART_ITEMS_MUTATION = /* GraphQL */ `
   mutation UpdateCartItems($cartId: String!, $items: [CartItemUpdateInput!]!) {
     updateCartItems(input: { cart_id: $cartId, cart_items: $items }) {

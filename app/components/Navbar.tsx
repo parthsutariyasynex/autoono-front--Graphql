@@ -161,6 +161,7 @@ export default function Navbar() {
   const [subAccountName, setSubAccountName] = useState<string | null>(null);
   const [isSubAccount, setIsSubAccount] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
+  const [isSalesPerson, setIsSalesPerson] = useState(false);
   const { unreadCount, fetchNotifications: pullNotifications } = useNotifications();
   const dropdownRef = useRef<HTMLDivElement>(null);
   const logoutCalledRef = useRef(false);
@@ -172,6 +173,21 @@ export default function Navbar() {
   const handleLogout = async () => {
     await handleGlobalLogout(lp("/login"));
   };
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    try {
+      const cache = JSON.parse(localStorage.getItem("sidebar_cache_v2") || "{}");
+      if (cache.user_type === "Sales Person") {
+        setIsSalesPerson(true);
+        return;
+      }
+      const addressBook = (cache.items || []).find((i: any) => i.code === "address_book");
+      setIsSalesPerson(addressBook?.is_visible === false);
+    } catch {
+      setIsSalesPerson(false);
+    }
+  }, [isAuthenticated]);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -802,8 +818,8 @@ export default function Navbar() {
                 })()}
               </div>
 
-              {/* Search Icon */}
-              {isAuthenticated && pathname !== "/login" && (
+              {/* Search Icon — hidden for Sales Person accounts */}
+              {isAuthenticated && !isSalesPerson && pathname !== "/login" && (
                 <button
                   onClick={() => { setSearchMounted(true); setIsSearchOpen(true); }}
                   className="flex relative cursor-pointer hover:opacity-70 transition-opacity items-center justify-center -mb-1 focus:outline-none"
@@ -817,8 +833,8 @@ export default function Navbar() {
 
 
 
-              {/* Notification Bell — shown for all authenticated users */}
-              {isAuthenticated && pathname !== "/login" && (
+              {/* Notification Bell — hidden for Sales Person accounts */}
+              {isAuthenticated && !isSalesPerson && pathname !== "/login" && (
 
 
                 <button

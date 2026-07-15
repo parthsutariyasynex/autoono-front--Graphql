@@ -243,6 +243,25 @@ export const KLEVER_SUBACCOUNTS_QUERY = /* GraphQL */ `
   }
 `;
 
+export const KLEVER_SALESPERSON_ACCOUNTS_QUERY = /* GraphQL */ `
+  query KleverSalespersonAccounts {
+    kleverSalespersonAccounts {
+      items {
+        customer_id
+        email
+        firstname
+        lastname
+        name
+        customer_code
+        company_name
+        is_active
+        login_type
+      }
+      total_count
+    }
+  }
+`;
+
 export const KLEVER_SUBACCOUNT_PERMISSIONS_QUERY = /* GraphQL */ `
   query KleverSubaccountPermissions {
     kleverSubaccountPermissions {

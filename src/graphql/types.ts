@@ -325,6 +325,25 @@ export interface KleverSubaccountsData {
   } | null;
 }
 
+export interface KleverSalespersonAccountSummary {
+  customer_id: number | string;
+  email: string | null;
+  firstname: string | null;
+  lastname: string | null;
+  name: string | null;
+  customer_code: string | null;
+  company_name: string | null;
+  is_active: number | boolean | null;
+  login_type: string | null;
+}
+
+export interface KleverSalespersonAccountsData {
+  kleverSalespersonAccounts: {
+    items: KleverSalespersonAccountSummary[];
+    total_count: number;
+  } | null;
+}
+
 export interface KleverSubaccountDetail {
   id: number | string;
   customer_id: number | string | null;
@@ -381,6 +400,15 @@ export interface KleverLoginAsSubaccountData {
   kleverLoginAsSubaccount: {
     token: string;
     customer: KleverDashboardCustomer;
+  } | null;
+}
+
+export interface KleverLoginAsSalespersonAccountData {
+  kleverLoginAsSalespersonAccount: {
+    token: string;
+    customer_id: number;
+    email: string | null;
+    login_type: string | null;
   } | null;
 }
 

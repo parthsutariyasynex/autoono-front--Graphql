@@ -35,6 +35,21 @@ export default function ManageSubAccountsPage() {
     const [loggingInId, setLoggingInId] = useState<string | number | null>(null);
     const [isSalesPersonView, setIsSalesPersonView] = useState(false);
 
+    const readIsSalesPersonView = () => {
+        if (typeof window === "undefined") return false;
+        try {
+            const sc = localStorage.getItem("sidebar_cache_v2");
+            if (!sc) return false;
+            const parsed = JSON.parse(sc);
+            const abItem = (parsed?.items ?? []).find((i: any) => i.code === "address_book");
+            const addressBookVisible = abItem ? abItem.is_visible !== false : true;
+            // Sales Person: backend marks address_book as not visible
+            return !addressBookVisible;
+        } catch {
+            return false;
+        }
+    };
+
     useEffect(() => {
         if (status === "unauthenticated") {
             redirectToLogin(router);
@@ -44,14 +59,11 @@ export default function ManageSubAccountsPage() {
         if (typeof window !== "undefined") {
             const impersonating = localStorage.getItem("isSubAccount") === "true";
             let userTypeIsSubaccount = false;
-            let addressBookVisible = true;
             try {
                 const sc = localStorage.getItem("sidebar_cache_v2");
                 if (sc) {
                     const parsed = JSON.parse(sc);
                     userTypeIsSubaccount = parsed?.user_type === "subaccount";
-                    const abItem = (parsed?.items ?? []).find((i: any) => i.code === "address_book");
-                    if (abItem) addressBookVisible = abItem.is_visible !== false;
                 }
             } catch { }
 
@@ -60,8 +72,7 @@ export default function ManageSubAccountsPage() {
                 return;
             }
 
-            // Sales Person: backend marks address_book as not visible
-            setIsSalesPersonView(!addressBookVisible);
+            setIsSalesPersonView(readIsSalesPersonView());
         }
     }, [status, router, lp]);
 
@@ -69,7 +80,8 @@ export default function ManageSubAccountsPage() {
         if (!token) return;
         try {
             setLoading(true);
-            const res = await fetch("/api/kleverapi/subaccounts", {
+            const scope = readIsSalesPersonView() ? "salesperson" : null;
+            const res = await fetch(`/api/kleverapi/subaccounts${scope ? `?scope=${scope}` : ""}`, {
                 headers: {
                     Authorization: `Bearer ${token}`,
                     "Content-Type": "application/json",
@@ -138,13 +150,16 @@ export default function ManageSubAccountsPage() {
         }
         setLoggingInId(subAccountId);
 
+        const scope = readIsSalesPersonView() ? "salesperson" : null;
+
         try {
-            const res = await fetch(`/api/kleverapi/subaccounts/${subAccountId}/login`, {
+            const res = await fetch(`/api/kleverapi/subaccounts/${subAccountId}/login${scope ? `?scope=${scope}` : ""}`, {
                 method: "POST",
                 headers: {
                     Authorization: `Bearer ${token}`,
                     "Content-Type": "application/json",
                 },
+                body: scope ? JSON.stringify({ loginType: subAccount.login_type ?? null }) : undefined,
             });
 
             const data = await res.json();
